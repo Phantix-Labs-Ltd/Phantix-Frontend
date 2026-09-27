@@ -357,17 +357,26 @@ export interface Slice {
   color: string;
 }
 
-/** Donut with the total in the hole and a labeled legend (never color alone). */
+/**
+ * Donut with the total in the hole and a labeled legend (never color alone).
+ *
+ * Hovering a slice (or its legend row) swaps the hole's figure for that slice's
+ * count and share. There is no floating tooltip: the ring is only 160px wide,
+ * so Recharts drew the tooltip inside it, right over the total, and neither
+ * could be read.
+ */
 export function Donut({ slices, centerLabel }: { slices: Slice[]; centerLabel: string }) {
-  const { c, tip } = useChartTheme();
+  const { c } = useChartTheme();
+  const [activeKey, setActiveKey] = React.useState<string | null>(null);
   const total = slices.reduce((s, x) => s + x.value, 0);
   const shown = slices.filter((s) => s.value > 0);
+  const active = shown.find((s) => s.key === activeKey) ?? null;
+  const pct = (v: number) => (total ? Math.round((v / total) * 100) : 0);
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative h-[160px] w-[160px] shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Tooltip {...tip} formatter={(v: number, n: string) => [`${v} (${total ? Math.round((v / total) * 100) : 0}%)`, n]} />
             <Pie
               data={shown.length ? shown : [{ key: "none", label: "None", value: 1, color: c.grid }]}
               dataKey="value"
@@ -378,27 +387,54 @@ export function Donut({ slices, centerLabel }: { slices: Slice[]; centerLabel: s
               stroke={c.surface}
               strokeWidth={2}
               isAnimationActive
+              onMouseEnter={(_: unknown, i: number) => setActiveKey(shown[i]?.key ?? null)}
+              onMouseLeave={() => setActiveKey(null)}
             >
               {(shown.length ? shown : [{ key: "none", color: c.grid }]).map((s) => (
-                <Cell key={s.key} fill={s.color} />
+                <Cell
+                  key={s.key}
+                  fill={s.color}
+                  fillOpacity={active && active.key !== s.key ? 0.35 : 1}
+                  style={{ transition: "fill-opacity 150ms ease-out", outline: "none" }}
+                />
               ))}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-mono text-2xl font-semibold text-white">{total.toLocaleString()}</span>
-          <span className="text-[12px] text-slate-500">{centerLabel}</span>
+        <div
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
+          aria-live="polite"
+        >
+          {active ? (
+            <>
+              <span className="font-mono text-2xl font-semibold text-white">{active.value.toLocaleString()}</span>
+              <span className="max-w-[92px] truncate text-[12px] font-medium" style={{ color: active.color }}>
+                {active.label} · {pct(active.value)}%
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-2xl font-semibold text-white">{total.toLocaleString()}</span>
+              <span className="text-[12px] text-slate-500">{centerLabel}</span>
+            </>
+          )}
         </div>
       </div>
       <ul className="grid w-full min-w-0 grid-cols-1 gap-x-5 gap-y-1.5 sm:grid-cols-2">
         {slices.map((s) => (
-          <li key={s.key} className="flex items-center gap-2.5 text-[13px]">
+          <li
+            key={s.key}
+            onMouseEnter={() => s.value > 0 && setActiveKey(s.key)}
+            onMouseLeave={() => setActiveKey(null)}
+            className={cx(
+              "-mx-1.5 flex items-center gap-2.5 rounded px-1.5 text-[13px] transition-colors",
+              active?.key === s.key && "bg-white/[0.04]",
+            )}
+          >
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} aria-hidden />
             <span className="min-w-0 flex-1 truncate text-slate-300">{s.label}</span>
             <span className="font-mono text-slate-200">{s.value}</span>
-            <span className="w-10 text-right font-mono text-[12px] text-slate-500">
-              {total ? Math.round((s.value / total) * 100) : 0}%
-            </span>
+            <span className="w-10 text-right font-mono text-[12px] text-slate-500">{pct(s.value)}%</span>
           </li>
         ))}
       </ul>
