@@ -613,23 +613,27 @@ export async function answerAgiClarification(
   }, { dualControl: true });
 }
 
+/**
+ * The session's findings as the backend reports them.
+ *
+ * A failed request throws rather than resolving to `[]`. The findings panes
+ * poll this, and an empty list on a dropped connection read as "the backend
+ * says there are no findings", so the pane was wiped until the API came back.
+ * Callers keep what they last showed when this rejects.
+ */
 export async function loadAgiFindings(sessionId: number): Promise<Array<Record<string, unknown>>> {
   if (isDemoMode()) return [];
-  try {
-    const res = await api.get<unknown>(`/agi/sessions/${sessionId}/findings`);
-    if (Array.isArray(res)) return res as Array<Record<string, unknown>>;
-    if (res && typeof res === "object") {
-      // Mirror the canonical list unwrapping used across the API (some builds
-      // wrap list payloads in items/data/results instead of findings).
-      const o = res as Record<string, unknown>;
-      for (const key of ["findings", "items", "data", "results", "rows"]) {
-        if (Array.isArray(o[key])) return o[key] as Array<Record<string, unknown>>;
-      }
+  const res = await api.get<unknown>(`/agi/sessions/${sessionId}/findings`);
+  if (Array.isArray(res)) return res as Array<Record<string, unknown>>;
+  if (res && typeof res === "object") {
+    // Mirror the canonical list unwrapping used across the API (some builds
+    // wrap list payloads in items/data/results instead of findings).
+    const o = res as Record<string, unknown>;
+    for (const key of ["findings", "items", "data", "results", "rows"]) {
+      if (Array.isArray(o[key])) return o[key] as Array<Record<string, unknown>>;
     }
-    return [];
-  } catch {
-    return [];
   }
+  return [];
 }
 
 /** Human verification layer: confirm or dismiss a finding (operator-gated). */

@@ -767,8 +767,11 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     try {
       await promoteAgiFinding(session.id, String(findingId));
       toast("success", "Promoted", "The finding is now in your risk register.");
-      const fs = await loadAgiFindings(session.id);
-      setDrawerFindings(Array.isArray(fs) ? fs : []);
+      // The promote succeeded; a failed refresh must not be reported as a
+      // failed promote, and must not clear the drawer.
+      void loadAgiFindings(session.id)
+        .then((fs) => setDrawerFindings(Array.isArray(fs) ? fs : []))
+        .catch(() => {});
     } catch (e) {
       toast("error", "Could not promote", e instanceof Error ? e.message : "");
     } finally {
