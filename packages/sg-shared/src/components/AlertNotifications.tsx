@@ -30,6 +30,62 @@ const SEV_META: Record<Severity, { label: string; chip: string; bar: string; ico
 
 const TOAST_MS = 3000;
 
+// ── Persisted notice state ────────────────────────────────────────────────────
+// The backend keeps no read/dismissed state for alert events or Pentest Agent
+// notifications, and every sign-in is a fresh page load. Held only in memory,
+// a notice the operator cleared came back on the next login — re-added to the
+// bell as unread, re-toasted, and a critical one took over the screen again.
+// localStorage outlives the session; it is per-origin, so each application
+// remembers its own. Keys pair the event type with the id because alert events
+// and agent notifications are separate tables whose ids can collide.
+const NOTICE_STATE_KEY = "phantix_notice_state";
+const NOTICE_STATE_CAP = 500;
+
+type NoticeBucket = "seen" | "read" | "dismissed";
+let noticeState: Record<NoticeBucket, Set<string>> | null = null;
+
+function noticeKey(n: { id: number; eventType: string }): string {
+  return `${n.eventType}:${n.id}`;
+}
+
+function loadNoticeState(): Record<NoticeBucket, Set<string>> {
+  if (noticeState) return noticeState;
+  let raw: Partial<Record<NoticeBucket, string[]>> = {};
+  try {
+    raw = JSON.parse(localStorage.getItem(NOTICE_STATE_KEY) || "{}") ?? {};
+  } catch {
+    /* unreadable or blocked storage — start empty */
+  }
+  const set = (v: unknown) => new Set(Array.isArray(v) ? v.map(String) : []);
+  noticeState = { seen: set(raw.seen), read: set(raw.read), dismissed: set(raw.dismissed) };
+  return noticeState;
+}
+
+function hasNotice(bucket: NoticeBucket, key: string): boolean {
+  return loadNoticeState()[bucket].has(key);
+}
+
+function rememberNotices(bucket: NoticeBucket, keys: string[]): void {
+  const state = loadNoticeState();
+  let changed = false;
+  for (const k of keys) {
+    if (state[bucket].has(k)) continue;
+    state[bucket].add(k);
+    changed = true;
+  }
+  if (!changed) return;
+  // Oldest first in insertion order, so the cap drops the least recent keys.
+  const trim = (s: Set<string>) => Array.from(s).slice(-NOTICE_STATE_CAP);
+  try {
+    localStorage.setItem(
+      NOTICE_STATE_KEY,
+      JSON.stringify({ seen: trim(state.seen), read: trim(state.read), dismissed: trim(state.dismissed) }),
+    );
+  } catch {
+    /* quota / private mode — the in-memory state still holds for this load */
+  }
+}
+
 type NotifyCtx = {
   inbox: InboxNotice[];
   unread: number;
@@ -37,7 +93,7 @@ type NotifyCtx = {
   setPanelOpen: (v: boolean | ((p: boolean) => boolean)) => void;
   push: (n: AlertNotice) => void;
   markAllRead: () => void;
-  dismissInbox: (id: number) => void;
+  dismissInbox: (notice: AlertNotice) => void;
 };
 
 const Ctx = createContext<NotifyCtx | null>(null);
@@ -47,15 +103,27 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [panelOpen, setPanelOpen] = useState(false);
 
   const push = useCallback((n: AlertNotice) => {
-    setInbox((prev) => (prev.some((x) => x.id === n.id) ? prev : [{ ...n, read: false }, ...prev].slice(0, 50)));
+    const key = noticeKey(n);
+    // Cleared by the operator in an earlier session: never comes back.
+    if (hasNotice("dismissed", key)) return;
+    setInbox((prev) =>
+      prev.some((x) => noticeKey(x) === key)
+        ? prev
+        : [{ ...n, read: hasNotice("read", key) }, ...prev].slice(0, 50),
+    );
   }, []);
 
   const markAllRead = useCallback(() => {
-    setInbox((prev) => prev.map((x) => ({ ...x, read: true })));
+    setInbox((prev) => {
+      rememberNotices("read", prev.map(noticeKey));
+      return prev.map((x) => ({ ...x, read: true }));
+    });
   }, []);
 
-  const dismissInbox = useCallback((id: number) => {
-    setInbox((prev) => prev.filter((x) => x.id !== id));
+  const dismissInbox = useCallback((notice: AlertNotice) => {
+    const key = noticeKey(notice);
+    rememberNotices("dismissed", [key]);
+    setInbox((prev) => prev.filter((x) => noticeKey(x) !== key));
   }, []);
 
   const unread = useMemo(() => inbox.filter((x) => !x.read).length, [inbox]);
@@ -118,7 +186,7 @@ export function NotificationBell() {
                 {inbox.map((n) => {
                   const meta = SEV_META[n.severity] ?? SEV_META.info;
                   return (
-                    <div key={n.id} className="flex items-start gap-2.5 border-b border-phantix-700/30 px-3.5 py-2.5 last:border-0">
+                    <div key={noticeKey(n)} className="flex items-start gap-2.5 border-b border-phantix-700/30 px-3.5 py-2.5 last:border-0">
                       <span className={cx("mt-0.5 h-2 w-2 shrink-0 rounded-full", meta.bar)} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
@@ -128,7 +196,7 @@ export function NotificationBell() {
                         <p className="mt-0.5 text-[12px] leading-4 text-slate-200">{n.title}</p>
                         {n.eventType && <p className="mt-0.5 font-mono text-[12px] text-slate-500">{n.eventType}</p>}
                       </div>
-                      <button onClick={() => dismissInbox(n.id)} className="rounded p-1 text-slate-500 hover:text-slate-200" aria-label="Dismiss">
+                      <button onClick={() => dismissInbox(n)} className="rounded p-1 text-slate-500 hover:text-slate-200" aria-label="Dismiss">
                         <X size={12} />
                       </button>
                     </div>
@@ -183,7 +251,7 @@ export default function AlertNotifications() {
   const dismissNotice = (id: number) => setStack((s) => s.filter((x) => x.id !== id));
 
   const dismissBlocking = () => {
-    if (blocking) seenRef.current.add(`${blocking.severity}:${blocking.id}`);
+    if (blocking) rememberNotices("seen", [noticeKey(blocking)]);
     setBlocking(null);
   };
 
@@ -204,14 +272,24 @@ export default function AlertNotifications() {
       const delivered = events.filter((e) => e.status !== "failed");
       if (!delivered.length) return;
       const sorted = [...delivered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      const fresh = sorted.filter((e) => !seenRef.current.has(`${e.severity}:${e.id}`));
-      for (const e of fresh) {
-        seenRef.current.add(`${e.severity}:${e.id}`);
+      for (const e of sorted) {
         const sev = (["critical", "high", "medium", "low", "info"].includes(e.severity) ? e.severity : "info") as Severity;
-        ingest({ id: e.id, severity: sev, title: e.title, eventType: e.event_type, createdAt: e.created_at });
+        const notice: AlertNotice = { id: e.id, severity: sev, title: e.title, eventType: e.event_type, createdAt: e.created_at };
+        const key = noticeKey(notice);
+        if (seenRef.current.has(key)) continue;
+        seenRef.current.add(key);
+        // Already surfaced in an earlier session (the seen set outlives a
+        // sign-out): back into the bell quietly — no toast, no takeover.
+        // `push` itself keeps a dismissed notice out and a read one read.
+        if (hasNotice("seen", key)) {
+          push(notice);
+          continue;
+        }
+        rememberNotices("seen", [key]);
+        ingest(notice);
       }
     } catch { /* transient */ }
-  }, [ingest]);
+  }, [ingest, push]);
 
   useEffect(() => {
     void check();
