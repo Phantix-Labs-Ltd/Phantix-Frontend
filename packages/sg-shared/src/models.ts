@@ -5,7 +5,7 @@
 // Selection persists server-side via PUT /api/v1/ai/settings
 // ({ preferred_model } for general, { pentest_model } for pentest).
 
-import { api } from "./api";
+import { api, isDemoMode } from "./api";
 
 export type AiSurface = "pentest" | "general";
 export type AiTier = "economy" | "balanced" | "enterprise";
@@ -109,6 +109,9 @@ function normalizeModel(raw: Record<string, unknown>): AiModel {
 
 /** Fetch + resolve the model catalog for one surface. Returns [] on any failure. */
 export async function loadModels(surface: AiSurface): Promise<AiSurfaceView> {
+  // The demo tenant has no model catalog; the picker falls back to the
+  // platform default, exactly as for an org that has not chosen a model.
+  if (isDemoMode()) return { models: [], selected: null, default: null };
   try {
     const payload = await api.get<ModelsPayload>("/ai/models");
     const empty: AiSurfaceView = { models: [], selected: null, default: null };

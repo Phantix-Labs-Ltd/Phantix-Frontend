@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Maximize2, Minimize2, Radar, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import AgiWorkspace from "./AgiWorkspace";
 import { ResizeHandle } from "./workbench";
+
+// The workspace (console, attack tree, terminal, Markdown) is most of the
+// Attack app's code. It still mounts right after load — a session keeps running
+// while the drawer is closed — but from its own chunk, not the first-paint one.
+const AgiWorkspace = React.lazy(() => import("./AgiWorkspace"));
 import { readPersistedAgiSession } from "../agi";
 import { useDragResize } from "../useDragResize";
 import { cx } from "../utils";
@@ -124,7 +128,9 @@ export default function AgiDrawer() {
           </div>
         </div>
         <div className="wb-pane min-h-0 flex-1 bg-phantix-950/95">
-          <AgiWorkspace variant={fullscreen ? "console" : "drawer"} />
+          <Suspense fallback={null}>
+            <AgiWorkspace variant={fullscreen ? "console" : "drawer"} />
+          </Suspense>
         </div>
       </aside>
     </>

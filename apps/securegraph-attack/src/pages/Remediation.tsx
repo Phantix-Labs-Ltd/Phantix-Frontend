@@ -13,7 +13,7 @@ import {
   Sparkles,
   Eye, ChevronRight } from "lucide-react";
 import { PageHeader, Card, Modal, SeverityBadge, VerificationBadge, EmptyState, PageSkeleton, ErrorState } from "@sg/ui";
-import { api } from "@sg/api";
+import { api, isDemoMode } from "@sg/api";
 import { useResource } from "@sg/useResource";
 import { cx, timeAgo } from "@sg/utils";
 import type { Severity, VerificationStatus } from "@sg/types";
@@ -279,7 +279,8 @@ function GuidanceModal({
 
 export default function Remediation() {
   const { data, loading, error, reload, setData } = useResource<RemediationFeed>(
-    () => api.get<RemediationFeed>("/scans/remediation"),
+    // The demo tenant has no scan backend; it shows the empty queue.
+    () => (isDemoMode() ? Promise.resolve(EMPTY) : api.get<RemediationFeed>("/scans/remediation")),
     EMPTY,
     "attack:remediation",
   );
@@ -338,7 +339,15 @@ export default function Remediation() {
   }
 
   if (loading && data.total === 0) return <PageSkeleton variant="list" rows={5} actions />;
-  if (error && data.total === 0) return <ErrorState title="Remediation" body={error} onRetry={reload} />;
+  if (error && data.total === 0) {
+    // Keep the page's own heading (and tab title) when the feed fails.
+    return (
+      <div className="space-y-5">
+        <PageHeader title="Remediation" description="Verified findings that are not yet retested and fixed." />
+        <ErrorState title="Remediation queue unavailable" body={error} onRetry={reload} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

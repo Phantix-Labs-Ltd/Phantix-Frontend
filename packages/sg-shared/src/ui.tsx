@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Loader2, ShieldCheck, Info, Globe, Building2, Server, ChevronDown, WifiOff, RefreshCw } from "lucide-react";
 import { cx, severityMeta, verificationMeta, statusColor, titleCase, impactLevelColor, categoryLabels, blastRadiusLabels, impactLevelRank } from "./utils";
 import type { Severity, VerificationStatus } from "./types";
+import { usePageTitle } from "./pageTitle";
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 export function SeverityBadge({ severity, className }: { severity: Severity; className?: string }) {
@@ -141,6 +142,7 @@ export function PageHeader({
   description?: string;
   actions?: React.ReactNode;
 }) {
+  usePageTitle(title);
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -763,7 +765,9 @@ export function ErrorState({
         {icon ?? <WifiOff size={22} />}
       </div>
       <h3 className="font-display text-base font-semibold text-slate-200">{title ?? "Server not responding"}</h3>
-      <p className="mt-1.5 max-w-md text-sm leading-6 text-slate-400">
+      {/* Error text can carry a long unbroken token (a URL, an id); let it wrap
+          instead of widening the page on a phone. */}
+      <p className="mt-1.5 max-w-md text-sm leading-6 text-slate-400 [overflow-wrap:anywhere]">
         {body ?? "We could not reach the SecureGraph API. Check your connection and retry — your session stays signed in."}
       </p>
       {onRetry && (

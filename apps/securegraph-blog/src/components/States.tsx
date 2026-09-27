@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -14,6 +14,29 @@ export function LoadingState() {
     <p className="state-note" role="status">
       Setting this week's issue…
     </p>
+  );
+}
+
+/** Any URL the Weekly does not have — a real 404 rather than the front page. */
+export function NotFoundPage() {
+  useEffect(() => {
+    document.title = "Page not found · The SecureGraph Weekly";
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex";
+    document.head.appendChild(meta);
+    return () => meta.remove();
+  }, []);
+  return (
+    <Shell>
+      <div className="state-note" role="alert">
+        <h1 className="state-title">There's nothing at this address.</h1>
+        <p className="state-hint">
+          The link may be old or mistyped.{" "}
+          <Link className="md-a" to="/">Read this week's issue</Link>
+        </p>
+      </div>
+    </Shell>
   );
 }
 
@@ -34,9 +57,8 @@ export function ErrorState({ message, notFound }: { message: string | null; notF
       <p className="state-title">This week's issue didn't arrive.</p>
       {message ? <p className="state-detail">{message}</p> : null}
       <p className="state-hint">
-        Refresh in a moment. If it still won't load, the Weekly's content
-        service is unreachable — or unset VITE_BLOG_API_URL to read the bundled
-        demo issue.
+        Refresh in a moment. If it still won't load, we're having trouble on
+        our end — please try again shortly.
       </p>
     </div>
   );

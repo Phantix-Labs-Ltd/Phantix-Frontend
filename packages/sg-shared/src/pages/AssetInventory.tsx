@@ -14,7 +14,8 @@ import { useResource } from "@sg/useResource";
 import { timeAgo, titleCase, cx, severityMeta } from "@sg/utils";
 import { useStore } from "@sg/store";
 import { useSseStream } from "@sg/useSse";
-import { api, tokens, API_BASE, ApiError } from "@sg/api";
+import { api, tokens, API_BASE, ApiError, isDemoMode } from "@sg/api";
+import { loadGithubInstallation } from "@sg/codeOps";
 import { classifyAsset, createAssetTag, deleteAssetTag, TAG_COLORS, type AssetClassification } from "@sg/assetTags";
 import { sanitizeSingleLine, validateUploadFile } from "@sg/uploadValidation";
 import type { Asset, AssetIntelligence, DiscoveryJob } from "@sg/types";
@@ -424,6 +425,13 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
 
 
   const loadGithubStatus = async () => {
+    // The demo tenant has its own (fixture) GitHub App and no PAT; asking the
+    // real backend from the demo only logs 401s.
+    if (isDemoMode()) {
+      setGithubStatus(null);
+      setGithubAppStatus(await loadGithubInstallation());
+      return;
+    }
     // PAT integration(s) — backend returns a list.
     try {
       const list = await api.get<{ github_login?: string; token_configured?: boolean }[] | { items: { github_login?: string; token_configured?: boolean }[] }>("/assets/integrations/github");

@@ -2,9 +2,10 @@ import React, { Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import { ApplicationShell } from "@sg/shell/ApplicationShell";
 import type { ApplicationKey } from "@sg/shell/types";
-import Docs from "@sg/pages/Docs";
-import DocPage from "@sg/pages/DocPage";
-import DocsChrome from "@sg/pages/DocsChrome";
+// Docs load when visited, not with the first paint.
+const Docs = React.lazy(() => import("@sg/pages/Docs"));
+const DocPage = React.lazy(() => import("@sg/pages/DocPage"));
+const DocsChrome = React.lazy(() => import("@sg/pages/DocsChrome"));
 import { StoreProvider, ToastViewport } from "@sg/store";
 import DualControlOverlay from "@sg/components/DualControlOverlay";
 import { BrandLoader } from "@sg/components/BrandLoader";

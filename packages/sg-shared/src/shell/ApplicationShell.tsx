@@ -32,7 +32,7 @@ import { BrandLoader } from "../components/BrandLoader";
 import { PageSkeleton } from "../ui";
 import { NotificationBell, NotificationProvider } from "../components/AlertNotifications";
 import AgiNotifications from "../components/AgiNotifications";
-import AgentAssistant, { toggleAssistant } from "../components/AgentAssistant";
+import { toggleAssistant } from "../components/assistantEvents";
 import OperationsWidget from "../components/OperationsWidget";
 import { OperationsProvider } from "../operations";
 import SandboxBanner from "../components/SandboxBanner";
@@ -46,12 +46,18 @@ import { apiGet, appToken, clearStoredSession, setApplication } from "./api";
 import { isDemoFlagSet, setActiveApplication } from "../api";
 import { consumeHandoff, handoffUrl, signOutEverywhere } from "./session";
 import { IS_DEV_HOSTS } from "../config";
+import { useNoIndex } from "../pageTitle";
 import {
   APPLICATION_LABEL,
   APPLICATION_ORDER,
   type ApplicationKey,
   type NavSection,
 } from "./types";
+
+// The assistant panel (Markdown renderer, animations, chat) stays off the
+// first-paint bundle; the header button works before it loads (see
+// assistantEvents).
+const AgentAssistant = React.lazy(() => import("../components/AgentAssistant"));
 
 /** One launcher card as the backend reports it. */
 interface ApplicationCard {
@@ -227,6 +233,8 @@ export function ApplicationShell({
   // the shell's own client and the shared @sg/api client used by pages.
   setApplication(application);
   setActiveApplication(application);
+  // Everything inside the shell is behind sign-in; keep it out of search.
+  useNoIndex();
 
   useEffect(() => {
     let alive = true;
@@ -931,7 +939,9 @@ export function ApplicationShell({
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} index={searchIndex} />
 
       {/* SecureGraph Agent panel — opened from the header's AI Assistant button. */}
-      <AgentAssistant />
+      <Suspense fallback={null}>
+        <AgentAssistant />
+      </Suspense>
 
       {/* Running operations tray — pages start long jobs through useOperations,
           so the provider has to wrap the shell or they throw on mount. */}

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ShieldCheck, Download, Send, Loader2, FileText } from "lucide-react";
-import { api } from "@sg/api";
+import { api, isDemoMode } from "@sg/api";
 import { sanitizeMultiline } from "@sg/uploadValidation";
 import { useStore } from "@sg/store";
 import { PageHeader, Card, CardHeader, EmptyState, DetailSkeleton, CardListSkeleton } from "@sg/ui";
@@ -77,7 +77,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 }
 
 export default function Privacy() {
-  const { toast } = useStore();
+  const { toast, session } = useStore();
   const [notice, setNotice] = useState<PrivacyNotice | null>(null);
   const [requests, setRequests] = useState<DsrRequest[] | null>(null);
   const [loadingNotice, setLoadingNotice] = useState(true);
@@ -87,9 +87,16 @@ export default function Privacy() {
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // This page is public. A visitor who is not signed in (or is in the demo)
+  // has no requests on file, and asking only logs a 401.
+  const signedIn = Boolean(session?.authenticated) && !isDemoMode();
   const refreshList = useCallback(() => {
+    if (!signedIn) {
+      setRequests([]);
+      return;
+    }
     api.get<DsrRequest[]>("/organizations/me/data-subject-request").then(setRequests).catch(() => setRequests([]));
-  }, []);
+  }, [signedIn]);
 
   useEffect(() => {
     api
