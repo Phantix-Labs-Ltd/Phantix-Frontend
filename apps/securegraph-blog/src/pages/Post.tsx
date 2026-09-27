@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Markdown } from "../components/Markdown";
 import { ErrorState, LoadingState, Shell } from "../components/States";
@@ -13,6 +13,12 @@ export function Post() {
   const { issue } = useIssue();
   const { post, loading, error } = usePost(slug);
   useReadTracking(slug);
+  // Each essay names its own tab (and bookmark / share title).
+  useEffect(() => {
+    if (!post?.title) return;
+    document.title = `${post.title} · The SecureGraph Weekly`;
+    return () => { document.title = "The SecureGraph Weekly"; };
+  }, [post?.title]);
 
   if (loading) return <Shell><LoadingState /></Shell>;
   if (error || !post || !issue) return <Shell><ErrorState message={error} notFound={/not found|404/i.test(error ?? "")} /></Shell>;

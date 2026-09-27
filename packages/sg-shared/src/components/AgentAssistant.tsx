@@ -13,6 +13,12 @@ import flowData from "../animations/ai-flow.json";
 import { tryNavigationAnswer, helpOverview } from "../navigationGuide";
 import { useChatSend } from "../useChatSend";
 import { useStickToBottom } from "../useStickToBottom";
+import {
+  ASSISTANT_OPEN_EVENT,
+  ASSISTANT_TOGGLE_EVENT,
+  claimPendingAssistantRequest,
+  releaseAssistantPanel,
+} from "./assistantEvents";
 
 type Msg = { role: "user" | "agent"; text: string; thinking?: string; nav?: { route: string; label: string; also?: { route: string; label: string }[] } };
 
@@ -40,19 +46,7 @@ function loadChat(email: string): Msg[] {
   return [{ role: "agent", text: DEFAULT_GREETING }];
 }
 
-/** Event any surface can fire to open the assistant panel. */
-export const ASSISTANT_OPEN_EVENT = "sg:assistant:open";
-
-export const ASSISTANT_TOGGLE_EVENT = "sg:assistant:toggle";
-
-/** Open the assistant panel, optionally straight into support. */
-export function openAssistant(mode?: "agent" | "support"): void {
-  window.dispatchEvent(new CustomEvent(ASSISTANT_OPEN_EVENT, { detail: { mode } }));
-}
-
-export function toggleAssistant(): void {
-  window.dispatchEvent(new CustomEvent(ASSISTANT_TOGGLE_EVENT));
-}
+export { ASSISTANT_OPEN_EVENT, ASSISTANT_TOGGLE_EVENT, openAssistant, toggleAssistant } from "./assistantEvents";
 
 export default function AgentAssistant() {
   const { toast, requireDualControl, session } = useStore();
@@ -112,7 +106,16 @@ export default function AgentAssistant() {
     const toggleFn = () => setOpen((v) => !v);
     window.addEventListener(ASSISTANT_OPEN_EVENT, openFn);
     window.addEventListener(ASSISTANT_TOGGLE_EVENT, toggleFn);
+    // The panel is lazy-loaded; replay a request made before it mounted.
+    const early = claimPendingAssistantRequest();
+    if (early?.kind === "open") {
+      if (early.mode) setMode(early.mode);
+      setOpen(true);
+    } else if (early?.kind === "toggle") {
+      setOpen((v) => !v);
+    }
     return () => {
+      releaseAssistantPanel();
       window.removeEventListener(ASSISTANT_OPEN_EVENT, openFn);
       window.removeEventListener(ASSISTANT_TOGGLE_EVENT, toggleFn);
     };

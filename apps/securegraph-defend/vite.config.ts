@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { siteFiles } from "../../packages/sg-shared/vite/siteFiles";
 
 // SecureGraph application shell. Browser config is same-origin; the dev server
 // proxies /api upstream. Shared code lives in ../../packages/sg-shared.
@@ -10,7 +11,10 @@ export default defineConfig(({ mode }) => {
     env.API_PROXY_TARGET || process.env.API_PROXY_TARGET || "https://staging.phantix.site";
   const port = Number(env.DEV_PORT || process.env.DEV_PORT || 5176);
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      siteFiles({ siteUrl: "https://defend.phantixlabs.com", allow: [], entryBudgetKB: 600 }),
+    ],
     publicDir: path.resolve(__dirname, "../../public"),
     resolve: {
       // One React/router instance across app + packages/sg-shared.
@@ -30,7 +34,10 @@ export default defineConfig(({ mode }) => {
       proxy: { "/api": { target: apiTarget, changeOrigin: true, secure: true, ws: true } },
     },
     build: {
-      chunkSizeWarningLimit: 1200,
+      // Lazy chunks for heavy libraries (Mermaid and its parser, Cytoscape) are
+      // ~700 KB and load only on the pages that draw diagrams. The first-paint
+      // bundle has its own, stricter budget (siteFiles, in plugins above).
+      chunkSizeWarningLimit: 700,
       rollupOptions: {
         output: {
           manualChunks: {

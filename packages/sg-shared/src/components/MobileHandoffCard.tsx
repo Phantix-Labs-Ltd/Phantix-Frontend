@@ -3,6 +3,7 @@ import { Loader2, Send, Smartphone, ShieldCheck, AlertTriangle } from "lucide-re
 import { Card } from "../ui";
 import { api, publicErrorMessage } from "../api";
 import { useStore } from "../store";
+import { listProjects } from "../productContext";
 import { cx } from "../utils";
 
 // ── Mobile endpoints → authorized scope (W6 NS-08) ───────────────────────────
@@ -19,8 +20,8 @@ export default function MobileHandoffCard() {
   const [result, setResult] = useState<any>(null);
 
   useEffect(() => {
-    void api
-      .get<any>("/context/projects")
+    // listProjects serves the demo tenant its fixture projects.
+    void listProjects(false)
       .then((r) => {
         const items = Array.isArray(r) ? r : (r?.items ?? []);
         setProjects(items);

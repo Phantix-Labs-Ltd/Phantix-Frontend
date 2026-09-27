@@ -10,17 +10,22 @@ import { coreNav } from "./nav";
 import Home from "./pages/Home";
 import Login from "@sg/pages/Login";
 import ChooseApp from "@sg/pages/ChooseApp";
-import DeviceConfirm from "@sg/pages/DeviceConfirm";
-import GithubCallback from "./pages/GithubCallback";
-import IntegrationOAuthCallback from "./pages/IntegrationOAuthCallback";
-import Cookies from "./pages/Cookies";
-import Privacy from "./pages/Privacy";
-import SandboxApplyPublic from "./pages/SandboxApplyPublic";
-import PasswordResetRequest from "@sg/pages/auth/PasswordResetRequest";
-import PasswordResetComplete from "@sg/pages/auth/PasswordResetComplete";
 import PublicChrome from "./components/PublicChrome";
-import Docs from "@sg/pages/Docs";
-import DocPage from "@sg/pages/DocPage";
+import { useCanonicalUrl } from "@sg/pageTitle";
+
+// Only the entry points (home, sign-in, the application picker) ship in the
+// first-paint bundle. The docs (which inline every how-to guide), legal pages,
+// password reset and the OAuth callbacks load when they are visited.
+const DeviceConfirm = React.lazy(() => import("@sg/pages/DeviceConfirm"));
+const GithubCallback = React.lazy(() => import("./pages/GithubCallback"));
+const IntegrationOAuthCallback = React.lazy(() => import("./pages/IntegrationOAuthCallback"));
+const Cookies = React.lazy(() => import("./pages/Cookies"));
+const Privacy = React.lazy(() => import("./pages/Privacy"));
+const SandboxApplyPublic = React.lazy(() => import("./pages/SandboxApplyPublic"));
+const PasswordResetRequest = React.lazy(() => import("@sg/pages/auth/PasswordResetRequest"));
+const PasswordResetComplete = React.lazy(() => import("@sg/pages/auth/PasswordResetComplete"));
+const Docs = React.lazy(() => import("@sg/pages/Docs"));
+const DocPage = React.lazy(() => import("@sg/pages/DocPage"));
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Assets = React.lazy(() => import("./pages/Assets"));
@@ -61,6 +66,7 @@ function RequireAuthorizer({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useCanonicalUrl("https://app.phantixlabs.com");
   return (
     <StoreProvider>
       <Suspense fallback={<BrandLoader label="Core" message="Loading" />}>

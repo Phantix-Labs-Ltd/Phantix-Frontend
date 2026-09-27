@@ -617,6 +617,11 @@ p {
 
   .th {
     @apply h-10 px-3 py-2 text-left align-middle text-[13px] font-semibold text-slate-300;
+    /* Contain absolutely-positioned children — chiefly the sr-only header labels
+       ("Actions", "Open"). Without a positioned ancestor they sit at their static
+       spot past the table edge, outside the scroll container, and widen the whole
+       page on a phone. */
+    position: relative;
     /* Visible row dividers: the header rule is the strongest line, each row
        gets its own hairline, so a dense list scans like a spreadsheet. */
     border-bottom: 1px solid rgb(var(--border-strong) / 0.7);

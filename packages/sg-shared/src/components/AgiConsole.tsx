@@ -492,8 +492,12 @@ export default function AgiConsole({
     if (!findingId) return false;
     const ok = await decideAgiFindingVerification(session.id, findingId, verdict);
     if (ok) {
-      const fs = await loadAgiFindings(session.id);
-      setLiveFindings(Array.isArray(fs) ? fs : []);
+      // The verdict landed; a failed refresh just leaves the current list up
+      // until the next poll.
+      try {
+        const fs = await loadAgiFindings(session.id);
+        setLiveFindings(Array.isArray(fs) ? fs : []);
+      } catch { /* keep the list already shown */ }
     }
     return ok;
   };

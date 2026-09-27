@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import lottie, { AnimationItem } from "lottie-web/build/player/lottie_svg";
+import type { AnimationItem } from "lottie-web/build/player/lottie_svg";
 
 interface LottiePlayerProps {
   /** Inline Lottie JSON. */
@@ -36,24 +36,31 @@ export default function LottiePlayer({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const anim = lottie.loadAnimation({
-      container: el,
-      renderer: "svg",
-      loop,
-      autoplay,
-      animationData: src ? undefined : (animationData as any),
-      path: src,
+    let cancelled = false;
+    // The player (~240 KB) is decorative, so it loads with the first animation
+    // that mounts instead of riding in every application's first-paint bundle.
+    void import("lottie-web/build/player/lottie_svg").then(({ default: lottie }) => {
+      if (cancelled) return;
+      const anim = lottie.loadAnimation({
+        container: el,
+        renderer: "svg",
+        loop,
+        autoplay,
+        animationData: src ? undefined : (animationData as any),
+        path: src,
+      });
+      anim.setSpeed(speed);
+      if (segment && typeof anim.playSegments === "function") {
+        anim.playSegments(segment, true);
+      }
+      if (onComplete) {
+        anim.addEventListener("complete", () => onComplete());
+      }
+      animRef.current = anim;
     });
-    anim.setSpeed(speed);
-    if (segment && typeof anim.playSegments === "function") {
-      anim.playSegments(segment, true);
-    }
-    if (onComplete) {
-      anim.addEventListener("complete", () => onComplete());
-    }
-    animRef.current = anim;
     return () => {
-      anim.destroy();
+      cancelled = true;
+      animRef.current?.destroy();
       animRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
