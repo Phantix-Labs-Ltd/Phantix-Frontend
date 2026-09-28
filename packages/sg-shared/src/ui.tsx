@@ -1,7 +1,8 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Loader2, ShieldCheck, Info, Globe, Building2, Server, ChevronDown, WifiOff, RefreshCw } from "lucide-react";
+import { X, Loader2, ShieldCheck, Info, Globe, Building2, Server, ChevronDown, WifiOff, RefreshCw, MessageSquareWarning } from "lucide-react";
 import { cx, severityMeta, verificationMeta, statusColor, titleCase, impactLevelColor, categoryLabels, blastRadiusLabels, impactLevelRank } from "./utils";
+import { openFeedbackReporter } from "./feedback";
 import type { Severity, VerificationStatus } from "./types";
 import { usePageTitle } from "./pageTitle";
 
@@ -775,6 +776,21 @@ export function ErrorState({
           <RefreshCw size={13} className="mr-1.5 inline" /> Retry
         </button>
       )}
+      {/* The failure is right in front of the operator — let them say so without
+          leaving the page. Filed against the route's service by the reporter. */}
+      <button
+        onClick={() =>
+          openFeedbackReporter({
+            category: "error",
+            severity: "high",
+            message: title ?? "Server not responding",
+            context: { error: body ?? "We could not reach the SecureGraph API." },
+          })
+        }
+        className={cx("btn-ghost !py-2 text-xs", onRetry ? "mt-2" : "mt-5")}
+      >
+        <MessageSquareWarning size={13} className="mr-1.5 inline" /> Report this
+      </button>
     </div>
   );
 }

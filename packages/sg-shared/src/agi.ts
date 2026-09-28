@@ -513,6 +513,8 @@ export type AgiSessionStartOpts = {
   include_org_assets?: boolean;
   preapprove_lab_auth?: boolean;
   confirm_environment?: string;
+  /** One-click capability confirmation (default true). False → oversight advisory-only. */
+  confirm_capabilities?: boolean;
   credentials?: { login_url: string; username: string; password: string; label?: string };
   credential_accounts?: Array<{ login_url: string; username: string; password: string; label?: string }>;
 };
@@ -534,6 +536,7 @@ export async function startAgiSession(
     confirm_environment: opts.confirm_environment ?? "staging",
   };
   if (opts.preapprove_lab_auth != null) body.preapprove_lab_auth = opts.preapprove_lab_auth;
+  body.confirm_capabilities = opts.confirm_capabilities ?? true;
   if (opts.credentials) body.credentials = opts.credentials;
   if (opts.credential_accounts?.length) body.credential_accounts = opts.credential_accounts;
   let s: AgiSession;
@@ -561,6 +564,100 @@ export async function startAgiSession(
   const normalized = normalizeAgiSession(s);
   persistAgiSession(normalized);
   return normalized;
+}
+
+// ── Capability confirmation (one click at session start) ────────────────────
+// Mirrors agi/capabilities.py. The operator confirms the whole set with the
+// start action; the backend records it and the runner enforces it.
+
+export interface AgiCapabilityGuardrail {
+  id: string;
+  detail: string;
+}
+
+export interface AgiCapabilityRow {
+  id: string;
+  group: string;
+  label: string;
+  description: string;
+  mechanism: string;
+  action_class: string;
+  confirmation: string;
+  guardrails: AgiCapabilityGuardrail[];
+  state: "ready" | "pending_confirmation" | "blocked";
+  blocked_reason?: string | null;
+}
+
+export interface AgiCapabilityAttestation {
+  schema: string;
+  capabilities: AgiCapabilityRow[];
+  pending_confirmation: string[];
+  blocked: string[];
+  ready: string[];
+  all_confirmed: boolean;
+  confirmed?: string[];
+  enforced?: boolean;
+}
+
+const DEMO_CAPABILITIES: AgiCapabilityRow[] = [
+  ["network.egress", "Talk to the internet / targets", "read", "In-scope HTTP/DNS/ports over the sandbox network"],
+  ["tools.invoke", "Call security tools", "read", "Named scanners baked into the sandbox image"],
+  ["process.execute", "Execute subprocesses / shell", "read", "Container-only shell + background jobs"],
+  ["packages.download", "Download / install packages", "tool_install", "Container-only package install"],
+  ["subtasks.spawn", "Spin up subtasks", "read", "Subagents and decomposable jobs"],
+  ["gui.computer", "Use a browser / computer GUI", "read", "Headless Chromium rendering + screenshots"],
+  ["files.write", "Write files / exploit scripts", "read", "Artifacts under /sandbox/out"],
+  ["proxy.intercept", "Intercept traffic (proxy)", "state_changing", "Burp / mitmproxy capture"],
+  ["credentials.use", "Use test credentials / auth", "state_changing", "Provisioned test principals"],
+  ["engine.call", "Call product engines", "read", "Read-only engine ops"],
+].map(([id, label, action_class, description], i) => ({
+  id,
+  group: i < 5 ? "Reach" : i === 5 ? "Reach" : "Orchestration",
+  label,
+  description,
+  mechanism: "sandbox container (demo)",
+  action_class,
+  confirmation: "operator",
+  guardrails: [{ id: "scope_guard", detail: "target allowlist checked before execution" }],
+  state: id === "credentials.use" ? "blocked" : "pending_confirmation",
+  blocked_reason: id === "credentials.use" ? "No test account configured (demo)." : null,
+}));
+
+/** Pre-start checklist: what the agent could do, and the guardrails that bound it. */
+export async function loadEngagementCapabilities(
+  engagementId: number,
+): Promise<AgiCapabilityAttestation> {
+  if (isDemoMode()) {
+    await delay(200);
+    return {
+      schema: "securegraph.agi.capabilities.v1",
+      capabilities: DEMO_CAPABILITIES,
+      pending_confirmation: DEMO_CAPABILITIES.filter((c) => c.state === "pending_confirmation").map((c) => c.id),
+      blocked: DEMO_CAPABILITIES.filter((c) => c.state === "blocked").map((c) => c.id),
+      ready: [],
+      all_confirmed: false,
+    };
+  }
+  return api.get<AgiCapabilityAttestation>(`/agi/engagements/${engagementId}/capabilities`);
+}
+
+/** Attestation + what a running/prepared session has already confirmed. */
+export async function loadSessionCapabilities(sessionId: number): Promise<AgiCapabilityAttestation> {
+  if (isDemoMode()) return loadEngagementCapabilities(0);
+  return api.get<AgiCapabilityAttestation>(`/agi/sessions/${sessionId}/capabilities`);
+}
+
+/** Confirm capabilities after start (empty list = confirm all available). */
+export async function confirmSessionCapabilities(
+  sessionId: number,
+  capabilities: string[] = [],
+): Promise<AgiCapabilityAttestation> {
+  if (isDemoMode()) return loadEngagementCapabilities(0);
+  return api.post<AgiCapabilityAttestation>(
+    `/agi/sessions/${sessionId}/capabilities/confirm`,
+    { capabilities, confirm_all: capabilities.length === 0 },
+    { dualControl: true },
+  );
 }
 
 export async function agiChat(sessionId: number, message: string): Promise<AgiChatResponse> {

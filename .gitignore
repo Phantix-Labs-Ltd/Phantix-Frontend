@@ -26,3 +26,5 @@ session.txt
 e2e-test-prompt.txt
 .agents/
 brag-output/
+brag-output2/
+extracted_text.md

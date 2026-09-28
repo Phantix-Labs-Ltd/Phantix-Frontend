@@ -6,11 +6,12 @@ import {
 import { EmptyState, SeverityBadge, StatusBadge } from "../ui";
 import { Pagination, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS as LIST_PAGE_SIZES } from "./Pagination";
 import { cx, timeAgo, titleCase } from "../utils";
+import { assetPort, assetValueWithoutPort } from "../assetChain";
 import type { Asset } from "../types";
 
 export type ListAsset = Asset & { discoveryStatus?: string; discoveryJobId?: number };
 
-type SortKey = "asset" | "type" | "risk" | "criticality" | "verified" | "last_seen";
+type SortKey = "asset" | "type" | "port" | "risk" | "criticality" | "verified" | "last_seen";
 type SortDir = "asc" | "desc";
 
 const CRIT_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
@@ -28,6 +29,7 @@ function riskRank(a: Asset): number {
 const SORTERS: Record<SortKey, (a: Asset, b: Asset) => number> = {
   asset: (a, b) => a.value.localeCompare(b.value, undefined, { numeric: true, sensitivity: "base" }),
   type: (a, b) => a.asset_type.localeCompare(b.asset_type) || a.value.localeCompare(b.value),
+  port: (a, b) => Number(assetPort(a)?.port ?? -1) - Number(assetPort(b)?.port ?? -1) || a.value.localeCompare(b.value, undefined, { numeric: true }),
   risk: (a, b) => riskRank(a) - riskRank(b),
   criticality: (a, b) => (CRIT_RANK[a.criticality] ?? 0) - (CRIT_RANK[b.criticality] ?? 0),
   verified: (a, b) => ["unverified", "inherited", "verified"].indexOf(verificationOf(a)) - ["unverified", "inherited", "verified"].indexOf(verificationOf(b)),
@@ -38,6 +40,7 @@ type Column = { key: SortKey | "parent" | "tags" | "source"; label: string; clas
 const COLUMNS: Column[] = [
   { key: "asset", label: "Asset", sortable: true },
   { key: "type", label: "Type", sortable: true },
+  { key: "port", label: "Port", sortable: true },
   { key: "parent", label: "Parent", className: "hidden 2xl:table-cell" },
   { key: "risk", label: "Risk", sortable: true },
   { key: "criticality", label: "Criticality", className: "hidden lg:table-cell", sortable: true },
@@ -97,6 +100,18 @@ function Highlight({ text, term }: { text: string; term: string }) {
   }
   parts.push(text.slice(i));
   return <>{parts}</>;
+}
+
+/** The port an asset listens on, lifted out of the asset name ("—" when none). */
+function PortCell({ a }: { a: Asset }) {
+  const p = assetPort(a);
+  if (!p) return <Dash />;
+  return (
+    <span className="whitespace-nowrap font-mono text-[13px] text-slate-300">
+      {p.port}
+      {p.protocol && <span className="text-slate-500">/{p.protocol}</span>}
+    </span>
+  );
 }
 
 function RiskCell({ a }: { a: Asset }) {
@@ -433,13 +448,14 @@ export default function AssetListView({
                 <button type="button" onClick={() => onSelect(a)} className="min-w-0 flex-1 text-left">
                   <span className="flex items-center gap-2">
                     <span className="text-phantix-300">{typeIcon[a.asset_type] ?? <Boxes size={15} />}</span>
-                    <span className="truncate"><AssetValue value={a.value} term={q} /></span>
+                    <span className="truncate"><AssetValue value={assetValueWithoutPort(a)} term={q} /></span>
                   </span>
                   {a.parent_asset_id != null && breadcrumb(a) && (
                     <span className="mt-0.5 block truncate text-[12px] text-slate-500">in {breadcrumb(a)}</span>
                   )}
                   <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="text-xs text-slate-400">{titleCase(a.asset_type)}</span>
+                    <PortCell a={a} />
                     <RiskCell a={a} />
                     <OwnershipCell a={a} />
                     <span className="text-xs text-slate-500">{timeAgo(a.last_seen_at)}</span>
@@ -519,12 +535,13 @@ export default function AssetListView({
                           {typeIcon[a.asset_type] ?? <Boxes size={15} />}
                         </span>
                         <span className="truncate" title={a.name && a.name !== a.value ? `${a.value} — ${a.name}` : a.value}>
-                          <AssetValue value={a.value} term={q} />
+                          <AssetValue value={assetValueWithoutPort(a)} term={q} />
                         </span>
                         <DiscoveryDot status={a.discoveryStatus} />
                       </div>
                     </td>
                     <td className="td whitespace-nowrap text-slate-400">{titleCase(a.asset_type)}</td>
+                    <td className="td"><PortCell a={a} /></td>
                     <td className="td hidden max-w-[14rem] 2xl:table-cell">
                       {a.parent_asset_id != null && breadcrumb(a) ? (
                         <span className="block truncate text-[13px] text-slate-400" title={breadcrumb(a)}>{breadcrumb(a)}</span>
