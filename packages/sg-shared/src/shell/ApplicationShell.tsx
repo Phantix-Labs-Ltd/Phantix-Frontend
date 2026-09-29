@@ -17,6 +17,7 @@ import {
   Lock,
   LogOut,
   Menu,
+  MessageSquareWarning,
   Search,
   ShieldCheck,
   Sparkles,
@@ -34,6 +35,8 @@ import { NotificationBell, NotificationProvider } from "../components/AlertNotif
 import AgiNotifications from "../components/AgiNotifications";
 import { toggleAssistant } from "../components/assistantEvents";
 import OperationsWidget from "../components/OperationsWidget";
+import FeedbackReporter from "../components/FeedbackReporter";
+import { openFeedbackReporter } from "../feedback";
 import { OperationsProvider } from "../operations";
 import SandboxBanner from "../components/SandboxBanner";
 import CookieConsent from "../components/CookieConsent";
@@ -704,6 +707,14 @@ export function ApplicationShell({
                 </CoreLink>
               )}
               <ThemeToggle />
+              <button
+                onClick={() => openFeedbackReporter()}
+                title="Report an issue"
+                aria-label="Report an issue"
+                className="rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
+              >
+                <MessageSquareWarning size={16} />
+              </button>
               <NotificationBell />
               <span
                 className={`chip hidden whitespace-nowrap xl:inline-flex ${
@@ -820,6 +831,15 @@ export function ApplicationShell({
                         >
                           <LifeBuoy size={15} /> Support
                         </CoreLink>
+                        <button
+                          onClick={() => {
+                            setUserMenu(false);
+                            openFeedbackReporter();
+                          }}
+                          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-phantix-800"
+                        >
+                          <MessageSquareWarning size={15} /> Report an issue
+                        </button>
                         <button
                           onClick={() => {
                             setUserMenu(false);
@@ -946,6 +966,10 @@ export function ApplicationShell({
       {/* Running operations tray — pages start long jobs through useOperations,
           so the provider has to wrap the shell or they throw on mount. */}
       <OperationsWidget />
+
+      {/* Service feedback — one dialog, openable from any page or error state
+          (see openFeedbackReporter). Filed against the route's service. */}
+      <FeedbackReporter application={application} />
 
       {/* Long-running Pentest Agent: durable inbox into the bell + the global
           approval popup, wherever the operator is in the app. */}

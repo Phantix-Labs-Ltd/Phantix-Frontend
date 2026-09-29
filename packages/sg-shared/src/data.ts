@@ -41,6 +41,10 @@ import type {
   PentestScopePattern,
   PentestScopeRead,
   PentestScopeList,
+  ExternalPentestFindingList,
+  ExternalPentestFindingRow,
+  ExternalPentestIntakeRequest,
+  ExternalPentestIntakeResult,
   PendingAction,
   PrioritizedAsset,
   RelationshipGraph,
@@ -2809,6 +2813,30 @@ export async function approvePentestScope(id: number): Promise<PentestScopeRead>
 export async function downloadPentestDoc(id: number, document: "scope" | "roe", format: "pdf" | "docx" | "markdown"): Promise<Blob> {
   if (isDemoMode()) { await delay(250); return new Blob([`# ${document} (${format}) demo content`], { type: format === "pdf" ? "text/markdown" : "text/plain" }); }
   return api.download(`/pentest-scope/${id}/download?document=${document}&format=${format}`);
+}
+
+// ── Human / external-pentest findings intake ─────────────────────────────────
+// POST /pentest-scope/findings/intake imports a human result set; the backend
+// stores it, the agent verifier adjudicates it, and it lands beside engine
+// findings in the canonical assessment store + tracker. GET lists what was
+// imported. See app/engines/reporting_engine/services/external_pentest_intake.py.
+
+export async function loadExternalPentestFindings(meta?: LoadMeta): Promise<ExternalPentestFindingList> {
+  if (isDemoMode()) { await delay(160); return { items: [], total: 0 }; }
+  const raw = await api.get<unknown>("/pentest-scope/findings?limit=200");
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const items = Array.isArray(o.items) ? (o.items as ExternalPentestFindingRow[]) : Array.isArray(raw) ? (raw as ExternalPentestFindingRow[]) : [];
+  return { items, total: Number(o.total ?? items.length) };
+}
+
+export async function intakeExternalPentestFindings(
+  body: ExternalPentestIntakeRequest,
+): Promise<ExternalPentestIntakeResult> {
+  if (isDemoMode()) {
+    await delay(400);
+    return { ok: true, source: "external_pentest", imported: body.findings.length, verified: 0, finding_ids: [] };
+  }
+  return api.post<ExternalPentestIntakeResult>("/pentest-scope/findings/intake", body);
 }
 
 // ── Orchestration: Cloud connector secret display (once) + webhook copy ──────

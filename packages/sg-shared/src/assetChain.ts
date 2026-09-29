@@ -65,6 +65,42 @@ export function chainLabel(asset: Pick<Asset, "asset_type" | "value">): string {
   return asset.value;
 }
 
+/** The port an asset's value carries, when it has one.
+ *
+ * A discovered port service is stored as ``host:port/proto`` (metadata also
+ * carries ``port``/``protocol``), so the port can be lifted out of the asset
+ * name and given its own column. Returns ``null`` for assets with no port.
+ */
+export function assetPort(
+  asset: Pick<Asset, "asset_type" | "value" | "metadata">,
+): { port: string; protocol: string } | null {
+  const md = (asset.metadata ?? {}) as Record<string, unknown>;
+  const t = (asset.asset_type || "").toLowerCase();
+  const value = (asset.value || "").trim();
+  let port = md.port != null ? String(md.port).trim() : "";
+  let protocol = String(md.protocol ?? md.proto ?? "").trim().toLowerCase();
+  if (!port && t === "port_service") {
+    const m = value.match(/:([0-9]{1,5})(?:\/([a-z0-9]+))?$/i);
+    if (m) {
+      port = m[1];
+      if (!protocol) protocol = (m[2] || "").toLowerCase();
+    }
+  }
+  return port ? { port, protocol } : null;
+}
+
+/** The value with its port removed, so the asset name stays clean (``host``
+ *  for a port service; other asset types are returned unchanged). */
+export function assetValueWithoutPort(
+  asset: Pick<Asset, "asset_type" | "value">,
+): string {
+  const value = (asset.value || "").trim();
+  if ((asset.asset_type || "").toLowerCase() === "port_service") {
+    return value.replace(/:[0-9]{1,5}(?:\/[a-z0-9]+)?$/i, "") || value;
+  }
+  return value;
+}
+
 // ── Demo: the backend's parent rules, simplified for the demo inventory ─────
 
 function registrable(host: string): string {

@@ -1640,6 +1640,66 @@ export interface PentestScopeList {
   total: number;
 }
 
+// ── Human / external-pentest findings intake ─────────────────────────────────
+// A human-led engagement is scoped above; its results are imported here so the
+// agent verifier adjudicates them and they sit beside engine findings.
+export type ExternalFindingSeverity = "critical" | "high" | "medium" | "low" | "info";
+
+export interface ExternalPentestFindingInput {
+  title: string;
+  severity?: ExternalFindingSeverity;
+  description?: string | null;
+  target?: string | null;
+  category?: string | null;
+  cve?: string | null;
+  cvss_score?: number | null;
+  asset_id?: number | null;
+  tool?: string | null;
+  source_ref?: string | null;
+  evidence?: Record<string, unknown> | null;
+}
+
+export interface ExternalPentestIntakeRequest {
+  title: string;
+  reference?: string | null;
+  tester?: string | null;
+  environment?: string;
+  summary?: string | null;
+  source_scope_id?: number | null;
+  verify?: boolean;
+  findings: ExternalPentestFindingInput[];
+}
+
+export interface ExternalPentestIntakeResult {
+  ok: boolean;
+  source: string;
+  imported: number;
+  assessment_id?: number | null;
+  verified: number;
+  finding_ids: number[];
+  error?: string | null;
+}
+
+export interface ExternalPentestFindingRow {
+  id: number;
+  title: string;
+  severity: string;
+  category?: string | null;
+  target?: string | null;
+  cve?: string | null;
+  status: string;
+  verification_status: string;
+  report_reference?: string | null;
+  tester?: string | null;
+  assessment_id?: number | null;
+  created_at?: string | null;
+}
+
+export interface ExternalPentestFindingList {
+  items: ExternalPentestFindingRow[];
+  total: number;
+}
+
 // ── SOC War Room ──────────────────────────────────────────────────────────────
 export interface SocWarRoomCase {
   id: number;

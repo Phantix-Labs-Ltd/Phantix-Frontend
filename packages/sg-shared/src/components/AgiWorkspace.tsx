@@ -45,6 +45,8 @@ import {
   pauseAgiSession,
   resumeAgiSession,
   normalizeAgiLoop,
+  loadEngagementCapabilities,
+  type AgiCapabilityAttestation,
 } from "../agi";
 import type { AgiAccess, AgiAction, AgiEngagement, AgiSession, AgiTranscriptChunk, AiUsage } from "../types";
 import { cx, humanize } from "../utils";
@@ -266,6 +268,13 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
   const [actionBusy, setActionBusy] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [policyBanner, setPolicyBanner] = useState<string | null>(null);
+  // Latest mission-control verdict from the runner's oversight layer (drift,
+  // steering, blocked capability) — advisory except when `blocked`.
+  const [missionControl, setMissionControl] = useState<{ verdict: string; policy_code: string; capability?: string; blocked?: boolean; steering?: string } | null>(null);
+  // Capability confirmation gate: one click at session start confirms the
+  // agent's capability set (see agi/capabilities.py).
+  const [capGate, setCapGate] = useState<{ instruction: string; attestation: AgiCapabilityAttestation } | null>(null);
+  const [capLoading, setCapLoading] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [workingOn, setWorkingOn] = useState<string | null>(null);
   const [connError, setConnError] = useState<string | null>(null);
@@ -483,15 +492,18 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     }
   };
 
-  const start = async () => {
-    const msg = instruction.trim();
-    if (!selectedEng || !msg) return;
-    if (!(await requireDualControl("Starting an Autonomous Pentest Agent session requires a dual-control operate session."))) return;
+  const doStart = async (msg: string) => {
+    if (!selectedEng) return;
     setStarting(true);
     setPolicyBanner(null);
     try {
       toast("info", "Provisioning container…", "Workspace setup can take up to ~2 minutes.");
-      const s = await startAgiSession(selectedEng, msg, { include_org_assets: false, autonomy: "medium" });
+      const s = await startAgiSession(selectedEng, msg, {
+        include_org_assets: false,
+        autonomy: "medium",
+        // One click confirms the capability set for the run.
+        confirm_capabilities: true,
+      });
       setSession(s);
       setRunning(true);
       reportSubmitted.current = false;
@@ -504,6 +516,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       setOverrideDrafts({});
       setInstruction("");
       if (s.loop?.working_on) setWorkingOn(s.loop.working_on);
+      setCapGate(null);
       toast("success", "Session started", "Streaming live from the engagement container...");
     } catch (e) {
       const blocked = isAgiPolicyBlocked(e);
@@ -520,6 +533,23 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       else toast("error", "Start failed", e instanceof Error ? e.message : "");
     } finally {
       setStarting(false);
+    }
+  };
+
+  // The start button first shows the capability checklist; confirming starts it.
+  const start = async () => {
+    const msg = instruction.trim();
+    if (!selectedEng || !msg) return;
+    if (!(await requireDualControl("Starting an Autonomous Pentest Agent session requires a dual-control operate session."))) return;
+    setCapLoading(true);
+    setPolicyBanner(null);
+    try {
+      const attestation = await loadEngagementCapabilities(selectedEng);
+      setCapGate({ instruction: msg, attestation });
+    } catch (e) {
+      toast("error", "Could not load the capability checklist", e instanceof Error ? e.message : "");
+    } finally {
+      setCapLoading(false);
     }
   };
 
@@ -937,6 +967,27 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           }
           return;
         }
+        if (event === "mission_control") {
+          const p = JSON.parse(data) as {
+            verdict?: string; policy_code?: string; capability?: string | null;
+            blocked?: boolean; reasons?: string[]; steering?: string | null;
+          };
+          setMissionControl({
+            verdict: p.verdict ?? "",
+            policy_code: p.policy_code ?? "",
+            capability: p.capability ?? undefined,
+            blocked: !!p.blocked,
+            steering: p.steering ?? undefined,
+          });
+          if (p.blocked) {
+            pushLive(
+              `mc-${p.policy_code}-${Date.now()}`,
+              `Mission control blocked a step — ${(p.reasons || []).join(" ") || p.policy_code}`,
+              { kind: "mission_control", event, ...p },
+            );
+          }
+          return;
+        }
         if (event === "token") { setThinking(true); return; }
         if (event === "job_progress" || event === "todo") {
           // Live checklist: the runner emits the job view directly on every change
@@ -1205,6 +1256,26 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         <div className="flex items-center gap-2 border-b border-severity-critical/30 bg-severity-critical/10 px-4 py-2">
           <Lock size={13} className="shrink-0 text-severity-critical" />
           <p className="wb-xs leading-relaxed text-red-300">{policyBanner}</p>
+        </div>
+      )}
+
+      {session && missionControl && missionControl.verdict && missionControl.verdict !== "allow" && (
+        <div
+          className={cx(
+            "flex items-center gap-2 border-b px-4 py-1.5",
+            missionControl.blocked
+              ? "border-severity-medium/30 bg-severity-medium/10"
+              : missionControl.verdict === "steer"
+                ? "border-gold-400/30 bg-gold-400/10"
+                : "border-phantix-700/40 bg-phantix-900/40",
+          )}
+        >
+          <ShieldAlert size={12} className={cx("shrink-0", missionControl.blocked ? "text-severity-medium" : "text-gold-300")} />
+          <p className="wb-xs leading-relaxed text-slate-300">
+            Mission control · {missionControl.blocked ? "blocked" : missionControl.verdict}
+            {missionControl.capability ? ` · ${missionControl.capability}` : ""}
+            {missionControl.steering ? ` — ${missionControl.steering}` : ""}
+          </p>
         </div>
       )}
 
@@ -1514,8 +1585,8 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                     );
                   })}
                 </div>
-                <button onClick={() => void start()} disabled={!selectedEng || !instruction.trim() || starting} className="btn-primary mt-2 w-full !py-2.5 wb-sm">
-                  {starting ? <Loader2 size={13} className="mr-1 animate-spin inline" /> : <Radar size={13} className="mr-1 inline" />} Start session
+                <button onClick={() => void start()} disabled={!selectedEng || !instruction.trim() || starting || capLoading} className="btn-primary mt-2 w-full !py-2.5 wb-sm">
+                  {starting || capLoading ? <Loader2 size={13} className="mr-1 animate-spin inline" /> : <Radar size={13} className="mr-1 inline" />} {capLoading ? "Checking capabilities…" : "Start session"}
                 </button>
               </div>
             </div>
@@ -1829,6 +1900,83 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       )}
 
       {/* Agreement modal */}
+      {/* Capability confirmation — one click at session start. Shows exactly what
+          the agent may do and the guardrail that bounds each capability. */}
+      <Modal
+        open={!!capGate}
+        onClose={() => { if (!starting) setCapGate(null); }}
+        title="Confirm agent capabilities"
+        wide
+      >
+        {capGate && (() => {
+          const att = capGate.attestation;
+          const pending = att.capabilities.filter((c) => c.state === "pending_confirmation");
+          const blocked = att.capabilities.filter((c) => c.state === "blocked");
+          const groups = Array.from(new Set(att.capabilities.map((c) => c.group)));
+          return (
+            <div className="space-y-4">
+              <p className="text-[13px] leading-5 text-slate-400">
+                These are the mechanisms the sandbox already provides for this engagement.
+                Confirming lets the agent use them for this run only — each stays bounded by
+                the guardrail shown, and nothing outside the engagement scope is reachable.
+              </p>
+              {groups.map((g) => (
+                <div key={g}>
+                  <p className="mb-1.5 text-[12px] uppercase tracking-wide text-slate-500">{g}</p>
+                  <ul className="space-y-2">
+                    {att.capabilities.filter((c) => c.group === g).map((c) => (
+                      <li key={c.id} className="rounded-lg border border-phantix-700/40 bg-phantix-950/40 p-2.5">
+                        <div className="flex items-start gap-2">
+                          <span className={cx("mt-0.5", c.state === "blocked" ? "text-severity-medium" : "text-emerald-400")}>
+                            {c.state === "blocked" ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-medium text-slate-200">
+                              {c.label}
+                              <span className="ml-2 font-mono text-[11px] text-slate-500">{c.id}</span>
+                            </p>
+                            <p className="text-[12px] leading-4 text-slate-500">{c.description}</p>
+                            {c.state === "blocked" ? (
+                              <p className="mt-1 text-[12px] text-severity-medium">{c.blocked_reason}</p>
+                            ) : (
+                              <p className="mt-1 flex flex-wrap gap-1">
+                                {c.guardrails.map((gr) => (
+                                  <span
+                                    key={gr.id}
+                                    className="chip border-phantix-600/40 bg-phantix-800/50 text-[11px] text-slate-400"
+                                    title={gr.detail}
+                                  >
+                                    {gr.id}
+                                  </span>
+                                ))}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <p className="text-[12px] text-slate-500">
+                  {pending.length} to confirm{blocked.length ? ` · ${blocked.length} unavailable` : ""}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button className="btn-ghost !text-sm" onClick={() => setCapGate(null)} disabled={starting}>
+                    Cancel
+                  </button>
+                  <button className="btn-primary !text-sm" onClick={() => void doStart(capGate.instruction)} disabled={starting}>
+                    {starting ? <Loader2 size={13} className="mr-1 inline animate-spin" /> : <ShieldCheck size={13} className="mr-1 inline" />}
+                    {starting ? "Starting…" : "Confirm & start"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
       <Modal open={!!editEng} onClose={() => setEditEng(null)} title={`Engagement settings · ${editEng?.name ?? ""}`} wide>
         <div className="space-y-4">
           <div className="space-y-2">

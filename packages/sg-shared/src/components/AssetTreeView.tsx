@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight, CornerDownRight, EyeOff, Folder, Globe, Radar, FileJson, Boxes, Github, Smartphone, ShieldCheck, FileText } from "lucide-react";
 import { TableSkeleton, EmptyState } from "../ui";
 import { cx, titleCase } from "../utils";
-import { chainLabel, loadAssetTree, type AssetTreeNode } from "../assetChain";
+import { assetPort, assetValueWithoutPort, chainLabel, loadAssetTree, type AssetTreeNode } from "../assetChain";
 import type { Asset } from "../types";
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -19,6 +19,24 @@ const ICONS: Record<string, React.ReactNode> = {
 function nodeIcon(a: Asset, hasChildren: boolean): React.ReactNode {
   if (a.asset_type === "web_path") return hasChildren ? <Folder size={15} /> : <FileText size={15} />;
   return ICONS[a.asset_type] ?? <Boxes size={15} />;
+}
+
+/** Row label: paths stay relative to their host, a port service drops the port
+ *  (it has its own column), everything else is the full value. */
+function rowLabel(a: Asset): string {
+  return a.asset_type === "port_service" ? assetValueWithoutPort(a) : chainLabel(a);
+}
+
+/** The port an asset listens on, "—" when none. */
+function PortCell({ a }: { a: Asset }) {
+  const p = assetPort(a);
+  if (!p) return <span className="text-xs text-slate-600">—</span>;
+  return (
+    <span className="whitespace-nowrap font-mono text-xs text-slate-300">
+      {p.port}
+      {p.protocol && <span className="text-slate-500">/{p.protocol}</span>}
+    </span>
+  );
 }
 
 interface Level {
@@ -160,14 +178,15 @@ export default function AssetTreeView({ onSelect, refreshKey = 0, onFirstLoad }:
                 {nodeIcon(a, hasChildren)}
               </span>
               <div className="min-w-0">
-                <p className="truncate font-medium text-slate-200" title={a.value}>{chainLabel(a)}</p>
+                <p className="truncate font-medium text-slate-200" title={a.value}>{rowLabel(a)}</p>
                 <p className="truncate text-xs text-slate-500">
-                  {a.name && a.name !== a.value && a.name !== chainLabel(a) ? a.name : titleCase(a.asset_type)}
+                  {a.name && a.name !== a.value && a.name !== rowLabel(a) ? a.name : titleCase(a.asset_type)}
                 </p>
               </div>
             </div>
           </td>
           <td className="td whitespace-nowrap"><span className="text-xs text-slate-400">{titleCase(a.asset_type)}</span></td>
+          <td className="td whitespace-nowrap"><PortCell a={a} /></td>
           <td className="td whitespace-nowrap">
             {node.descendant_count > 0 ? (
               <span className="text-xs text-slate-300">
@@ -211,7 +230,7 @@ export default function AssetTreeView({ onSelect, refreshKey = 0, onFirstLoad }:
         if (!child || (child.loading && child.items.length === 0)) {
           rows.push(
             <tr key={`${a.id}-loading`}>
-              <td colSpan={5} className="px-5 py-2" style={{ paddingLeft: 20 + (depth + 1) * 22 }}>
+              <td colSpan={6} className="px-5 py-2" style={{ paddingLeft: 20 + (depth + 1) * 22 }}>
                 <div className="skeleton h-4 w-56 rounded" />
               </td>
             </tr>,
@@ -225,7 +244,7 @@ export default function AssetTreeView({ onSelect, refreshKey = 0, onFirstLoad }:
       const parentId = parentKey === "root" ? null : Number(parentKey);
       rows.push(
         <tr key={`${parentKey}-more`}>
-          <td colSpan={5} className="px-5 py-2" style={{ paddingLeft: 20 + depth * 22 }}>
+          <td colSpan={6} className="px-5 py-2" style={{ paddingLeft: 20 + depth * 22 }}>
             <button className="btn-ghost !px-2 !py-1 text-xs" disabled={level.loading} onClick={() => void load(parentId, level.items.length)}>
               Show more ({level.total - level.items.length} remaining)
             </button>
@@ -243,6 +262,7 @@ export default function AssetTreeView({ onSelect, refreshKey = 0, onFirstLoad }:
           <tr className="border-b border-phantix-700/40">
             <th className="th">Asset</th>
             <th className="th">Type</th>
+            <th className="th">Port</th>
             <th className="th">Below it</th>
             <th className="th">Open findings</th>
             <th className="th">Verified</th>
