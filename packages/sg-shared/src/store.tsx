@@ -38,12 +38,20 @@ type OperateState = {
   expiresAt: number | null;
 };
 
+/** A dropped main session: the page is held under a "sign back in" card. */
+type SessionExpired = { active: boolean; returnTo: string };
+
 type Store = {
   session: Session;
   org: Organization;
   dualControl: DualControlState;
   operate: OperateState;
   securityDbReady: boolean;
+  /** Main session ended: hold the current page under the "sign back in" card. */
+  sessionExpired: SessionExpired;
+  /** End the main session and raise the card in place (no redirect). */
+  expireSession: () => void;
+  clearSessionExpired: () => void;
   /** Bootstrap snapshot from GET /billing/entitlements (gates / 402 UX). */
   billingEntitlements: Record<string, unknown> | null;
   /** Bootstrap snapshot from GET /billing/credits (wallet; top-up lives on Platform). */
@@ -118,28 +126,63 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [billingEntitlements, setBillingEntitlements] = useState<Record<string, unknown> | null>(null);
   const [creditsBalance, setCreditsBalance] = useState<{ total?: number; cycle?: string; exhausted?: boolean; low?: boolean } | null>(null);
   const [demoTick, setDemoTick] = useState(0);
+  const [sessionExpired, setSessionExpired] = useState<SessionExpired>({ active: false, returnTo: "" });
 
-  // Sync session with token state (handles 401-induced token clearing)
+  // Sync session with token state (handles 401-induced token clearing). Storage
+  // is shared across tabs now, so losing the tokens here — a sign-out or a
+  // revoked session in another tab — raises the "session expired" card rather
+  // than leaving a shell with no session.
   useEffect(() => {
+    const expire = () => {
+      window.dispatchEvent(new CustomEvent("phantix:session-expired"));
+      setSession(null);
+    };
     const onStorage = () => {
-      if (!tokens.appSession && !tokens.platform && !isDemoFlagSet()) {
-        clearAppIdentity();
-        setSession(null);
-      }
+      if (!tokens.appSession && !tokens.platform && !isDemoFlagSet()) expire();
     };
     window.addEventListener("storage", onStorage);
-    // Also poll for direct token clearing (api.ts clears tokens synchronously)
+    // Also poll for direct token clearing in this tab (api.ts clears tokens
+    // synchronously; the 401 path also dispatches the event directly).
     const interval = setInterval(() => {
-      if (session?.authenticated && !tokens.appSession && !tokens.platform && !isDemoFlagSet()) {
-        clearAppIdentity();
-        setSession(null);
-      }
+      if (session?.authenticated && !tokens.appSession && !tokens.platform && !isDemoFlagSet()) expire();
     }, 2000);
     return () => {
       window.removeEventListener("storage", onStorage);
       clearInterval(interval);
     };
   }, [session?.authenticated]);
+
+  const clearSessionExpired = useCallback(() => {
+    setSessionExpired({ active: false, returnTo: "" });
+  }, []);
+
+  /**
+   * End the main session and raise the "sign back in" card in place. Used when
+   * the backend rejects a stored session (expired or revoked while the operator
+   * was away): the current page stays mounted and they choose to sign in again,
+   * instead of being redirected away from what they were doing.
+   */
+  const expireSession = useCallback(() => {
+    clearResourceCache();
+    clearAppIdentity();
+    tokens.appSession = null;
+    tokens.device = null;
+    tokens.dualControl = null;
+    tokens.platform = null;
+    tokens.orgUser = null;
+    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+    setSessionExpired((prev) => (prev.active ? prev : { active: true, returnTo }));
+  }, []);
+
+  // The api client drops an application-realm 401 onto this event (a stored
+  // session the backend no longer accepts): hold the page under the card rather
+  // than navigating away to sign-in.
+  useEffect(() => {
+    const onExpired = () => expireSession();
+    window.addEventListener("phantix:session-expired", onExpired);
+    return () => window.removeEventListener("phantix:session-expired", onExpired);
+  }, [expireSession]);
 
   const [operate, setOperate] = useState<OperateState>({
     unlocked: !!tokens.dualControl,
@@ -437,6 +480,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         tokens.platform = res.access_token;
         clearResourceCache();
         clearAppIdentity();
+        clearSessionExpired();
         setSession({ authenticated: true, realm: "platform", userEmail: email, userName: email, isInitiator: true, isAuthorizer: false, initiatorName: "", authorizerName: "" });
         return { mfaRequired: false };
       }
@@ -454,6 +498,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       tokens.platform = "demo.company.jwt";
       clearResourceCache();
       clearAppIdentity();
+      clearSessionExpired();
       setSession({ authenticated: true, realm: "platform", userEmail: "ada@acme.ng", userName: "Ada Okonkwo", isInitiator: true, isAuthorizer: false, initiatorName: "", authorizerName: "" });
       return;
     }
@@ -466,6 +511,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.removeItem("pending_login_email");
     clearResourceCache();
     clearAppIdentity();
+    clearSessionExpired();
     setSession({ authenticated: true, realm: "platform", userEmail: email, userName: email, isInitiator: true, isAuthorizer: false, initiatorName: "", authorizerName: "" });
   }, []);
 
@@ -483,14 +529,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setOrg(emptyOrganization);
     setDualControl(emptyDualControl);
     setOperate({ unlocked: false, actingUser: null, actingRole: null, expiresAt: null });
+    clearSessionExpired();
     setDemoTick((t) => t + 1);
-  }, []);
+  }, [clearSessionExpired]);
 
   const completeAppLogin = useCallback((email: string, name: string, isInitiator = false, isAuthorizer = false) => {
     clearResourceCache();
     clearAppIdentity();
+    clearSessionExpired();
     setSession({ authenticated: true, realm: "application", userEmail: email, userName: name || email, isInitiator, isAuthorizer, initiatorName: "", authorizerName: "" });
-  }, []);
+  }, [clearSessionExpired]);
 
   const enterDemo = useCallback(() => {
     clearResourceCache();
@@ -499,9 +547,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setOrg(demo.organization);
     setDualControl(demo.dualControl);
     setSecurityDbReady(true);
+    clearSessionExpired();
     setSession({ authenticated: true, realm: "platform", userEmail: "demo@acme.ng", userName: "Demo Explorer", isInitiator: true, isAuthorizer: false, initiatorName: "", authorizerName: "" });
     setDemoTick((t) => t + 1);
-  }, []);
+  }, [clearSessionExpired]);
 
   const switchToRealOrg = useCallback(() => {
     clearResourceCache();
@@ -839,6 +888,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       securityDbReady,
       billingEntitlements,
       creditsBalance,
+      sessionExpired,
+      expireSession,
+      clearSessionExpired,
       demoActive: isDemoMode(),
       hasLiveApi: !!API_BASE,
       enterDemo,
@@ -862,7 +914,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      session, org, dualControl, operate, securityDbReady, billingEntitlements, creditsBalance, toasts, toast, dismissToast,
+      session, org, dualControl, operate, securityDbReady, billingEntitlements, creditsBalance, sessionExpired, expireSession, clearSessionExpired, toasts, toast, dismissToast,
       login, verifyMfa, completeAppLogin, logout, unlockOperateStable, lockOperate, withOperate, enterDemo, switchToRealOrg,
       requireDualControl, dualControlPrompt, closeDualControlPrompt,
       requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice, demoTick,

@@ -83,10 +83,10 @@ export interface AppIdentity {
 // One in-flight promise + a short-lived value cache collapses them into one
 // network call.
 //
-// The identity is also cached in ``sessionStorage`` so tenant + account naming
-// survives a reload and a cross-app handoff: the redeem response carries the
-// same fields, so the target origin can show the org and user name immediately
-// while `/app/auth/me` is still in flight.
+// The identity is also cached persistently so tenant + account naming survives
+// a reload, a return visit, and a cross-app handoff: the redeem response carries
+// the same fields, so the target origin can show the org and user name
+// immediately while `/app/auth/me` is still in flight.
 let _identityPromise: Promise<AppIdentity | null> | null = null;
 let _identityValue: { value: AppIdentity; ts: number } | null = null;
 const IDENTITY_TTL_MS = 5_000;
@@ -95,9 +95,12 @@ const IDENTITY_STORAGE_KEY = "phantix_app_identity";
 function _storeStorage(): Storage | null {
   try {
     if (typeof window === "undefined") return null;
-    return window.sessionStorage;
+    const probe = "__sg_identity_probe__";
+    window.localStorage.setItem(probe, "1");
+    window.localStorage.removeItem(probe);
+    return window.localStorage;
   } catch {
-    return null;
+    try { return window.sessionStorage; } catch { return null; }
   }
 }
 

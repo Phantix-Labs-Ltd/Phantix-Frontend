@@ -29,19 +29,89 @@ export function isDemoMode(): boolean {
 }
 
 // ── Token stores (per-surface, never mixed) ──────────────────────────────────
+// Tokens are kept in localStorage, not sessionStorage: an operator who leaves
+// the page — closes the tab, or restarts the browser — and comes back keeps the
+// session until the backend expires it. When it *has* expired, the shell raises
+// the "session ended" card instead of silently bouncing to sign-in. Falls back
+// to sessionStorage where localStorage is unavailable (private mode), so a
+// session still works per-tab there.
+const tokenStore: Storage = (() => {
+  try {
+    const probe = "__sg_storage_probe__";
+    window.localStorage.setItem(probe, "1");
+    window.localStorage.removeItem(probe);
+    return window.localStorage;
+  } catch {
+    return window.sessionStorage;
+  }
+})();
+
+function readToken(key: string): string | null {
+  try { return tokenStore.getItem(key); } catch { return null; }
+}
+function writeToken(key: string, value: string | null): void {
+  try { value ? tokenStore.setItem(key, value) : tokenStore.removeItem(key); } catch { /* unavailable */ }
+}
+
+// One-time migration: these keys used to live in sessionStorage. Adopt any
+// existing session into the persistent store so the change does not sign every
+// already-signed-in operator out on their first load after deploy.
+for (const key of [
+  "platform_access_token",
+  "platform_org_user_token",
+  "app_session_token",
+  "app_device_token",
+  "staff_access_token",
+]) {
+  try {
+    if (!tokenStore.getItem(key)) {
+      const legacy = window.sessionStorage.getItem(key);
+      if (legacy) tokenStore.setItem(key, legacy);
+    }
+  } catch { /* unavailable */ }
+}
+
+/** Read a value from the shared session store (localStorage, else sessionStorage). */
+export function readStoredToken(key: string): string | null {
+  return readToken(key);
+}
+
+/** Write (or clear, with null) a value in the shared session store. */
+export function writeStoredToken(key: string, value: string | null): void {
+  writeToken(key, value);
+}
+
+// The dual-control operate token is a short-lived elevation, not the session:
+// it stays per-tab (sessionStorage) so closing the tab ends the elevation even
+// though the signed-in session persists.
+function readSessionToken(key: string): string | null {
+  try { return window.sessionStorage.getItem(key); } catch { return null; }
+}
+function writeSessionToken(key: string, value: string | null): void {
+  try { value ? window.sessionStorage.setItem(key, value) : window.sessionStorage.removeItem(key); } catch { /* unavailable */ }
+}
+
+/** Read/write a per-tab (non-persisted) token, used for the operate elevation. */
+export function readSessionStoredToken(key: string): string | null {
+  return readSessionToken(key);
+}
+export function writeSessionStoredToken(key: string, value: string | null): void {
+  writeSessionToken(key, value);
+}
+
 export const tokens = {
-  get platform() { return sessionStorage.getItem("platform_access_token"); },
-  set platform(v: string | null) { v ? sessionStorage.setItem("platform_access_token", v) : sessionStorage.removeItem("platform_access_token"); },
-  get orgUser() { return sessionStorage.getItem("platform_org_user_token"); },
-  set orgUser(v: string | null) { v ? sessionStorage.setItem("platform_org_user_token", v) : sessionStorage.removeItem("platform_org_user_token"); },
-  get dualControl() { return sessionStorage.getItem("platform_dual_control"); },
-  set dualControl(v: string | null) { v ? sessionStorage.setItem("platform_dual_control", v) : sessionStorage.removeItem("platform_dual_control"); },
-  get appSession() { return sessionStorage.getItem("app_session_token"); },
-  set appSession(v: string | null) { v ? sessionStorage.setItem("app_session_token", v) : sessionStorage.removeItem("app_session_token"); },
-  get device() { return sessionStorage.getItem("app_device_token"); },
-  set device(v: string | null) { v ? sessionStorage.setItem("app_device_token", v) : sessionStorage.removeItem("app_device_token"); },
-  get staff() { return sessionStorage.getItem("staff_access_token"); },
-  set staff(v: string | null) { v ? sessionStorage.setItem("staff_access_token", v) : sessionStorage.removeItem("staff_access_token"); },
+  get platform() { return readToken("platform_access_token"); },
+  set platform(v: string | null) { writeToken("platform_access_token", v); },
+  get orgUser() { return readToken("platform_org_user_token"); },
+  set orgUser(v: string | null) { writeToken("platform_org_user_token", v); },
+  get dualControl() { return readSessionToken("platform_dual_control"); },
+  set dualControl(v: string | null) { writeSessionToken("platform_dual_control", v); },
+  get appSession() { return readToken("app_session_token"); },
+  set appSession(v: string | null) { writeToken("app_session_token", v); },
+  get device() { return readToken("app_device_token"); },
+  set device(v: string | null) { writeToken("app_device_token", v); },
+  get staff() { return readToken("staff_access_token"); },
+  set staff(v: string | null) { writeToken("staff_access_token", v); },
 };
 
 export function deviceId(): string {
@@ -391,6 +461,16 @@ export function setActiveApplication(app: ApplicationDeclaration): void {
   activeApplication = app;
 }
 
+/**
+ * Whether a shell is mounted that can hold the page under its "session expired"
+ * card. Set by `ApplicationShell`; with no shell (a public page) a dropped
+ * session still has to fall back to the sign-in redirect.
+ */
+let sessionCardMounted = false;
+export function setSessionCardMounted(mounted: boolean): void {
+  sessionCardMounted = mounted;
+}
+
 export function getActiveApplication(): ApplicationDeclaration {
   return activeApplication;
 }
@@ -580,7 +660,11 @@ async function request<T>(
         else { tokens.platform = null; tokens.orgUser = null; }
       }
       if (realm === "application" && hadBearer && relogin && !dcSessionIssue && !superseded) {
-        window.location.assign("/login");
+        // A mounted shell holds the current page under its "session expired"
+        // card, so the operator keeps what they were doing and chooses to sign
+        // in again. With no shell (a public page), fall back to the redirect.
+        if (sessionCardMounted) window.dispatchEvent(new CustomEvent("phantix:session-expired"));
+        else window.location.assign("/login");
       }
     }
     // AI credits exhausted gets its own message. The person at the keyboard is

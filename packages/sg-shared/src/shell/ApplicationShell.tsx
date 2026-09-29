@@ -36,6 +36,7 @@ import AgiNotifications from "../components/AgiNotifications";
 import { toggleAssistant } from "../components/assistantEvents";
 import OperationsWidget from "../components/OperationsWidget";
 import FeedbackReporter from "../components/FeedbackReporter";
+import SessionExpiredOverlay from "../components/SessionExpiredOverlay";
 import { openFeedbackReporter } from "../feedback";
 import { OperationsProvider } from "../operations";
 import SandboxBanner from "../components/SandboxBanner";
@@ -46,7 +47,7 @@ import { loadSandboxMe } from "../sandbox";
 import { loadAppIdentity, type AppIdentity } from "../applications";
 import { PLATFORM_IDENTITY_URL } from "../links";
 import { apiGet, appToken, clearStoredSession, setApplication } from "./api";
-import { isDemoFlagSet, setActiveApplication } from "../api";
+import { isDemoFlagSet, setActiveApplication, setSessionCardMounted } from "../api";
 import { consumeHandoff, handoffUrl, signOutEverywhere } from "./session";
 import { IS_DEV_HOSTS } from "../config";
 import { useNoIndex } from "../pageTitle";
@@ -207,6 +208,7 @@ export function ApplicationShell({
     switchToRealOrg,
     requireDualControl,
     securityDbReady,
+    expireSession,
   } = useStore();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [me, setMe] = useState<AppIdentity | null>(null);
@@ -238,6 +240,14 @@ export function ApplicationShell({
   setActiveApplication(application);
   // Everything inside the shell is behind sign-in; keep it out of search.
   useNoIndex();
+
+  // The shell can hold the current page under its "session expired" card; tell
+  // the api client one is mounted so it does not hard-redirect a dropped
+  // session out from under the operator.
+  useEffect(() => {
+    setSessionCardMounted(true);
+    return () => setSessionCardMounted(false);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -277,8 +287,13 @@ export function ApplicationShell({
       const appsRes = await apiGet<{ applications: ApplicationCard[] }>("/app/auth/applications").catch(() => null);
       if (!alive) return;
       if (!meRes && authRejected) {
-        // Session invalid/expired — go to login without flashing the app.
-        window.location.replace(coreLoginUrl());
+        // The stored session is no longer accepted (expired or revoked while
+        // the operator was away). Hold this page under the "session expired"
+        // card so they choose to sign in again, instead of an abrupt redirect
+        // that gives no explanation.
+        expireSession();
+        setMe(null);
+        setAuthReady(true);
         return;
       }
       if (!meRes) {
@@ -305,7 +320,7 @@ export function ApplicationShell({
     return () => {
       alive = false;
     };
-  }, [application, hosts.core]);
+  }, [application, hosts.core, expireSession]);
 
   useEffect(() => {
     setMobileNav(false);
@@ -974,6 +989,11 @@ export function ApplicationShell({
       {/* Long-running Pentest Agent: durable inbox into the bell + the global
           approval popup, wherever the operator is in the app. */}
       <AgiNotifications application={application} />
+
+      {/* A stored session the backend no longer accepts (expired/revoked while
+          the operator was away): hold the page and offer sign-in, rather than
+          bouncing them out to Core's login. */}
+      <SessionExpiredOverlay onSignIn={() => window.location.assign(coreLoginUrl(application))} />
 
       {/* Analytics consent banner — lost when the Command Centre monolith was
           retired in favor of this shared shell; nothing was tracked because

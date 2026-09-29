@@ -2,7 +2,7 @@
  * Minimal same-origin API client for the application shells.
  *
  * The four apps share one backend and one session: tokens live in the same
- * sessionStorage keys on every host (the cross-origin handoff copies them), and
+ * persistent keys on every host (the cross-origin handoff copies them), and
  * each app's dev server proxies `/api` upstream. This is deliberately small —
  * pages that need richer behaviour can import their own client later.
  *
@@ -12,7 +12,7 @@
  * because the operator's role happens to include Attack.
  */
 import type { ApplicationKey } from "./types";
-import { deviceId as sharedDeviceId } from "../api";
+import { deviceId as sharedDeviceId, readSessionStoredToken, readStoredToken, writeSessionStoredToken, writeStoredToken } from "../api";
 
 export type { ApplicationKey };
 
@@ -37,21 +37,16 @@ export function activeApplication(): ApplicationKey | "" {
   return currentApplication;
 }
 
+// Read/write through the shared store so the shell and the page clients agree
+// on where the session lives (see `tokens` in ../api.ts). Everything persists
+// except the operate elevation, which is deliberately per-tab.
 function read(key: string): string {
-  try {
-    return sessionStorage.getItem(key) || "";
-  } catch {
-    return "";
-  }
+  return (key === STORAGE.dualControl ? readSessionStoredToken(key) : readStoredToken(key)) || "";
 }
 
 function write(key: string, value: string): void {
-  try {
-    if (value) sessionStorage.setItem(key, value);
-    else sessionStorage.removeItem(key);
-  } catch {
-    /* private mode / blocked storage — the session simply does not persist */
-  }
+  if (key === STORAGE.dualControl) writeSessionStoredToken(key, value || null);
+  else writeStoredToken(key, value || null);
 }
 
 export function appToken(): string {
