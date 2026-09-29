@@ -102,8 +102,6 @@ import type {
   SocWarRoomStats,
 } from "./types";
 import {
-  extractReportFindings,
-  findingDedupeKey,
   normalizeReportRow,
   normalizeTrackerFinding,
 } from "./utils";
@@ -803,24 +801,6 @@ export async function addComplianceEvidence(body: {
   return { ok: true, evidence: raw?.evidence };
 }
 
-function trackerFromReports(reports: any[]): TrackerFinding[] {
-  const byKey = new Map<string, TrackerFinding>();
-  for (const r of reports) {
-    const campaign = String(r?.title ?? r?.subtitle ?? "Report");
-    for (const f of extractReportFindings(r)) {
-      const row = normalizeTrackerFinding(f, campaign) as TrackerFinding;
-      const key = row.finding_key || findingDedupeKey(f);
-      const prev = byKey.get(key);
-      if (!prev || String(row.updated_at) > String(prev.updated_at)) {
-        byKey.set(key, { ...row, finding_key: key });
-      }
-    }
-  }
-  return Array.from(byKey.values()).sort((a, b) =>
-    String(b.updated_at).localeCompare(String(a.updated_at)),
-  );
-}
-
 export async function loadReportsBundle() {
   if (isDemoMode()) {
     await delay();
@@ -858,19 +838,18 @@ export async function loadReportsBundle() {
   }
   const rawReports = await softList<Report>("/reports");
   const reports = rawReports.map((r) => normalizeReportRow(r) as Report);
-  let trackerFindings = (rawTrackerItems ?? []).map(
+  // The board reads the security-DB tracker only. There is deliberately no
+  // fallback that reconstructs rows from report artifacts: the security
+  // database is the store of record, so an empty tracker is an empty board.
+  const trackerFindings = (rawTrackerItems ?? []).map(
     (t) => normalizeTrackerFinding(t) as TrackerFinding,
   );
-  // AGI sessions often never seed /reports/tracker — surface session findings so the tab is usable.
-  if (trackerFindings.length === 0 && reports.length > 0) {
-    trackerFindings = trackerFromReports(reports);
-  }
   return { reports, trackerFindings, trackerSummary, trackerNote };
 }
 
-/** The findings tracker on its own: board rows + summary. Reports are only
- *  fetched when the tracker is empty, to surface findings from AGI sessions
- *  that never seeded it (same fallback the report library used). */
+/** The findings tracker on its own: board rows + summary, read from the org's
+ *  security database. There is no report-artifact fallback — the security DB is
+ *  the store of record, so an empty tracker is an empty board. */
 export async function loadTrackerBundle() {
   if (isDemoMode()) {
     const { trackerFindings, trackerSummary, trackerNote } = await loadReportsBundle();
@@ -883,12 +862,7 @@ export async function loadTrackerBundle() {
       ? ((envelope.summary ?? null) as TrackerSummary | null)
       : null;
   const trackerNote = envelope?.note != null ? String(envelope.note) : null;
-  const rawTrackerItems: any[] = items;
-  let trackerFindings = (rawTrackerItems ?? []).map((t) => normalizeTrackerFinding(t) as TrackerFinding);
-  if (trackerFindings.length === 0) {
-    const reports = (await softList<Report>("/reports")).map((r) => normalizeReportRow(r) as Report);
-    if (reports.length > 0) trackerFindings = trackerFromReports(reports);
-  }
+  const trackerFindings = (items ?? []).map((t) => normalizeTrackerFinding(t) as TrackerFinding);
   return { trackerFindings, trackerSummary, trackerNote };
 }
 
