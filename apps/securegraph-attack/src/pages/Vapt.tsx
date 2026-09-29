@@ -7,7 +7,7 @@ import SecurityDbBanner from "@sg/components/SecurityDbBanner";
 import VaptPlanReview from "@sg/components/VaptPlanReview";
 import DocLink from "@sg/components/DocLink";
 import { loadVaptBundle } from "@sg/data";
-import { api, isDemoMode, isPendingApproval } from "@sg/api";
+import { api, isDemoMode, isPendingApproval, publicDetailCopy } from "@sg/api";
 import { useResource } from "@sg/useResource";
 import { useOperations } from "@sg/operations";
 import { timeAgo, titleCase, cx, humanize, isReportable, impactLevelRank, formatDateTime } from "@sg/utils";
@@ -361,11 +361,13 @@ export default function Vapt() {
         typeof detail === "object" &&
         (detail as Record<string, unknown>).campaign_id != null;
       if (draftCreated) {
-        toast("warning", "Draft created", (detail as { message?: string })?.message || "Review the plan and start when ready.");
+        toast("warning", "Draft created", publicDetailCopy((detail as { message?: string })?.message) || "Review the plan and start when ready.");
         setPendingPlan(null);
         reload();
       } else if (e?.status === 400) {
-        const msg = typeof detail === "string" ? detail : (detail as { message?: string })?.message || e.message || "";
+        // e.message is already normalized (api.ts publicErrorCopy) — prefer it,
+        // and fall back to the sanitized detail for the draft-created shape.
+        const msg = e.message || publicDetailCopy(detail) || "";
         toast("error", "Could not create campaign", msg);
         // Keep the review open so the operator can retry once the refusal is
         // resolved (quota rollover, billing) without regenerating the plan.

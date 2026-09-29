@@ -7,7 +7,7 @@ import DocLink from "@sg/components/DocLink";
 import ReportSolutions from "@sg/components/ReportSolutions";
 import { loadReportsBundle, loadReportTypes } from "@sg/data";
 import type { ReportTypeEntry } from "@sg/types";
-import { api, ApiError, publicErrorMessage } from "@sg/api";
+import { api, ApiError, publicErrorMessage, publicDetailCopy } from "@sg/api";
 import { useResource } from "@sg/useResource";
 import { timeAgo, formatBytes, titleCase, cx, normalizeReportRow, extractReportFindings } from "@sg/utils";
 import { useStore } from "@sg/store";
@@ -117,7 +117,8 @@ async function handleDownload(
       (err.detail as { code?: string }).code === "report_artifact_missing";
     const msg =
       artifactMissing && err.detail && typeof err.detail === "object"
-        ? ((err.detail as { hint?: string }).hint || err.message)
+        // The hint is backend prose; normalize it before it reaches the panel.
+        ? (publicDetailCopy((err.detail as { hint?: string }).hint) || err.message)
         : err instanceof Error ? err.message : "Could not download this report format";
     if (onError) onError(msg, !!artifactMissing);
     else console.error("Report download failed:", msg);

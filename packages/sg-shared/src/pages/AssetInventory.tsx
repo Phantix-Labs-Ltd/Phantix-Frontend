@@ -15,7 +15,7 @@ import { useResource } from "@sg/useResource";
 import { timeAgo, titleCase, cx, severityMeta } from "@sg/utils";
 import { useStore } from "@sg/store";
 import { useSseStream } from "@sg/useSse";
-import { api, tokens, API_BASE, ApiError, isDemoMode } from "@sg/api";
+import { api, tokens, API_BASE, ApiError, isDemoMode, publicDetailCopy } from "@sg/api";
 import { loadGithubInstallation } from "@sg/codeOps";
 import { classifyAsset, createAssetTag, deleteAssetTag, TAG_COLORS, type AssetClassification } from "@sg/assetTags";
 import { sanitizeSingleLine, validateUploadFile } from "@sg/uploadValidation";
@@ -419,12 +419,15 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
       reload();
     } catch (e: any) {
       if (e.status === 422 && e.detail?.verification) {
+        // Normalized before display: the backend detail can name internals.
         setVerifyStep({
-          message: e.detail.message || "Domain verification required",
-          hint: e.detail.verification?.hint || "Check the domain and confirm ownership",
+          message: publicDetailCopy(e.detail?.message) || "Domain verification required",
+          hint: publicDetailCopy(e.detail?.verification?.hint) || "Check the domain and confirm ownership",
         });
       } else {
-        toast("error", "Failed", e.message || "Could not add asset");
+        // e.message is already normalized (api.ts publicErrorCopy): the backend's
+        // own explanation when it is safe and actionable, else the status copy.
+        toast("error", "Could not add asset", e.message || "Check the value and ownership details and try again.");
       }
     } finally {
       setAdding(false);

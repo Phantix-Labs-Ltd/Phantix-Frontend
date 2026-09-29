@@ -1,5 +1,5 @@
 // Central resource loaders --- demo-data only when isDemoMode() is true.
-import { api, ApiError, delay, isDemoMode, isSecurityDbBlocked, tokens, API_BASE } from "./api";
+import { api, ApiError, delay, isDemoMode, isSecurityDbBlocked, tokens, API_BASE, publicDetailCopy } from "./api";
 import * as demo from "./demo-data";
 import { deriveParents } from "./assetChain";
 import type {
@@ -1724,9 +1724,7 @@ async function streamAgentPost(
     // Plan-gated: surface the paid-plan request clearly (402 from entitlement gate)
     // so the app-wide "Upgrade required" handler fires.
     if (res.status === 402) {
-      const readable = (detail && typeof detail === "object" && typeof (detail as any).message === "string")
-        ? (detail as any).message
-        : "A paid plan is required to use the SecureGraph Agent.";
+      const readable = publicDetailCopy(detail) || "A paid plan is required to use the SecureGraph Agent.";
       window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: readable }));
       onEvent("error", { type: "error", error: readable, code: "ai_agent_plan_required", status: 402 });
     } else if (res.status === 403 && /dual|operate|authenticator|session/i.test(msg)) {

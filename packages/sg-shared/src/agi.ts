@@ -2,7 +2,7 @@
 // Mirrors app/engines/ai_engine/agi/customer_api.py. Demo-mode fallbacks so the
 // UI is testable without a live runner.
 
-import { api, ApiError, delay, isDemoMode, streamSse } from "./api";
+import { api, ApiError, delay, isDemoMode, publicDetailCopy, streamSse } from "./api";
 import { AGI_ENABLED as AGI_FLAG } from "./config";
 import type {
   AgiAccess,
@@ -849,7 +849,7 @@ export function isAgiPolicyBlocked(err: unknown): { code: string; message: strin
   if (!(err instanceof ApiError)) return null;
   const detail = err.detail as Record<string, unknown> | null;
   const code = typeof detail?.code === "string" ? detail.code : "";
-  const message = typeof detail?.message === "string" ? detail.message : err.message;
+  const message = publicDetailCopy(detail?.message) || err.message;
   if (code.startsWith("forbidden_")) return { code, message };
   return null;
 }

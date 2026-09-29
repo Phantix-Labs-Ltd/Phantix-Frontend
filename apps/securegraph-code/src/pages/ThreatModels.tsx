@@ -5,7 +5,7 @@ import {
 import { Card, CardHeader, EmptyState, ErrorState, Modal, PageHeader, StatCard, PageBodySkeleton } from "@sg/ui";
 import { CreateProductModal, ProjectInputsModal } from "@sg/components/ThreatModelInputs";
 import { useStore } from "@sg/store";
-import { ApiError } from "@sg/api";
+import { ApiError, publicDetailCopy } from "@sg/api";
 import {
   answerThreatClarification, deliverThreatModel, exportThreatModel, generateThreatModel, getContextSummary, getThreatModel, GRADE_TONE,
   listProjects, listThreatModels, patchThreat, regenerateThreatModel,
@@ -528,7 +528,8 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
       if (e instanceof ApiError && e.status === 422 && e.detail && typeof e.detail === "object") {
         const d = e.detail as { reason?: string; allowed?: unknown };
         const allowed = Array.isArray(d.allowed) ? d.allowed.map(String).join(", ") : null;
-        toast("error", "Not allowed", allowed ? `${d.reason ?? "Invalid value"} — choose one of: ${allowed}.` : (d.reason ?? "Invalid value."));
+        const reason = publicDetailCopy(d.reason) || "Invalid value";
+        toast("error", "Not allowed", allowed ? `${reason.replace(/\.$/, "")} — choose one of: ${allowed}.` : `${reason}`);
       } else {
         toast("error", "Could not update", e instanceof Error ? e.message : undefined);
       }

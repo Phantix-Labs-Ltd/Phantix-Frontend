@@ -6,7 +6,7 @@ import {
   Gitlab, Plug, PlugZap, Key, Trash2, TestTube, Webhook, CheckCircle2,
 } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, EmptyState, Tabs, Modal, CardListSkeleton } from "@sg/ui";
-import { api, isPendingApproval, publicErrorMessage } from "@sg/api";
+import { api, isPendingApproval, publicErrorMessage, publicDetailCopy } from "@sg/api";
 import CodeReview from "@sg/components/CodeReview";
 import {
   loadGithubInstallation,
@@ -695,11 +695,13 @@ function ContinuousPrForm({ repos, onDone }: { repos: Repo[]; onDone: () => void
     } catch (e: any) {
       const detail = e?.detail ?? {};
       if (detail?.error === "free_model_agreement_required") {
-        setResult({ kind: "error", message: detail.message || "Agreement required.", requestUrl: detail.agreement_endpoint });
+        setResult({ kind: "error", message: publicDetailCopy(detail.message) || "Agreement required.", requestUrl: detail.agreement_endpoint });
       } else if (detail?.error === "permission_required") {
-        setResult({ kind: "permission", message: detail.message || "GitHub write permissions required.", requestUrl: detail.request_url });
+        setResult({ kind: "permission", message: publicDetailCopy(detail.message) || "GitHub write permissions required.", requestUrl: detail.request_url });
       } else {
-        setResult({ kind: "error", message: e?.message || detail?.message || "Could not open Continuous PR." });
+        // e.message is normalized already; the sanitized detail covers statuses
+        // (e.g. 403) whose detail is useful but not on the status-copy path.
+        setResult({ kind: "error", message: publicDetailCopy(detail) || e?.message || "Could not open Continuous PR." });
       }
     } finally {
       setBusy(false);

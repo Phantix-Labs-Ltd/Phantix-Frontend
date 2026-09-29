@@ -67,6 +67,152 @@ function detailMessage(detail: unknown): string {
   return "Request failed";
 }
 
+// ── Customer-facing error copy (normalized) ─────────────────────────────────
+// The backend writes `detail` for whoever reads the logs: it can name routes,
+// headers, env vars, internal codes and doc paths. Some of it, though, is
+// exactly what the customer needs — "Domain/host 'x' is not HTTP(S)-reachable —
+// asset not added. Ensure DNS resolves and the host responds on 80/443." This
+// turns the raw detail into one safe sentence: keep the human explanation, drop
+// anything that reads like an internal diagnostic, and fall back to the status
+// copy when nothing safe survives. The raw words stay on `serverMessage`.
+
+/**
+ * Statuses whose detail describes the caller's own input or state, so it is
+ * worth showing once normalized. Authentication (401), permissions (403),
+ * rate limits (429), server faults (5xx) and network errors (0) keep the
+ * app-authored copy: that detail is the likeliest to name internals, and the
+ * cause is rarely the customer's to fix.
+ */
+const ACTIONABLE_DETAIL_STATUSES = new Set([400, 409, 412, 413, 415, 422, 423, 424, 428]);
+
+/**
+ * A candidate carrying any of these is an internal diagnostic, not customer
+ * copy: crash/stack text, routes and headers, SCREAMING_SNAKE codes, SQL,
+ * data-layer and broker internals, loopback/private hosts, and repo or spec
+ * references. Matching one sends the request back to the status copy.
+ */
+const INTERNAL_DIAGNOSTIC_PATTERNS: RegExp[] = [
+  // Crash / stack text
+  /\btraceback\b/i,
+  /\bfile\s+"[^"]+"/i,
+  /\bline\s+\d+\b/i,
+  /\b\w+(?:Error|Exception)\b/,
+  /\bexception\b/i,
+  /\bstack\s?trace\b/i,
+  // Routes, headers and machine codes
+  /(?:\/api\/v\d|\/(?:internal|admin|_debug)\/)/i,
+  /\b(?:GET|POST|PUT|PATCH|DELETE)\s+[\/\"]/,
+  /\bX(?:-[A-Z][A-Za-z0-9]+){2,}\b/,
+  /\bWWW-Authenticate\b/i,
+  /\b[A-Z][A-Z0-9]{2,}(?:_[A-Z0-9]+)+\b/,
+  // Data-layer internals
+  /\bselect\b[\s\S]{0,80}\bfrom\b/i,
+  /\binsert\s+into\b/i,
+  /\bupdate\b[\s\S]{0,80}\bset\b/i,
+  /\bdelete\s+from\b/i,
+  /\b(?:psycopg|sqlalchemy|asyncpg|prisma|sqlite|alembic)\w*\b/i,
+  /\b(?:relation|column|table|schema)\b[^.]{0,60}\bdoes not exist\b/i,
+  /\bduplicate key value violates\b/i,
+  /\bnull value in column\b/i,
+  /\bmigration[s]?\b/i,
+  /\b(?:redis|celery|rabbitmq|kafka)\b/i,
+  // Hosts
+  /\b(?:localhost|127\.0\.0\.1|0\.0\.0\.0)\b/i,
+  /\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}\b/,
+  // Repo / spec / support identifiers
+  /\b(?:docs?|design|architecture|specs?)\/\S+/i,
+  /§\s*\d/,
+  /\.(?:py|ts|tsx|js|jsx|mjs|json|ya?ml|toml|ini|sql|sh|md)\b/i,
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i,
+  /\bcorrelation[- _]?id\b/i,
+  /\bservice[- _]?key\b/i,
+];
+
+/** "asset_id" → "asset id" — a field name a person can read. */
+function humanizeField(field: string): string {
+  return field.replace(/[_-]+/g, " ").trim();
+}
+
+/** The one human sentence inside a FastAPI `detail`, or null when there is none. */
+function detailCandidate(detail: unknown): string | null {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    // Validation arrays: [{ loc: ["body", "value"], msg: "..." }] — keep the
+    // message and name the field, so "invalid" becomes "value: invalid".
+    const parts: string[] = [];
+    for (const item of detail) {
+      if (!item || typeof item !== "object") continue;
+      const { msg, loc } = item as { msg?: unknown; loc?: unknown };
+      if (typeof msg !== "string" || !msg.trim()) continue;
+      const field = Array.isArray(loc)
+        ? [...loc].reverse().find(
+            (p) => typeof p === "string" && !["body", "query", "path", "header", "cookie"].includes(p),
+          )
+        : undefined;
+      parts.push(field ? `Invalid ${humanizeField(String(field))}: ${msg.trim()}` : msg.trim());
+    }
+    return parts.length ? parts.join("; ") : null;
+  }
+  if (detail && typeof detail === "object") {
+    const d = detail as Record<string, unknown>;
+    // Prose first; `error`/`code` are usually bare machine identifiers.
+    for (const key of ["message", "detail", "reason", "hint"]) {
+      if (typeof d[key] === "string" && (d[key] as string).trim()) return d[key] as string;
+    }
+    if (typeof d.error === "string" && /\s/.test(d.error) && d.error.trim().length > 12) {
+      return d.error;
+    }
+  }
+  return null;
+}
+
+/** Clean one candidate into presentable copy, or null when it is internal. */
+function sanitizeDetailCopy(raw: string): string | null {
+  let text = raw.replace(/\s+/g, " ").trim();
+  // A leading machine code — "validation_error: ..." — is not the sentence.
+  const lead = text.match(/^([A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*)\s*:\s+(\S.*)$/);
+  if (lead) {
+    const machineish =
+      /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(lead[1]) || /^(?:error|warning|note)$/i.test(lead[1]);
+    if (machineish) text = lead[2];
+  }
+  // Drop a correlation/request suffix the backend may append.
+  text = text.replace(/\s*[([]?(?:correlation|request)[-_ ]?id[:\s][^)\]]*[)\]]?\.?$/i, "").trim();
+  if (!text) return null;
+  // A bare identifier is a code, not a sentence.
+  if (!/\s/.test(text) && /^[a-z0-9_.:-]+$/i.test(text)) return null;
+  if (INTERNAL_DIAGNOSTIC_PATTERNS.some((re) => re.test(text))) return null;
+  // Diagnostics can be long; keep the first sentence or two.
+  if (text.length > 300) {
+    const cut = text.slice(0, 300);
+    const stop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("; "));
+    text = stop > 80 ? cut.slice(0, stop + 1) : `${cut.replace(/\s+\S*$/, "")}…`;
+  }
+  text = text.charAt(0).toUpperCase() + text.slice(1);
+  if (!/[.!?…]$/.test(text)) text += ".";
+  return text;
+}
+
+/**
+ * The sentence a failed request may show the customer.
+ *
+ * Uses the backend's own explanation when the status says the caller's input or
+ * state is at fault and the text carries no internal detail; otherwise the
+ * app-authored status copy. `serverMessage` keeps the raw text for triage.
+ */
+export function publicErrorCopy(status: number, detail: unknown): string {
+  if (!ACTIONABLE_DETAIL_STATUSES.has(status)) return errorCopyFor(status);
+  const candidate = detailCandidate(detail);
+  if (!candidate) return errorCopyFor(status);
+  return sanitizeDetailCopy(candidate) ?? errorCopyFor(status);
+}
+
+/** Normalize a raw backend detail for display (callers that bypass `ApiError`). */
+export function publicDetailCopy(detail: unknown): string | null {
+  const candidate = detailCandidate(detail);
+  return candidate ? sanitizeDetailCopy(candidate) : null;
+}
+
 /**
  * What a failed request is allowed to say to the operator.
  *
@@ -110,10 +256,11 @@ function logRequestFailure(
  * that need a domain-specific line ("Repositories unavailable.") rather than the
  * status-only default on ``ApiError.message``.
  *
- * The raw server message is never returned: a failed request is an ``ApiError``
- * whose ``message`` is already app-authored (see ``errorCopyFor``), so that is
- * shown; anything else falls back to the caller's copy. The backend's own words
- * stay on ``serverMessage`` / the console (see ``logRequestFailure``).
+ * A failed request is an ``ApiError`` whose ``message`` is already normalized
+ * for display (see ``publicErrorCopy``): the backend's explanation when it is
+ * safe and customer-actionable, otherwise the status copy. Anything else falls
+ * back to the caller's copy. The raw backend words stay on ``serverMessage`` /
+ * the console (see ``logRequestFailure``).
  */
 export function publicErrorMessage(
   err: unknown,
@@ -131,7 +278,9 @@ export class ApiError extends Error {
   correlationId?: string;
   constructor(status: number, detail: unknown, correlationId?: string) {
     const serverMessage = detailMessage(detail);
-    super(errorCopyFor(status));
+    // Normalized for display: the backend's own explanation when it is safe and
+    // actionable, otherwise the status copy. Raw text stays on `serverMessage`.
+    super(publicErrorCopy(status, detail));
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
@@ -410,12 +559,12 @@ async function request<T>(
     // to lock so the next action prompts cleanly (instead of the FE guessing).
     if ((res.status === 401 || res.status === 403) && sentDualControl && dcSessionIssue) {
       tokens.dualControl = null;
-      window.dispatchEvent(new CustomEvent("phantix:operate-expired", { detail: msg || "Operate session ended." }));
+      window.dispatchEvent(new CustomEvent("phantix:operate-expired", { detail: publicDetailCopy(msg) ?? "Operate session ended." }));
     } else if ((res.status === 401 || res.status === 403) && dualControlScoped && dcSessionIssue) {
       // Dual-control header missing or expired (not a broken main session).
       // Open the unlock overlay so the user can operate and retry instead of
       // being signed out; the inbox shows its own error state meanwhile.
-      window.dispatchEvent(new CustomEvent("phantix:operate-required", { detail: msg || undefined }));
+      window.dispatchEvent(new CustomEvent("phantix:operate-required", { detail: publicDetailCopy(msg) ?? undefined }));
     }
     const superseded = detailObj?.error === "session_superseded" || /superseded by renewal/i.test(msg);
     // Never let a dual-control-scoped 401 tear down the main session on a
@@ -455,10 +604,10 @@ async function request<T>(
       );
     if (creditExhausted) {
       window.dispatchEvent(
-        new CustomEvent("phantix:credits-exhausted", { detail: detailMsg || undefined }),
+        new CustomEvent("phantix:credits-exhausted", { detail: publicDetailCopy(detailMsg) ?? undefined }),
       );
     } else if (res.status === 402) {
-      const upgradeMsg = typeof detail === "string" ? detail : "Upgrade required";
+      const upgradeMsg = publicDetailCopy(detail) ?? "Upgrade required";
       window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: upgradeMsg }));
     }
     // Login throttling (staging-rollout §8): failed attempts are throttled per
