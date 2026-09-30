@@ -36,11 +36,11 @@ export default function CookieConsent() {
             <Cookie size={16} className="shrink-0 text-gold-300" />
             <p className="min-w-[15rem] flex-1 text-[13px] leading-5 text-slate-300">
               We use <strong className="text-slate-200">first-party analytics</strong> to understand how SecureGraph
-              is used — page path, referrer and coarse device info, with no tracking cookies, no fingerprints
+              . It records page path, referrer and coarse device info, with no tracking cookies, no fingerprints
               and no personal data. Your choice applies to every SecureGraph app. Read our{" "}
               {/* The policy page lives on Core; Attack/Defend/Code have no such route. */}
               <a href={`${APP_URL}${COOKIE_POLICY_PATH}`} className="text-gold-300 underline hover:text-gold-200">
-                cookies &amp; analytics policy
+                cookies and analytics policy
               </a>
               .
             </p>

@@ -27,10 +27,10 @@ function rowLabel(a: Asset): string {
   return a.asset_type === "port_service" ? assetValueWithoutPort(a) : chainLabel(a);
 }
 
-/** The port an asset listens on, "—" when none. */
+/** The port an asset listens on, "Not set" when none. */
 function PortCell({ a }: { a: Asset }) {
   const p = assetPort(a);
-  if (!p) return <span className="text-xs text-slate-600">—</span>;
+  if (!p) return <span className="text-xs text-slate-600">Not set</span>;
   return (
     <span className="whitespace-nowrap font-mono text-xs text-slate-300">
       {p.port}
@@ -128,7 +128,7 @@ export default function AssetTreeView({ onSelect, refreshKey = 0, onFirstLoad }:
     return <p className="px-5 py-10 text-center text-sm text-slate-400">{root.error}</p>;
   }
   if (root.items.length === 0) {
-    return <EmptyState icon={<Boxes size={22} />} title="No assets yet" body="Add a domain to start a chain — its subdomains and paths will appear under it." />;
+    return <EmptyState icon={<Boxes size={22} />} title="No assets yet" body="Add a domain to start a chain. Its subdomains and paths then appear under it." />;
   }
 
   const rows: React.ReactNode[] = [];
@@ -193,7 +193,7 @@ export default function AssetTreeView({ onSelect, refreshKey = 0, onFirstLoad }:
                 {node.child_count} <span className="text-slate-500">direct · {node.descendant_count} total</span>
               </span>
             ) : (
-              <span className="text-xs text-slate-600">—</span>
+              <span className="text-xs text-slate-600">Not set</span>
             )}
           </td>
           <td className="td whitespace-nowrap">

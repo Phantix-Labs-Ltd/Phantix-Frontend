@@ -29,7 +29,7 @@ export const NAV: NavSection[] = [
   {
     label: "Test",
     items: [
-      { to: "/scans", label: "Web & API", icon: <Radar size={17} /> },
+      { to: "/scans", label: "Web and API", icon: <Radar size={17} /> },
       { to: "/mobile", label: "Mobile", icon: <Smartphone size={17} /> },
       { to: "/remediation", label: "Remediation", icon: <Wrench size={17} /> },
     ],
@@ -40,7 +40,7 @@ export const NAV: NavSection[] = [
       { to: "/prior-reports", label: "Prior reports", icon: <FileText size={17} /> },
       { to: "/vapt", label: "Campaigns", icon: <Crosshair size={17} /> },
       { to: "/vapt/schedules", label: "Schedules", icon: <CalendarClock size={17} /> },
-      { to: "/vapt/procedures", label: "Procedures & rules", icon: <BookOpen size={17} /> },
+      { to: "/vapt/procedures", label: "Procedures and rules", icon: <BookOpen size={17} /> },
       { to: "/vapt/settings", label: "Engine settings", icon: <SlidersHorizontal size={17} /> },
     ],
   },

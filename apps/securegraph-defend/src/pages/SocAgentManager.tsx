@@ -73,7 +73,7 @@ export default function SocAgentManager() {
                     <td className="td text-xs text-slate-400">v{agent.version}</td>
                     <td className="td font-mono text-xs text-slate-500">{agent.agent_id.slice(0, 12)}</td>
                     <td className="td"><StatusBadge status={agent.status} /></td>
-                    <td className="td text-xs text-slate-500">{agent.last_heartbeat ? timeAgo(agent.last_heartbeat) : "—"}</td>
+                    <td className="td text-xs text-slate-500">{agent.last_heartbeat ? timeAgo(agent.last_heartbeat) : "Not set"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -12,7 +12,7 @@ export function Shell({ children }: { children: ReactNode }) {
 export function LoadingState() {
   return (
     <p className="state-note" role="status">
-      Setting this week's issue…
+      The issue for this week is loading.
     </p>
   );
 }
@@ -30,10 +30,10 @@ export function NotFoundPage() {
   return (
     <Shell>
       <div className="state-note" role="alert">
-        <h1 className="state-title">There's nothing at this address.</h1>
+        <h1 className="state-title">There is nothing at this address.</h1>
         <p className="state-hint">
           The link may be old or mistyped.{" "}
-          <Link className="md-a" to="/">Read this week's issue</Link>
+          <Link className="md-a" to="/">Read the issue for this week</Link>
         </p>
       </div>
     </Shell>
@@ -44,21 +44,20 @@ export function ErrorState({ message, notFound }: { message: string | null; notF
   if (notFound) {
     return (
       <div className="state-note" role="alert">
-        <p className="state-title">This essay isn't in the Weekly.</p>
+        <p className="state-title">This essay is not in the Weekly.</p>
         <p className="state-hint">
-          It may have been moved or taken down by the editors.{" "}
-          <Link className="md-a" to="/">Back to this week's issue</Link>
+          The editors may have moved it, or removed it.{" "}
+          <Link className="md-a" to="/">Back to the issue for this week</Link>
         </p>
       </div>
     );
   }
   return (
     <div className="state-note" role="alert">
-      <p className="state-title">This week's issue didn't arrive.</p>
+      <p className="state-title">The issue for this week did not arrive.</p>
       {message ? <p className="state-detail">{message}</p> : null}
       <p className="state-hint">
-        Refresh in a moment. If it still won't load, we're having trouble on
-        our end — please try again shortly.
+        Refresh the page in a moment. If it still does not load, try again shortly.
       </p>
     </div>
   );

@@ -291,15 +291,15 @@ export function publicDetailCopy(detail: unknown): string | null {
  * That text is logged (see `logRequestFailure`) and the UI gets this instead.
  */
 export function errorCopyFor(status: number): string {
-  if (status === 0) return "We couldn't reach the server. Check your connection and try again.";
+  if (status === 0) return "We could not reach the server. Check your connection and try again.";
   if (status === 401) return "Your session has expired. Sign in again to continue.";
   if (status === 402) return "That needs an upgrade on your plan.";
-  if (status === 403) return "You don't have permission to do that.";
+  if (status === 403) return "You do not have permission to do that.";
   if (status === 404) return "That item no longer exists.";
   if (status === 408) return "The request timed out. Try again.";
   if (status === 409) return "That conflicts with the current state. Refresh and try again.";
   if (status === 429) return "Too many attempts. Wait a moment and try again.";
-  if (status >= 500) return "The server couldn't complete that request. Try again shortly.";
+  if (status >= 500) return "The server could not complete that request. Try again shortly.";
   if (status >= 400) return "That request was rejected. Check the details and try again.";
   return "Something went wrong. Try again.";
 }

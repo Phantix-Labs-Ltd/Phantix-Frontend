@@ -409,7 +409,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       : orgAssets.filter((a) => selectedAssetIds.has(a.id));
     const targets = picked.map((a) => a.value.trim()).filter(Boolean).slice(0, max);
     if (!newName.trim() || targets.length === 0) {
-      toast("error", selectAllAssets && orgAssets.length === 0 ? "No assets available yet — add assets first" : "Name and at least one target asset are required");
+      toast("error", selectAllAssets && orgAssets.length === 0 ? "No assets available yet. Add assets first." : "Name and at least one target asset are required");
       return;
     }
     setCreating(true);
@@ -525,7 +525,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         toast(
           "error",
           "Start failed at the gateway",
-          "The session may still be starting. Wait a minute and reload this page before retrying — " +
+          "The session may still be starting. Wait a minute and reload this page . " +
           "retrying immediately can create a duplicate session. If it persists, contact support and " +
           "include the reference shown above.",
         );
@@ -567,7 +567,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       // generates the deliverable from Report Solutions on the Core app. So we
       // surface that instruction instead of navigating to a /reports route that
       // only exists in the Core app (here it would just 404).
-      toast("success", "Assessment complete", "Findings submitted — generate reports from Report Solutions on the Core app.");
+      toast("success", "Assessment complete", "Findings submitted. Generate reports from Report Solutions on the Core app.");
     } catch (e) {
       toast("error", "Stop failed", e instanceof Error ? e.message : "");
     } finally {
@@ -659,14 +659,14 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       const message = String(e?.message ?? "");
       // Dual-control expired while session still running — clearer copy
       if (/dual.?control|authenticator session|X-Dual-Control/i.test(message) && running) {
-        setConnError("Operate session expired — unlock it in the dialog, then resend your message.");
+        setConnError("Operate session expired. Unlock it in the dialog, then resend your message.");
         toast("warning", "Operate session expired", "Unlock the operate session to continue, then resend.");
         return false;
       }
       if (name === "TimeoutError" || name === "AbortError" || /timeout|timed out/i.test(message)) {
-        setConnError("Timed out — the agent server is unavailable. Check your connection and try again.");
+        setConnError("Timed out. The agent server is unavailable. Check your connection and try again.");
       } else if (/failed to fetch|networkerror|network error|load failed|fetch/i.test(message)) {
-        setConnError("Failed to fetch — could not reach the agent server. Check your connection and try again.");
+        setConnError("Failed to fetch. Could not reach the agent server. Check your connection and try again.");
       } else {
         setConnError(message || "Failed to reach the agent server.");
       }
@@ -982,7 +982,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           if (p.blocked) {
             pushLive(
               `mc-${p.policy_code}-${Date.now()}`,
-              `Mission control blocked a step — ${(p.reasons || []).join(" ") || p.policy_code}`,
+              `Mission control blocked a step: ${(p.reasons || []).join(" ") || p.policy_code}`,
               { kind: "mission_control", event, ...p },
             );
           }
@@ -1013,7 +1013,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           const p = JSON.parse(data) as { title?: string; verdict?: string; confidence?: number; reason?: string };
           pushLive(
             `dropped-${p.title ?? ""}-${p.confidence ?? ""}`,
-            `Candidate dropped as a non-vulnerability — "${p.title || "candidate"}" (${p.verdict || p.reason || "control"}, confidence ${p.confidence ?? "?"})`,
+            `Candidate dropped as a non-vulnerability: "${p.title || "candidate"}" (${p.verdict || p.reason || "control"}, confidence ${p.confidence ?? "?"})`,
             { kind: "finding_dropped", event, ...p },
           );
           return;
@@ -1031,7 +1031,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           const p = JSON.parse(data) as { found?: number; assets?: number; summary?: { elapsed?: number; categories?: string[] } };
           pushLive(
             `campaign-${p.summary?.elapsed ?? ""}-${p.assets ?? 0}-${p.found ?? 0}`,
-            `Campaign complete — ${p.found ?? 0} finding(s) across ${p.assets ?? 0} asset(s) in ${p.summary?.elapsed ?? "?"}s.`,
+            `Campaign complete: ${p.found ?? 0} finding(s) across ${p.assets ?? 0} asset(s) in ${p.summary?.elapsed ?? "?"}s.`,
             { kind: "campaign_done", event, ...p },
           );
           return;
@@ -1040,7 +1040,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           const p = JSON.parse(data) as { verdict?: string; unresolved?: string[]; next?: string[]; findings?: number };
           pushLive(
             `review-${(p.unresolved || []).length}-${(p.next || []).join(",")}`,
-            `Decision review — verdict: ${p.verdict || "continue"}. ${(p.unresolved || []).length} open lead(s).`,
+            `Decision review. Verdict: ${p.verdict || "continue"}. ${(p.unresolved || []).length} open lead(s).`,
             { kind: "decision_review", event, ...p },
           );
           return;
@@ -1050,7 +1050,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           if (typeof p.count === "number") {
             pushLive(
               `verify-${p.count}-${p.verified ?? 0}-${p.dismissed ?? 0}-${p.inconclusive ?? 0}`,
-              `Verification — ${p.count} finding(s): ${p.verified ?? 0} confirmed, ${p.dismissed ?? 0} dismissed, ${p.inconclusive ?? 0} inconclusive`,
+              `Verification. ${p.count} finding(s): ${p.verified ?? 0} confirmed, ${p.dismissed ?? 0} dismissed, ${p.inconclusive ?? 0} inconclusive`,
               { kind: "verify_all", event, ...p },
             );
             refreshFindings();
@@ -1061,7 +1061,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           const p = JSON.parse(data) as { estimated_credits?: number; total_tokens?: number };
           pushLive(
             `credits-${p.estimated_credits ?? 0}-${p.total_tokens ?? 0}`,
-            `AI spend — ${p.estimated_credits ?? 0} credit(s) across ${p.total_tokens ?? 0} token(s).`,
+            `AI spend: ${p.estimated_credits ?? 0} credit(s) across ${p.total_tokens ?? 0} token(s).`,
             { kind: "ai_credit_spend", event, ...p },
           );
           return;
@@ -1274,7 +1274,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           <p className="wb-xs leading-relaxed text-slate-300">
             Mission control · {missionControl.blocked ? "blocked" : missionControl.verdict}
             {missionControl.capability ? ` · ${missionControl.capability}` : ""}
-            {missionControl.steering ? ` — ${missionControl.steering}` : ""}
+            {missionControl.steering ? ` · ${missionControl.steering}` : ""}
           </p>
         </div>
       )}
@@ -1308,7 +1308,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           <p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">
             The Autonomous Pentest Agent only runs against your approved engagement allowlist. State-changing steps pause for your approval.
           </p>
-          <button onClick={() => void openAgreement()} className="btn-primary mt-4 !text-xs"><ShieldCheck size={13} /> Review & accept agreement</button>
+          <button onClick={() => void openAgreement()} className="btn-primary mt-4 !text-xs"><ShieldCheck size={13} /> Review and accept agreement</button>
 
           {/* What is actually being agreed to. A gate that only says "accept"
               asks for consent without stating the terms it governs. */}
@@ -1485,7 +1485,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                   </div>
                   <div className="space-y-2">
                     <span className="block text-xs font-semibold text-slate-400">
-                      Engagement context — answers the agent up front so it does not stop to ask
+                      Engagement context. This answers the agent up front, so it does not stop to ask.
                     </span>
                     <EngagementContextFields
                       mode={newMode}
@@ -1538,7 +1538,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                     <button
                       type="button"
                       onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}
-                      title="Edit testing mode & engagement context"
+                      title="Edit testing mode and engagement context"
                       className="absolute right-2 top-2 rounded-md border border-phantix-700/50 bg-phantix-900/80 p-1 text-slate-500 transition-colors hover:text-gold-300"
                     >
                       <Pencil size={11} />
@@ -1703,7 +1703,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                   {!running && (session.status === "stopped" || session.status === "torn_down" || session.status === "failed") && (
                     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-phantix-700/40 bg-phantix-900/60 px-3 py-2.5">
                       <p className="wb-xs flex-1 text-slate-400">
-                        Session ended{session.status === "failed" ? " — check the engine logs" : ""}. Ready to run a fresh assessment?
+                        Session ended{session.status === "failed" ? " Check the engine logs." : ""}. Ready to run a fresh assessment?
                       </p>
                       <button onClick={exitToPicker} className="btn-primary !px-2.5 !py-1 wb-xs shrink-0"><Plus size={11} className="mr-1 inline" /> New session</button>
                     </div>
@@ -1771,12 +1771,12 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                     />
                   )}
                   {running && transcript.length > 0 && !thinking && !connError && actions.length === 0 && !openClarification && !stalled && (
-                    <p className="wb-xs text-center text-slate-600">— awaiting engine output —</p>
+                    <p className="wb-xs text-center text-slate-600">Awaiting engine output</p>
                   )}
                   {running && !thinking && !connError && actions.length === 0 && !openClarification && stalled && (
                     <div className="mx-auto my-1 flex max-w-md flex-col items-center gap-2 rounded-xl border border-phantix-700/50 bg-phantix-900/50 px-4 py-3 text-center">
                       <p className="wb-xs text-slate-400">
-                        The agent has been quiet for a while — re-syncing the transcript. If it stays idle, resume the run.
+                        . Re-syncing the transcript. If it stays idle, resume the run.
                       </p>
                       <button
                         type="button"
@@ -1881,7 +1881,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                       e.preventDefault();
                       send();
                     }}
-                    placeholder={loopStopped ? "Loop stopped — send a message to continue..." : running ? "Further instructions for the agent..." : "Session stopped"}
+                    placeholder={loopStopped ? "Loop stopped. Send a message to continue..." : running ? "Further instructions for the agent..." : "Session stopped"}
                     disabled={!running}
                     className="wb-md flex-1 bg-transparent text-slate-200 outline-none placeholder:text-slate-500 disabled:opacity-50"
                   />
@@ -1890,7 +1890,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                 <p className="wb-xs mt-2 flex items-center gap-1.5 text-slate-600">
                   <ShieldCheck size={11} className="shrink-0" />
                   {chatSend.hint === "queued"
-                    ? "Queued — press Enter again to send now, or wait for the current reply."
+                    ? "Queued. Press Enter again to send now, or wait for the current reply."
                     : "Read-only steps stream live · state-changing steps wait for your approval · container destroyed on stop"}
                 </p>
               </div>
@@ -1917,7 +1917,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
             <div className="space-y-4">
               <p className="text-[13px] leading-5 text-slate-400">
                 These are the mechanisms the sandbox already provides for this engagement.
-                Confirming lets the agent use them for this run only — each stays bounded by
+                Confirming lets the agent use them . Each stays bounded by
                 the guardrail shown, and nothing outside the engagement scope is reachable.
               </p>
               {groups.map((g) => (
@@ -1968,7 +1968,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                   </button>
                   <button className="btn-primary !text-sm" onClick={() => void doStart(capGate.instruction)} disabled={starting}>
                     {starting ? <Loader2 size={13} className="mr-1 inline animate-spin" /> : <ShieldCheck size={13} className="mr-1 inline" />}
-                    {starting ? "Starting…" : "Confirm & start"}
+                    {starting ? "Starting…" : "Confirm and start"}
                   </button>
                 </div>
               </div>
@@ -2002,7 +2002,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         </div>
       </Modal>
 
-      <Modal open={agreementOpen} onClose={() => setAgreementOpen(false)} title="Autonomous Pentest Agent — Usage Agreement">
+      <Modal open={agreementOpen} onClose={() => setAgreementOpen(false)} title="Autonomous Pentest Agent: Usage Agreement">
         <div className="space-y-3">
           <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-phantix-700/40 bg-phantix-950/60 p-4">
             <MarkdownView source={agreementBody} />
@@ -2017,7 +2017,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
             <span className="text-xs leading-5 text-slate-400">I am authorized to test the listed targets under the stated rules of engagement, and understand that state-changing steps require approval.</span>
           </label>
           <button onClick={() => void accept()} disabled={!agreementChecked || accepting} className="btn-primary w-full !py-2.5 !text-xs">
-            {accepting ? <Loader2 size={12} className="mr-1 animate-spin inline" /> : <ShieldCheck size={13} className="mr-1 inline" />} Accept & continue
+            {accepting ? <Loader2 size={12} className="mr-1 animate-spin inline" /> : <ShieldCheck size={13} className="mr-1 inline" />} Accept and continue
           </button>
           {/* Help sits under the button so the agreement is read first — the guide
               explains scope, approvals and what the agent may never touch.

@@ -46,6 +46,16 @@ import app25 from "@docs/docs/how-to/command-centre/25-soc-operations.md?raw";
 import app26 from "@docs/docs/how-to/command-centre/26-pentest-scope.md?raw";
 import app27 from "@docs/docs/how-to/command-centre/27-admin-and-audit.md?raw";
 import app28 from "@docs/docs/how-to/command-centre/28-analytics.md?raw";
+import app29 from "@docs/docs/how-to/command-centre/29-dashboard.md?raw";
+import app30 from "@docs/docs/how-to/command-centre/30-findings-intake.md?raw";
+import app31 from "@docs/docs/how-to/command-centre/31-asset-removal.md?raw";
+import app32 from "@docs/docs/how-to/command-centre/32-mobile-testing.md?raw";
+import app33 from "@docs/docs/how-to/command-centre/33-remediation.md?raw";
+import app34 from "@docs/docs/how-to/command-centre/34-prior-reports.md?raw";
+import app35 from "@docs/docs/how-to/command-centre/35-asset-intelligence.md?raw";
+import app36 from "@docs/docs/how-to/command-centre/36-incidents.md?raw";
+import app37 from "@docs/docs/how-to/command-centre/37-product-context.md?raw";
+import app38 from "@docs/docs/how-to/command-centre/38-overview.md?raw";
 
 function toWeb(md: string): string {
   return md.replace(/\.\.\/\.\.\/screenshots\//g, "/screenshots/").replace(/\.\.\/screenshots\//g, "/screenshots/");
@@ -60,30 +70,30 @@ function e(id: string, title: string, description: string, category: string, raw
 export const howToDocs: Entry[] = [
   e("howto-index", "How-to index", "Task guides for Platform and Command Centre.", "how-to", howToIndex),
 
-  e("howto-platform-index", "Platform — how-to index", "Org admin tasks on platform.phantixlabs.com.", "how-to-platform", platIndex),
-  e("howto-platform-01", "Platform: Register & sign in", "Create org and MFA login.", "how-to-platform", plat01),
+  e("howto-platform-index", "Platform: how-to index", "Org admin tasks on platform.phantixlabs.com.", "how-to-platform", platIndex),
+  e("howto-platform-01", "Platform: Register and sign in", "Create org and MFA login.", "how-to-platform", plat01),
   e("howto-platform-02", "Platform: Setup wizard", "Privacy, email OTP, verification.", "how-to-platform", plat02),
   e("howto-platform-03", "Platform: Add a user", "Create org users for dual control and app access.", "how-to-platform", plat03),
   e("howto-platform-04", "Platform: Assign dual control", "Initiator and authorizer slots.", "how-to-platform", plat04),
   e("howto-platform-05", "Platform: Issue app login link", "Invite operators to Command Centre.", "how-to-platform", plat05),
   e("howto-platform-06", "Platform: Security database", "Connect and bootstrap security_data_storage.", "how-to-platform", plat06),
   e("howto-platform-07", "Platform: Config database", "Optional config_inspection connection.", "how-to-platform", plat07),
-  e("howto-platform-08", "Platform: Identity & keys", "Profile, pk_live keys, branding.", "how-to-platform", plat08),
+  e("howto-platform-08", "Platform: Identity and keys", "Profile, pk_live keys, branding.", "how-to-platform", plat08),
   e("howto-platform-09", "Platform: Unlock operate", "Dual-control session for mutations.", "how-to-platform", plat09),
   e("howto-platform-10", "Platform: Connect GitHub", "GitHub App and repo import.", "how-to-platform", plat10),
   e("howto-platform-11", "Platform: Billing", "Subscribe, pay, redeem coupons.", "how-to-platform", plat11),
   e("howto-platform-12", "Platform: Alerts", "SMTP, WhatsApp, Telegram.", "how-to-platform", plat12),
   e("howto-platform-13", "Platform: Sandbox feedback", "Updates and ratings when enrolled.", "how-to-platform", plat13),
 
-  e("howto-app-index", "Command Centre — how-to index", "Operator tasks on app.phantixlabs.com.", "how-to-app", appIndex),
+  e("howto-app-index", "Command Centre: how-to index", "Operator tasks on app.phantixlabs.com.", "how-to-app", appIndex),
   e("howto-app-01", "App: Sign in", "Password, invite link, or demo.", "how-to-app", app01),
   e("howto-app-02", "App: Unlock operate", "Dual-control for scans and writes.", "how-to-app", app02),
-  e("howto-app-03", "App: Add & verify assets", "Inventory and verification.", "how-to-app", app03),
+  e("howto-app-03", "App: Add and verify assets", "Inventory and verification.", "how-to-app", app03),
   e("howto-app-04", "App: Run discovery", "Discover hosts and imports.", "how-to-app", app04),
   e("howto-app-05", "App: Launch a scan", "One active job per org.", "how-to-app", app05),
   e("howto-app-06", "App: VAPT campaign", "Create, approve, run, findings.", "how-to-app", app06),
   e("howto-app-07", "App: Triage SOC", "Detections, cases, escalation.", "how-to-app", app07),
-  e("howto-app-08", "App: Availability & agent", "Checks and heartbeat installs.", "how-to-app", app08),
+  e("howto-app-08", "App: Availability and agent", "Checks and heartbeat installs.", "how-to-app", app08),
   e("howto-app-09", "App: Manage risks", "Priority queue and treatments.", "how-to-app", app09),
   e("howto-app-10", "App: Compliance assessment", "Frameworks and evidence.", "how-to-app", app10),
   e("howto-app-11", "App: Generate reports", "Library formats including pptx/html.", "how-to-app", app11),
@@ -98,10 +108,20 @@ export const howToDocs: Entry[] = [
   e("howto-app-20", "App: Agent activity", "Every agent action with its intent, actor and outcome.", "how-to-app", app20),
   e("howto-app-21", "App: Code security", "PR review, AutoFix and Continuous PR.", "how-to-app", app21),
   e("howto-app-22", "App: Posture", "Reviews due, regressions and accepted-risk age.", "how-to-app", app22),
-  e("howto-app-23", "App: VAPT schedules & settings", "Cadence, rules of engagement, engine settings.", "how-to-app", app23),
+  e("howto-app-23", "App: VAPT schedules and settings", "Cadence, rules of engagement, engine settings.", "how-to-app", app23),
   e("howto-app-24", "App: Compliance review", "Frameworks, questionnaire, gaps and evidence.", "how-to-app", app24),
   e("howto-app-25", "App: SOC operations", "Triage, war room, playbooks, advisor and logs.", "how-to-app", app25),
   e("howto-app-26", "App: Pentest scope", "External scope and rules of engagement.", "how-to-app", app26),
-  e("howto-app-27", "App: Audit, people & integrations", "Trail, users, delivery and sandbox.", "how-to-app", app27),
+  e("howto-app-27", "App: Audit, people and integrations", "Trail, users, delivery and sandbox.", "how-to-app", app27),
   e("howto-app-28", "App: Analytics", "Live posture, findings and comparative analysis without a report.", "how-to-app", app28),
+  e("howto-app-29", "App: Dashboard", "The daily composite picture: posture, findings, risks, reports and detections.", "how-to-app", app29),
+  e("howto-app-30", "App: Findings intake", "Findings that are not yet on the remediation tracker.", "how-to-app", app30),
+  e("howto-app-31", "App: Asset removal", "Remove an asset and its data from the Danger zone.", "how-to-app", app31),
+  e("howto-app-32", "App: Mobile package analysis", "Static analysis of an APK, AAB or IPA package.", "how-to-app", app32),
+  e("howto-app-33", "App: Remediation queue", "The fix queue for verified findings.", "how-to-app", app33),
+  e("howto-app-34", "App: Prior reports", "Upload and read reports from earlier engagements.", "how-to-app", app34),
+  e("howto-app-35", "App: Asset intelligence", "Live asset events and the relationship graph.", "how-to-app", app35),
+  e("howto-app-36", "App: Alerts and incidents", "Delivery log, SMTP, channels and event toggles.", "how-to-app", app36),
+  e("howto-app-37", "App: Product context", "Projects, parsed models and ingested documents.", "how-to-app", app37),
+  e("howto-app-38", "App: Overview and navigation", "The launcher and how to move between pages and apps.", "how-to-app", app38),
 ];

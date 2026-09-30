@@ -23,7 +23,7 @@ import {
 type Msg = { role: "user" | "agent"; text: string; thinking?: string; nav?: { route: string; label: string; also?: { route: string; label: string }[] } };
 
 const DEFAULT_GREETING =
-  "Hi, I'm SecureGraph Agent — your security operations assistant. I can summarize your posture, surface highest-risk assets, list open critical risks, preview report findings, and explain risks or findings. I can also point you to any page in the app — just ask \u201cwhere do I find\u2026\u201d. What would you like to look into?";
+  "Hi, I am SecureGraph Agent, your security operations assistant. I can summarize your posture and surface highest-risk assets. I can list open critical risks, preview report findings, and explain risks or findings. I can also point you to any page in the app. Ask \u201cwhere do I find\u2026\u201d. What would you like to look into?";
 
 const SUGGESTIONS = [
   "Summarize my current security posture",
@@ -195,14 +195,14 @@ export default function AgentAssistant() {
           const name = String((e as any)?.name ?? "");
           const message = String((e as any)?.message ?? "");
           if (name === "TimeoutError" || name === "AbortError" || /timeout|timed out/i.test(message)) {
-            setConnError("Timed out — the agent server is unavailable. Check your connection and try again.");
+            setConnError("Timed out. The agent server is unavailable. Check your connection and try again.");
           } else if (/failed to fetch|networkerror|network error|load failed|fetch/i.test(message)) {
-            setConnError("Failed to fetch — could not reach the agent server. Check your connection and try again.");
+            setConnError("Failed to fetch. Could not reach the agent server. Check your connection and try again.");
           } else {
             setConnError(message || "Failed to reach the agent server.");
           }
           toast("error", "Agent unavailable", e instanceof Error ? e.message : "");
-          setMessages((m) => [...m, { role: "agent", text: "I couldn't process that request. Please try again." }]);
+          setMessages((m) => [...m, { role: "agent", text: "I could not process that request. Please try again." }]);
         }
       }
     } finally {
@@ -269,7 +269,7 @@ export default function AgentAssistant() {
               {mode === "support" && (
                 <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
                   <p className="text-xs leading-5 text-slate-400">
-                    Stuck on something? Raise it with the support desk — it is submitted on behalf of your
+                    Stuck on something? . It is submitted on behalf of your
                     organization, and the thread is answered here and by email.
                   </p>
                   <button
@@ -279,7 +279,7 @@ export default function AgentAssistant() {
                     <Sparkles size={15} className="mt-0.5 shrink-0 text-gold-300" />
                     <span>
                       <span className="block text-xs font-semibold text-gold-200">Open a support ticket</span>
-                      <span className="block text-[13px] leading-5 text-gold-100/80">Describe the issue and pick a priority — critical is triaged first.</span>
+                      <span className="block text-[13px] leading-5 text-gold-100/80">. Critical is triaged first.</span>
                     </span>
                   </button>
                   <button
@@ -298,8 +298,8 @@ export default function AgentAssistant() {
                   >
                     <BookOpen size={15} className="mt-0.5 shrink-0 text-slate-400" />
                     <span>
-                      <span className="block text-xs font-semibold text-slate-200">Documentation &amp; Help Centre</span>
-                      <span className="block text-[13px] leading-5 text-slate-500">Setup guides, how-tos and FAQs — most answers are already written down.</span>
+                      <span className="block text-xs font-semibold text-slate-200">Documentation and Help Centre</span>
+                      <span className="block text-[13px] leading-5 text-slate-500">. Most answers are already written down.</span>
                     </span>
                   </button>
                   <a
@@ -445,7 +445,7 @@ export default function AgentAssistant() {
                 <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-slate-600">
                   <Sparkles size={10} />
                   {chatSend.hint === "queued"
-                    ? "Queued — press Enter again to send now, or wait for the current reply."
+                    ? "Queued. Press Enter again to send now, or wait for the current reply."
                     : "PII redacted before provider calls · every interaction audited · agent never changes findings or risk scores"}
                 </p>
               </div>

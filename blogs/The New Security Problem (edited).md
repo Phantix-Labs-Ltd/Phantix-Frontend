@@ -1,6 +1,6 @@
-# The New Security Problem: Software Is Being Built Faster Than Ever
+# The New Security Problem: Software Is Built Faster Than Ever
 
-Software is being built faster than ever.
+Software is built faster than ever.
 
 The way applications are designed, developed, tested, and deployed has changed significantly. Cloud platforms, open-source technologies, DevOps practices, CI/CD pipelines, and artificial intelligence have made it possible for teams to move from an idea to a working product much faster than before.
 
@@ -14,7 +14,7 @@ Security is still often treated as a point-in-time activity. An application is t
 
 New features are introduced. Dependencies are updated. APIs are added. Configurations change. Permissions change. Infrastructure changes. AI systems and agents become part of applications.
 
-The security posture of the application can therefore change long after the original security assessment has been completed.
+The security posture of the application can therefore change long after the original security assessment is complete.
 
 This is where the idea of **continuous security** becomes important.
 
@@ -144,21 +144,21 @@ The goal should be **useful automation within controlled boundaries.**
 
 ## From Periodic Testing to Continuous Validation
 
-If modern software is being built and changed continuously, security needs to move closer to that same pace.
+If modern software is built and changed continuously, security needs to move closer to that same pace.
 
 A continuous security process can involve:
 
-**Discovery** — knowing what assets, applications, APIs, services, and technologies exist.
+**Discovery**: knowing what assets, applications, APIs, services, and technologies exist.
 
-**Testing** — regularly evaluating those assets for security weaknesses.
+**Testing**: regularly evaluating those assets for security weaknesses.
 
-**Validation** — determining whether potential findings are real, reproducible, and meaningful.
+**Validation**: determining whether potential findings are real, reproducible, and meaningful.
 
-**Remediation** — addressing confirmed vulnerabilities.
+**Remediation**: addressing confirmed vulnerabilities.
 
-**Retesting** — checking whether the issue has actually been resolved.
+**Retesting**: checking whether the issue has actually been resolved.
 
-**Monitoring** — continuously watching for changes and new security signals.
+**Monitoring**: continuously watching for changes and new security signals.
 
 This approach does not eliminate traditional penetration testing. It complements it.
 
@@ -200,11 +200,11 @@ toward:
 
 The difference is more than a change in workflow. It is a change in mindset.
 
-Security is no longer something that happens only after an application has been built. It has to exist throughout the application's lifecycle.
+Security is no longer something that happens only after an application is built. It has to exist throughout the application's lifecycle.
 
 ## Conclusion
 
-Software is being built faster than ever.
+Software is built faster than ever.
 
 AI agents are accelerating development, increasing automation, and changing how applications are designed and operated. That creates enormous opportunities, but it also creates a security challenge.
 

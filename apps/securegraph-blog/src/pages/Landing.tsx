@@ -133,7 +133,7 @@ const PullQuote = forwardRef<HTMLElement, { inView: boolean; issue: IssueMeta }>
           {issue.pullQuote}
           <span className="pull-underline" aria-hidden="true" />
         </blockquote>
-        <figcaption className="cite">— {issue.pullCite}</figcaption>
+        <figcaption className="cite">{issue.pullCite}</figcaption>
       </figure>
     );
   }

@@ -104,7 +104,7 @@ export default function Sandbox() {
       });
       setRatings((prev) => [row, ...prev]);
       setRateOpen(false);
-      toast("success", "Thanks — rating recorded");
+      toast("success", "Rating recorded");
     } catch (e) {
       toast("error", "Rating failed", e instanceof Error ? e.message : "");
     } finally {
@@ -173,7 +173,7 @@ if (loading) {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-3">
           <Card>
-            <CardHeader title="Live updates" subtitle="Staff posts after deploys — ack when you've refreshed" action={<Megaphone size={15} className="text-gold-400" />} />
+            <CardHeader title="Live updates" subtitle="Staff post after each deploy. Acknowledge when you refresh" action={<Megaphone size={15} className="text-gold-400" />} />
             {updates.length === 0 ? (
               <p className="py-8 text-center text-sm text-slate-500">No updates yet.</p>
             ) : (
@@ -226,7 +226,7 @@ if (loading) {
           <Card>
             <CardHeader title="Your ratings" subtitle="Help prioritize what we fix next" />
             {ratings.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">No ratings yet — rate a build after you try it.</p>
+              <p className="py-6 text-center text-sm text-slate-500">No ratings yet. Rate a build after you try it.</p>
             ) : (
               <div className="space-y-2">
                 {ratings.map((r, i) => (

@@ -361,7 +361,7 @@ export default function SocDashboard() {
     return (
       <ErrorState
         onRetry={socData.reload}
-        body="We could not load the SOC Operations Center. Check your connection and retry — your session stays signed in."
+        body="We could not load the SOC Operations Center. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -414,7 +414,7 @@ export default function SocDashboard() {
             <Card>
               <CardHeader
                 title="Detections over time"
-                subtitle="Signals per day — critical/high overlay · last 14 days"
+                subtitle="Signals per day. Critical and high overlay, last 14 days"
                 action={
                   (() => {
                     const total = detTrend.data.reduce((s, p) => s + (p.value ?? 0), 0);
@@ -554,7 +554,7 @@ export default function SocDashboard() {
                 }) : (
                   <div className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-1 px-4 text-center text-xs text-slate-500">
                     <Wifi size={16} className={cx(liveConnected ? "text-gold-400/60" : "text-slate-600")} />
-                    {liveConnected ? "Connected — waiting for events" : "Stream offline"}
+                    {liveConnected ? "Connected. Waiting for events." : "Stream offline"}
                   </div>
                 )}
               </div>
@@ -608,15 +608,15 @@ export default function SocDashboard() {
                         <td className="td">
                           <div className="min-w-0 max-w-md">
                             <p className="font-medium text-slate-100 truncate">{d.title}</p>
-                            <p className="text-[13px] text-slate-500 truncate">{d.correlator_id ?? d.source} · asset #{d.asset_id ?? "—"}{d.risk_id ? ` · risk #${d.risk_id}` : ""}</p>
+                            <p className="text-[13px] text-slate-500 truncate">{d.correlator_id ?? d.source} · asset #{d.asset_id ?? "Not set"}{d.risk_id ? ` · risk #${d.risk_id}` : ""}</p>
                           </div>
                         </td>
                         <td className="td"><SeverityBadge severity={sevOf(String(d.severity))} /></td>
                         <td className="td"><StatusBadge status={String(d.status)} /></td>
                         <td className="td font-mono tabular-nums text-slate-200">{Math.round(Number(d.priority_score ?? 0))}</td>
-                        <td className="td text-xs text-slate-400">{d.assignee_ref || "—"}</td>
+                        <td className="td text-xs text-slate-400">{d.assignee_ref || "Not set"}</td>
                         <td className="td font-mono tabular-nums text-slate-300">{d.occurrence_count}</td>
-                        <td className="td text-xs text-slate-500 whitespace-nowrap">{d.last_seen_at ? timeAgo(d.last_seen_at) : "—"}</td>
+                        <td className="td text-xs text-slate-500 whitespace-nowrap">{d.last_seen_at ? timeAgo(d.last_seen_at) : "Not set"}</td>
                         <td className="td"><ChevronRight size={14} className="text-slate-500" /></td>
                       </tr>
                     ))}
@@ -662,8 +662,8 @@ export default function SocDashboard() {
                         </td>
                         <td className="td"><SeverityBadge severity={sevOf(String(c.severity))} /></td>
                         <td className="td"><StatusBadge status={String(c.status)} /></td>
-                        <td className="td text-xs text-slate-400">{c.assignee_ref ? <span className="flex items-center gap-1"><UserCheck size={11} /> {c.assignee_ref}</span> : "—"}</td>
-                        <td className="td text-xs text-slate-500 whitespace-nowrap">{c.opened_at ? timeAgo(c.opened_at) : "—"}</td>
+                        <td className="td text-xs text-slate-400">{c.assignee_ref ? <span className="flex items-center gap-1"><UserCheck size={11} /> {c.assignee_ref}</span> : "Not set"}</td>
+                        <td className="td text-xs text-slate-500 whitespace-nowrap">{c.opened_at ? timeAgo(c.opened_at) : "Not set"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -714,7 +714,7 @@ export default function SocDashboard() {
                         <td className="td"><span className="chip text-[12px]">{r.source ?? "org"}</span></td>
                         <td className="td"><SeverityBadge severity={sevOf(String(r.severity_default))} /></td>
                         <td className="td font-mono text-[13px] text-slate-400">{Object.keys(r.match_spec ?? {}).join(", ")}</td>
-                        <td className="td font-mono text-xs text-slate-400">{r.dedup_window_seconds ? `${Math.round(r.dedup_window_seconds / 3600)}h` : "—"}</td>
+                        <td className="td font-mono text-xs text-slate-400">{r.dedup_window_seconds ? `${Math.round(r.dedup_window_seconds / 3600)}h` : "Not set"}</td>
                         <td className="td">{r.enabled ? <StatusBadge status="active" /> : <StatusBadge status="closed" />}</td>
                         <td className="td">
                           <div className="flex gap-1">
@@ -735,7 +735,7 @@ export default function SocDashboard() {
       {tab === "adapters" && (
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Enrichment adapters" subtitle="Optional external enrichment only — SOC operates fully on internal SecureGraph signals" />
+            <CardHeader title="Enrichment adapters" subtitle="Optional external enrichment only. The SOC operates fully on internal SecureGraph signals." />
             {adaptersRes.loading && !(adaptersRes.data ?? []).length ? (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -806,7 +806,7 @@ export default function SocDashboard() {
             {detail.summary && <p className="text-sm text-slate-300">{detail.summary}</p>}
 
             <div className="grid grid-cols-2 gap-3 text-xs">
-              {[["Asset", detail.asset_id ? `#${detail.asset_id}` : "—"], ["Risk", detail.risk_id ? `#${detail.risk_id}` : "—"], ["Correlator", detail.correlator_id ?? "—"], ["Assignee", detail.assignee_ref ?? "—"], ["First seen", detail.first_seen_at ? timeAgo(detail.first_seen_at) : "—"], ["Last seen", detail.last_seen_at ? timeAgo(detail.last_seen_at) : "—"]].map(([k, v]) => (
+              {[["Asset", detail.asset_id ? `#${detail.asset_id}` : "Not set"], ["Risk", detail.risk_id ? `#${detail.risk_id}` : "Not set"], ["Correlator", detail.correlator_id ?? "Not set"], ["Assignee", detail.assignee_ref ?? "Not set"], ["First seen", detail.first_seen_at ? timeAgo(detail.first_seen_at) : "Not set"], ["Last seen", detail.last_seen_at ? timeAgo(detail.last_seen_at) : "Not set"]].map(([k, v]) => (
                 <div key={k} className="rounded-lg bg-phantix-950/50 border border-phantix-700/40 p-3">
                   <p className="text-[12px] uppercase tracking-wider text-slate-500">{k}</p>
                   <p className="mt-0.5 font-medium text-slate-200">{v}</p>
@@ -838,7 +838,7 @@ export default function SocDashboard() {
                 </button>
               )}
               {!["closed"].includes(String(detail.status)) && (
-                <button className="btn-danger text-sm ml-auto" disabled={busyId === detail.id} onClick={() => void doTriage(detail, { status: "closed", summary: "FP / resolved" }, "Closed")}>
+                <button className="btn-danger text-sm ml-auto" disabled={busyId === detail.id} onClick={() => void doTriage(detail, { status: "closed", summary: "False positive or resolved" }, "Closed")}>
                   <XCircle size={14} /> Close
                 </button>
               )}
@@ -883,7 +883,7 @@ export default function SocDashboard() {
       </Modal>
 
       {/* Case detail modal */}
-      <Modal open={selectedCase !== null} onClose={() => setSelectedCase(null)} title={selectedCase ? `Case #${selectedCase.id} — ${selectedCase.title}` : ""} wide>
+      <Modal open={selectedCase !== null} onClose={() => setSelectedCase(null)} title={selectedCase ? `Case #${selectedCase.id}: ${selectedCase.title}` : ""} wide>
         {selectedCase && (
           <div className="space-y-4">
             {(caseDetail ?? selectedCase) && (

@@ -65,7 +65,7 @@ export default function AgiDrawer() {
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("phantix:agi-open"))}
         className="fixed right-0 top-1/2 z-[70] -translate-y-1/2 flex items-center gap-2 rounded-l-xl border border-r-0 border-phantix-700/50 bg-phantix-900/90 px-2.5 py-3 text-gold-300 shadow-card backdrop-blur-xl transition-colors hover:border-gold-400/40 hover:bg-phantix-800/90"
-        title={live ? "Pentest Agent — session running" : "Autonomous Pentest Agent"}
+        title={live ? "Pentest Agent: session running" : "Autonomous Pentest Agent"}
       >
         <span className="relative">
           <Radar size={16} />
@@ -121,7 +121,7 @@ export default function AgiDrawer() {
             <button
               onClick={hide}
               className="rounded-lg border border-phantix-700/40 p-2 text-slate-400 transition-colors hover:border-severity-critical/40 hover:text-severity-critical"
-              title="Hide console — session keeps running"
+              title="Hide console. The session keeps running."
             >
               <X size={14} />
             </button>

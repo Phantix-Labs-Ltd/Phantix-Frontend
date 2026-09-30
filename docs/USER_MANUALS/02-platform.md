@@ -13,7 +13,7 @@
 
 ![Platform login](../screenshots/platform/login.png)
 
-3. Enter the **email OTP** → **Verify & sign in**  
+3. Enter the **email OTP** → **Verify and sign in**  
 4. You land on the tenant **Dashboard**
 
 ![Platform dashboard](../screenshots/platform/dashboard.png)
@@ -38,27 +38,27 @@ Confirm:
 
 ---
 
-## 3. Identity & service keys
+## 3. Identity and service keys
 
-**Nav → Identity & Keys**
+**Nav → Identity and Keys**
 
 ![Identity](../screenshots/platform/identity.png)
 
 1. Update legal name, industry, website, contacts  
-2. Create / rotate **service keys** (`pk_live_*`) used by machine agents and some integrations  
+2. Create and rotate **service keys** (`pk_live_*`) used by machine agents and some integrations  
 3. Upload **report branding** logo if needed  
 
 ---
 
-## 4. People & dual control
+## 4. People and dual control
 
-**Nav → People & Control**
+**Nav → People and Control**
 
 ![Users](../screenshots/platform/users.png)
 
 1. **Create users** (name, email, role)  
 2. Assign **Initiator** and **Authorizer** (required for operate sessions)  
-3. Issue **Command Centre login links** (invite / magic link) for operators  
+3. Issue **Command Centre login links** (invite and magic link) for operators  
 4. Unlock **Operate** when you need to approve mutations (OTP dual-control flow)  
 
 ---
@@ -93,11 +93,11 @@ For multi-company groups: each child company keeps its own keys, users, DB, and 
 ![GitHub](../screenshots/platform/github.png)
 
 1. Connect GitHub App or PAT  
-2. Discover / import repositories as assets (used later in Command Centre)  
+2. Discover and import repositories as assets (used later in Command Centre)  
 
 ---
 
-## 8. Tool catalog & billing
+## 8. Tool catalog and billing
 
 **Nav → Tool Catalog** · **Billing**
 
@@ -111,7 +111,7 @@ For multi-company groups: each child company keeps its own keys, users, DB, and 
 
 ---
 
-## 9. AI & Autonomous Agent settings
+## 9. AI and Autonomous Agent settings
 
 **Nav → AI settings** · **Autonomous Agent**
 
@@ -119,7 +119,7 @@ For multi-company groups: each child company keeps its own keys, users, DB, and 
 
 ![AGI](../screenshots/platform/agi.png)
 
-- Configure org AI preferences and AGI access agreement / scopes (product-side).  
+- Configure org AI preferences and AGI access agreement and scopes (product-side).  
 - Live AGI **sessions** for staff-run engagements are managed in the **Staff portal**.  
 
 ---
@@ -128,7 +128,7 @@ For multi-company groups: each child company keeps its own keys, users, DB, and 
 
 | Page | Use |
 |------|-----|
-| **Alerts** | SMTP / channel settings for org notifications |
+| **Alerts** | SMTP and channel settings for org notifications |
 | **Support** | Open tickets to Phantix |
 | **Audit** | Tenant audit trail |
 
@@ -144,7 +144,7 @@ For multi-company groups: each child company keeps its own keys, users, DB, and 
 
 From the dashboard **Ready for operations** (or bookmark https://app.phantixlabs.com):
 
-1. Use an **invite / login link** from People, or  
+1. Use an **invite and login link** from People, or  
 2. Sign in with app credentials (see [Command Centre manual](04-command-centre.md))  
 
 Platform = tenant admin. Command Centre = scans, SOC, risks, reports.

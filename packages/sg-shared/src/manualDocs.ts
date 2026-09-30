@@ -9,14 +9,14 @@ function toWebContent(markdown: string): string {
 export const manualDocs = [
   {
     id: "manual-platform",
-    title: "How to — Platform",
+    title: "How to use the Platform",
     description: "Org admin: sign-in, identity, people, security DB, billing, sandbox.",
     category: "manuals",
     content: toWebContent(platformManual),
   },
   {
     id: "manual-command-centre",
-    title: "How to — Command Centre",
+    title: "How to use the Command Centre",
     description: "Operators: assets, SOC, scans, VAPT, risks, reports, tracker, agent.",
     category: "manuals",
     content: toWebContent(appManual),

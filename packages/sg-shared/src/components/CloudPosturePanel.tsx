@@ -45,7 +45,7 @@ function PackRow({
       )}
       <div className="min-w-0">
         <p className="text-xs font-medium text-slate-200">
-          {label} — <span className={enabled ? "text-emerald-400" : "text-severity-medium"}>{enabled ? "enabled" : "held"}</span>
+          {label}: <span className={enabled ? "text-emerald-400" : "text-severity-medium"}>{enabled ? "enabled" : "held"}</span>
         </p>
         {!enabled && reason && <p className="mt-0.5 text-[13px] leading-5 text-slate-500">{reason}</p>}
         {extra}
@@ -170,7 +170,7 @@ export default function CloudPosturePanel({
                           {row.port}/{row.protocol ?? "tcp"}
                           {row.tls && <span className="chip ml-1 border-emerald-400/30 text-emerald-400">tls</span>}
                         </td>
-                        <td className="td text-[13px] text-slate-400">{row.service ?? "—"}</td>
+                        <td className="td text-[13px] text-slate-400">{row.service ?? "Not set"}</td>
                         <td className="td text-[13px] text-slate-500" title={row.first_seen_at ?? ""}>{timeAgo(row.first_seen_at ?? null)}</td>
                         <td className="td text-[13px] text-slate-400" title={row.last_seen_at ?? ""}>{timeAgo(row.last_seen_at ?? null)}</td>
                       </tr>
@@ -251,7 +251,7 @@ export default function CloudPosturePanel({
             {execution.docker_isolated ? "Docker-isolated" : "No container runtime"}
           </span>
           <span className="chip border-phantix-700 text-slate-400">
-            {execution.one_active_scan_per_org ? "1 active scan / org" : "Concurrency: organisation"}
+            {execution.one_active_scan_per_org ? "1 active scan per organization" : "Concurrency: organization"}
           </span>
           {execution.global_scan_concurrency != null && (
             <span className="chip border-phantix-700 text-slate-400">

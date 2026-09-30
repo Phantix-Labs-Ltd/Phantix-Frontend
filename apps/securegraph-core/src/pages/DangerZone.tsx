@@ -14,6 +14,7 @@
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, Boxes, RefreshCw, Search, ShieldAlert, Trash2 } from "lucide-react";
 import { PageHeader, Card, EmptyState, ErrorState, PageSkeleton, Spinner } from "@sg/ui";
+import DocLink from "@sg/components/DocLink";
 import { loadAssetsBundle } from "@sg/data";
 import { useResource } from "@sg/useResource";
 import { cx, titleCase } from "@sg/utils";
@@ -116,7 +117,8 @@ export default function DangerZone() {
     <div className="space-y-5">
       <PageHeader
         title="Danger zone"
-        description="Remove assets from this organization's inventory. This is deliberate, logged, and — by default — reversible."
+        description="Remove assets from the inventory of this organization. This action is deliberate and logged. By default it is reversible."
+        actions={<DocLink docId="howto-app-31" label="Asset removal how-to" />}
       />
 
       {/* Why this page exists, in the operator's terms. */}
@@ -213,7 +215,7 @@ export default function DangerZone() {
                       />
                     </td>
                     <td className="max-w-[26rem] px-3 py-2">
-                      <span className="block truncate" title={a.name && a.name !== a.value ? `${a.value} — ${a.name}` : a.value || a.name}>
+                      <span className="block truncate" title={a.name && a.name !== a.value ? `${a.value}: ${a.name}` : a.value || a.name}>
                         <span className="font-medium text-slate-200">{a.value || a.name}</span>
                         {a.name && a.name !== a.value ? <span className="ml-2 text-[13px] text-slate-500">{a.name}</span> : null}
                       </span>
@@ -300,7 +302,7 @@ export default function DangerZone() {
                 {results.map((r) => (
                   <li key={r.id} className={r.ok ? "text-severity-low" : "text-severity-critical"}>
                     {r.ok ? "Removed" : "Failed"}: {r.value}
-                    {r.error ? ` — ${r.error}` : ""}
+                    {r.error ? `: ${r.error}` : ""}
                   </li>
                 ))}
               </ul>

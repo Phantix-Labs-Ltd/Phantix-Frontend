@@ -1007,7 +1007,7 @@ export async function loadCommandCenter(): Promise<{
         queue: { openTotal: 3, byStatus: { open: 3 }, bySeverityOpen: { critical: 1, high: 2 } },
         topDetections: [
           { id: 1, title: "Brute force on portal login", severity: "high", status: "open", priorityScore: 88 },
-          { id: 2, title: "WAF block spike — API", severity: "medium", status: "triaged", priorityScore: 61 },
+          { id: 2, title: "WAF block spike on the API", severity: "medium", status: "triaged", priorityScore: 61 },
         ],
       },
       tracker: {
@@ -1451,11 +1451,11 @@ export async function loadAssetIntelligence(assetId: number): Promise<AssetIntel
       risk_score_delta: -16,
       open_findings_count: 4,
       exposure_level: "external_facing",
-      posture_summary: "Moderate risk due to exposed public API endpoints. The asset has been scanned 3 times in the past 30 days with 4 open findings, 2 of which are high severity.",
+      posture_summary: "Moderate risk due to exposed public API endpoints. SecureGraph scanned the asset 3 times in the past 30 days and found 4 open findings. 2 are high severity.",
       recommended_actions: [
         { action_key: "scan_now", label: "Run a new scan", description: "Check for newly introduced vulnerabilities", priority: "high" },
         { action_key: "review_findings", label: "Review open findings", description: "4 findings need verification or remediation", priority: "high" },
-        { action_key: "update_firewall", label: "Review firewall rules", description: "Public-facing asset --- ensure WAF rules are current", priority: "medium" },
+        { action_key: "update_firewall", label: "Review firewall rules", description: "Public-facing asset. Make sure the WAF rules are current", priority: "medium" },
       ],
       related_assets: demo.assets.filter((x) => x.id !== a.id).slice(0, 3).map((r) => ({
         id: r.id, name: r.name, value: r.value, asset_type: r.asset_type, risk_score: 30 + Math.floor(Math.random() * 40),
@@ -1769,9 +1769,9 @@ async function streamDemoResponse(
   await delay(180);
   onEvent("meta", { type: "meta", provider: "deepseek", model: "deepseek-v4-flash", stream: true, thinking: true });
   await delay(stepMs);
-  onEvent("reasoning", { type: "reasoning", content: "I'll summarize what the user asked and check the current posture signals available in the organization's security data." });
+  onEvent("reasoning", { type: "reasoning", content: "I will summarize the request of the user and check the current posture signals in the security data of the organization." });
   await delay(stepMs);
-  const answer = `Here's what I can tell you about "${question}":\n\n• I can review open findings, risk posture, asset exposure and recent scan results.\n• In production this answer is synthesized from your live security data (verified findings only — I never invent a vulnerability without a SecureGraph finding ID).\n• Skills used are shown on the result, and every interaction is governed + audited.\n\nAsk me about assets, VAPT campaigns, critical risks, or compliance gaps for a concrete summary.`;
+  const answer = `Here is what I can tell you about "${question}":\n\n• I can review open findings, risk posture, asset exposure and recent scan results.\n• In production this answer comes from your live security data. It uses verified findings only, and SecureGraph never invents a vulnerability without a finding ID.\n• The result shows the skills that were used, and every interaction is governed and audited.\n\nAsk me about assets, VAPT campaigns, critical risks, or compliance gaps for a concrete summary.`;
   const words = answer.split(" ");
   for (const w of words) {
     onEvent("delta", { type: "delta", content: w + " " });
@@ -1798,7 +1798,7 @@ async function streamDemoRun(domain: string, objective: string, onEvent: (event:
   await delay(250);
   onEvent("reasoning", { type: "reasoning", content: `Correlating ${domain} signals across the organization.` });
   await delay(500);
-  const summary = `${domain} analysis complete. I reviewed the ${domain} inventory, verified findings and posture signals. No finding was changed or created — every item referenced is a SecureGraph finding with an ID. Skills used: phantix-${domain}@1.0.0.`;
+  const summary = `${domain} analysis complete. I reviewed the ${domain} inventory, verified findings and posture signals. No finding was changed or created. Every item referenced is a SecureGraph finding with an ID. Skills used: phantix-${domain}@1.0.0.`;
   const words = summary.split(" ");
   for (const w of words) {
     onEvent("delta", { type: "delta", content: w + " " });
@@ -1848,7 +1848,7 @@ export async function confirmAgentScope(payload: {
 export async function sendAgentMessage(message: string): Promise<string> {
   if (isDemoMode()) {
     await delay(1600);
-    return `I'm SecureGraph Agent. I understand you asked: "${message}". In production, I would analyze your assets, findings, and risk posture to answer this. Key surfaces you can explore: Assets, Scans, VAPT campaigns, Risks, Compliance, and Reports.`;
+    return `I am SecureGraph Agent. I understand you asked: "${message}". In production, I would analyze your assets, findings, and risk posture to answer this. Key surfaces you can explore: Assets, Scans, VAPT campaigns, Risks, Compliance, and Reports.`;
   }
   const out: string[] = [];
   await streamAgentChat(
@@ -2371,7 +2371,7 @@ export async function sendAvailabilityHeartbeat(body: Record<string, unknown>): 
 }
 
 export function formatDuration(sec: number | null | undefined): string {
-  if (sec == null || Number.isNaN(sec)) return "—";
+  if (sec == null || Number.isNaN(sec)) return "Not set";
   const s = Math.max(0, Math.floor(sec));
   if (s < 60) return `${s}s`;
   if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
@@ -2607,8 +2607,8 @@ export async function loadCloudPosture(): Promise<CloudPosture> {
       },
       cis_host_targets: {
         available: [
-          { name: "cis_ssh_password_auth", display_name: "CIS — SSH password auth", severity: "medium", targets: ["ip_address", "domain"] },
-          { name: "cis_rdp_exposed", display_name: "CIS — RDP exposed", severity: "high", targets: ["ip_address"] },
+          { name: "cis_ssh_password_auth", display_name: "CIS: SSH password auth", severity: "medium", targets: ["ip_address", "domain"] },
+          { name: "cis_rdp_exposed", display_name: "CIS: RDP exposed", severity: "high", targets: ["ip_address"] },
         ],
         matched: 1,
         by_pack: { cis_ssh_password_auth: 1 },

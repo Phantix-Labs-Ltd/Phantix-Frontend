@@ -117,7 +117,7 @@ export default function Privacy() {
         details: sanitizeMultiline(details) || null,
         contact_email: contactEmail.trim() || null,
       });
-      toast("success", "Request received", `${typeLabel(type)} — we will respond using the contact details on file.`);
+      toast("success", "Request received", `${typeLabel(type)}. We will respond using the contact details on file.`);
       setType(null);
       setDetails("");
       refreshList();
@@ -143,7 +143,7 @@ export default function Privacy() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Privacy & data requests" description="Your rights under NDPA §34–37 — raise requests in product, not by email." />
+      <PageHeader title="Privacy and data requests" description="Your rights under NDPA §34–37. Raise requests in the product, not by email." />
 
       <Card>
         <CardHeader title="How we handle your data" subtitle={notice?.version ? `Privacy notice v${notice.version}` : "Privacy notice"} action={
@@ -178,7 +178,7 @@ export default function Privacy() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
       <Card>
-        <CardHeader title="Raise a data subject request" subtitle="Choose the right — each is explained below" />
+        <CardHeader title="Raise a data subject request" subtitle="Choose the right request. Each one is explained below." />
         <form onSubmit={submit} className="space-y-4 px-5 pb-5">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {REQUEST_TYPES.map((r) => (
@@ -208,7 +208,7 @@ export default function Privacy() {
             />
           </div>
           <div>
-            <label className="label">Contact email (optional — defaults to your organisation's primary contact)</label>
+            <label className="label">Contact email, optional. The default is the primary contact of your organization.</label>
             <input type="email" className="input" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@company.com" />
           </div>
           <button type="submit" className="btn-primary w-full !py-2.5" disabled={!type || submitting}>
@@ -251,7 +251,7 @@ export default function Privacy() {
                       {r.status.replace(/_/g, " ")}
                     </span>
                   </td>
-                  <td className="td text-slate-500 whitespace-nowrap">{r.created_at ? timeAgo(r.created_at) : "—"}</td>
+                  <td className="td text-slate-500 whitespace-nowrap">{r.created_at ? timeAgo(r.created_at) : "Not set"}</td>
                 </tr>
               ))}
             </tbody>

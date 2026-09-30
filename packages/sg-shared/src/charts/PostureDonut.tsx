@@ -73,7 +73,7 @@ export default function PostureDonut({
         {slices.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center">
             <span className="font-display text-4xl font-semibold" style={{ color: tone.color }}>
-              {overallScore ?? "—"}
+              {overallScore ?? "Not set"}
             </span>
             <span className="mt-1 text-[13px] text-slate-500">nothing outstanding</span>
           </div>
@@ -105,7 +105,7 @@ export default function PostureDonut({
             {/* Hero figure in the hole — the one number the dashboard leads with. */}
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-display text-[34px] font-semibold leading-none" style={{ color: tone.color }}>
-                {overallScore ?? "—"}
+                {overallScore ?? "Not set"}
               </span>
               <span className="mt-1 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                 {tone.label}

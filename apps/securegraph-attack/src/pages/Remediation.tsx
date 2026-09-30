@@ -142,14 +142,14 @@ function RemediationRow({
         <td className="td whitespace-nowrap"><SeverityBadge severity={(item.severity || "info") as Severity} /></td>
         <td className="td hidden whitespace-nowrap lg:table-cell"><VerificationBadge status={(ver.status || "unverified") as VerificationStatus} /></td>
         <td className="td max-w-[14rem]">
-          <span className="block truncate font-mono text-[13px] text-slate-400" title={item.asset_value || undefined}>{item.asset_value || "—"}</span>
+          <span className="block truncate font-mono text-[13px] text-slate-400" title={item.asset_value || undefined}>{item.asset_value || "Not set"}</span>
         </td>
-        <td className="td hidden whitespace-nowrap text-[13px] text-slate-400 xl:table-cell">{item.tool || "—"}</td>
+        <td className="td hidden whitespace-nowrap text-[13px] text-slate-400 xl:table-cell">{item.tool || "Not set"}</td>
         <td className="td hidden whitespace-nowrap xl:table-cell">
-          {generated && rem.priority ? <span className={cx("chip capitalize", priorityClass(rem.priority))}>{rem.priority}</span> : <span className="text-slate-600">—</span>}
+          {generated && rem.priority ? <span className={cx("chip capitalize", priorityClass(rem.priority))}>{rem.priority}</span> : <span className="text-slate-600">Not set</span>}
         </td>
-        <td className="td hidden whitespace-nowrap text-[13px] capitalize text-slate-400 2xl:table-cell">{generated && rem.effort ? rem.effort : "—"}</td>
-        <td className="td hidden whitespace-nowrap text-[13px] text-slate-400 lg:table-cell">{item.created_at ? timeAgo(item.created_at) : "—"}</td>
+        <td className="td hidden whitespace-nowrap text-[13px] capitalize text-slate-400 2xl:table-cell">{generated && rem.effort ? rem.effort : "Not set"}</td>
+        <td className="td hidden whitespace-nowrap text-[13px] text-slate-400 lg:table-cell">{item.created_at ? timeAgo(item.created_at) : "Not set"}</td>
         <td className="td whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
           <span className="inline-flex items-center justify-end gap-1">
             {generated && !generating ? (
@@ -201,7 +201,7 @@ function RemediationRow({
             </div>
             <p className="mt-3 flex items-center gap-1.5 text-[12px] text-slate-500">
               <Wrench size={13} />
-              {generating ? "Generating fix guidance…" : generated ? "AI fix guidance is ready — open it with View fix." : "No AI fix guidance yet — queued for the daily sweep, or generate it now."}
+              {generating ? "Generating fix guidance…" : generated ? "AI fix guidance is ready. Open it with View fix." : "No AI fix guidance yet. It is queued for the daily sweep, or you can generate it now."}
             </p>
           </td>
         </tr>
@@ -223,7 +223,7 @@ function GuidanceModal({
 }) {
   const rem = item.remediation || {};
   return (
-    <Modal open onClose={onClose} title={`How to fix — ${item.title || "finding"}`} wide>
+    <Modal open onClose={onClose} title={`How to fix: ${item.title || "finding"}`} wide>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <SeverityBadge severity={(item.severity || "info") as Severity} />
@@ -356,7 +356,7 @@ export default function Remediation() {
         description="Verified findings that are not yet retested and fixed."
         actions={
           <>
-            <DocLink docId="howto-app-12" label="Remediation how-to" />
+            <DocLink docId="howto-app-33" label="Remediation how-to" />
             <button
               type="button"
               onClick={refresh}
@@ -393,7 +393,7 @@ export default function Remediation() {
         <EmptyState
           icon={<ShieldCheck size={22} />}
           title="Nothing to remediate"
-          body="Every verified finding has been retested and fixed. New verified findings appear here until their fix is confirmed."
+          body="SecureGraph retested and fixed every verified finding. New verified findings appear here until the fix is confirmed."
         />
       ) : (
         <Card className="!p-0 overflow-hidden">

@@ -146,7 +146,7 @@ export default function ModelPicker({ surface, value, onChange, className }: Pro
         <div className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-phantix-700/50 bg-phantix-900 shadow-2xl shadow-black/40">
           <div className="border-b border-phantix-700/40 px-3.5 py-2.5">
             <p className="text-xs font-semibold capitalize text-slate-200">{surface} models</p>
-            <p className="mt-0.5 text-[13px] text-slate-500">Selecting persists for your organisation</p>
+            <p className="mt-0.5 text-[13px] text-slate-500">Selecting persists for your organization</p>
           </div>
           <div className="flex items-center gap-1 border-b border-phantix-700/40 px-3.5 py-2">
             {(["all", "vision", "reasoning"] as const).map((f) => (
@@ -245,7 +245,7 @@ export default function ModelPicker({ surface, value, onChange, className }: Pro
           </div>
           {freePlan && freeModelsEnabled === false && (
             <div className="border-t border-phantix-700/40 bg-phantix-900/60 px-3.5 py-2 text-[12px] leading-4 text-slate-500">
-              Free open-source models aren't enabled for your organization. An administrator can enable them in the platform portal.
+              Free open-source models are not enabled for your organization. An administrator can enable them in the platform portal.
             </div>
           )}
           {notes && (

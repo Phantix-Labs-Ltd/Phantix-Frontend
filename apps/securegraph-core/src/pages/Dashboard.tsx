@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { SeverityBadge, StatusBadge, PageSkeleton, ErrorState } from "@sg/ui";
 import SecurityDbBanner from "@sg/components/SecurityDbBanner";
+import DocLink from "@sg/components/DocLink";
 import LatestAssessmentPanel from "@sg/components/LatestAssessment";
 import CrossAppLink from "@sg/components/CrossAppLink";
 import AppSwitcher from "@sg/components/AppSwitcher";
@@ -80,7 +81,7 @@ function incidentToServerEvent(i: AvailabilityIncident): ServerEvent {
     label: i.title || i.last_error || `Check ${i.check_id ?? ""}`,
     detail: open
       ? `Down since ${timeAgo(i.down_at)}`
-      : `MTTR ${i.time_to_resolve_seconds != null ? `${i.time_to_resolve_seconds}s` : "—"} · recovered ${timeAgo(i.recovered_at || i.down_at)}`,
+      : `MTTR ${i.time_to_resolve_seconds != null ? `${i.time_to_resolve_seconds}s` : "Not set"} · recovered ${timeAgo(i.recovered_at || i.down_at)}`,
     tone: open ? "text-severity-critical" : "text-emerald-300",
     ts: i.recovered_at || i.down_at,
   };
@@ -94,7 +95,7 @@ function num(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function str(v: unknown, fallback = "—"): string {
+function str(v: unknown, fallback = "Not set"): string {
   if (v == null || v === "") return fallback;
   return String(v);
 }
@@ -280,7 +281,7 @@ export default function Dashboard() {
               label: str(inner.title ?? inner.target, "Server incident"),
               detail: open
                 ? `Down since ${timeAgo(String(inner.downAt || evt.ts))}`
-                : `MTTR ${inner.timeToResolveSeconds ?? "—"}s`,
+                : `MTTR ${inner.timeToResolveSeconds ?? "Not set"}s`,
               tone: open ? "text-severity-critical" : "text-emerald-300",
               ts: evt.ts,
             },
@@ -339,7 +340,7 @@ export default function Dashboard() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load the command centre overview. Check your connection and retry — your session stays signed in."
+        body="We could not load the command centre overview. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -411,7 +412,7 @@ export default function Dashboard() {
       key: "open",
       header: "Open",
       className: "text-right font-mono",
-      render: (a) => (a.openFindingsCount != null || a.open_findings != null ? num(a.openFindingsCount ?? a.open_findings) : "—"),
+      render: (a) => (a.openFindingsCount != null || a.open_findings != null ? num(a.openFindingsCount ?? a.open_findings) : "Not set"),
     },
     {
       key: "risk",
@@ -421,7 +422,7 @@ export default function Dashboard() {
         a.riskLevel != null || a.risk_level != null ? (
           <SeverityBadge severity={str(a.riskLevel ?? a.risk_level, "info") as any} />
         ) : (
-          "—"
+          "Not set"
         ),
     },
   ];
@@ -508,6 +509,7 @@ export default function Dashboard() {
           <span className="inline-flex items-center gap-2 rounded-md border border-phantix-700 bg-phantix-900 px-3 py-2 text-xs font-medium text-slate-300">
             <CalendarRange size={14} className="text-gold-400" /> {rangeLabel}
           </span>
+          <DocLink docId="howto-app-29" label="Dashboard how-to" />
           <AppSwitcher current="core" />
           <Link to={href("tracker", "/tracker")} className="btn-primary">
             <KanbanSquare size={15} /> Tracker
@@ -575,7 +577,7 @@ export default function Dashboard() {
           action={<span className="chip border-phantix-700 bg-phantix-900 text-[12px] text-slate-400">14 days</span>}
         >
           <div className="mb-2 flex items-baseline gap-2">
-            <span className="font-mono text-[26px] font-semibold text-white">{postureKnown ? postureScore : "—"}</span>
+            <span className="font-mono text-[26px] font-semibold text-white">{postureKnown ? postureScore : "Not set"}</span>
             <Delta value={scoreDelta} unit=" pts" goodWhen="up" />
           </div>
           {trendRes.loading && !hasTrend ? (
@@ -601,7 +603,7 @@ export default function Dashboard() {
 
         <Panel
           title="Open findings per day"
-          subtitle="Findings still open at each day's close"
+          subtitle="Findings still open at the end of each day"
           delay={0.22}
           action={<Delta value={findingsDelta} goodWhen="down" />}
         >

@@ -1,6 +1,6 @@
 # AI with accountability
 
-Phantix includes AI — carefully.
+Phantix includes AI. Carefully.
 
 ---
 
@@ -29,13 +29,13 @@ Phantix includes AI — carefully.
 | **Asset** | Exposure and crown-jewel storytelling |
 | **Chief** | Multi-domain questions (“why is this system at risk?”) |
 
-They spin up when called — not as unsupervised 24/7 bots with unlimited tools.
+They spin up when called, not as unsupervised 24/7 bots with unlimited tools.
 
 ---
 
 ## Privacy for AI
 
-- Prefer **local / controlled** models for routine tenant-touching work
+- Prefer **local and controlled** models for routine tenant-touching work
 - External models only with minimization and/or explicit approval paths
 - Skill sharing strips tenant identifiers before any platform-level pattern library
 - AI actions can be audited
@@ -48,9 +48,9 @@ Designed with privacy obligations such as **NDPA** in mind for Nigerian organiza
 
 For external developers and automation:
 
-> **Subscribe to the AI Agent plan** — the only public API payment plan Phantix offers.
+> **Subscribe to the AI Agent plan**: the only public API payment plan Phantix offers.
 
-You get programmatic access to domain agents (invoke, poll, skills, approvals). You do **not** get a marketed SKU for unrestricted public access to every Platform endpoint. Day-to-day platform use remains Free / Premium **in the app**.
+You get programmatic access to domain agents (invoke, poll, skills, approvals). You do **not** get a marketed SKU for unrestricted public access to every Platform endpoint. Day-to-day platform use remains Free or Premium **in the app**.
 
 ---
 
@@ -64,4 +64,4 @@ Most “AI security” products hide a chatbot on top of noisy data. Phantix tie
 4. Human gates
 5. Your data boundary
 
-That’s AI as a **senior analyst assistant** — not a fortune teller.
+That’s AI as a **senior analyst assistant**: not a fortune teller.

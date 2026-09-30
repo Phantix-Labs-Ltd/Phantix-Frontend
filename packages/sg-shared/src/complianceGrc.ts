@@ -110,7 +110,7 @@ export const EMPTY_PROGRESS: QuestionnaireProgress = {
   partial_count: 0,
   not_applicable: 0,
   disclaimer: "",
-  disclaimer_short: "Self-attestation only — not a substitute for a GRC specialist audit.",
+  disclaimer_short: "Self-attestation only. This is not a substitute for a GRC specialist audit.",
   replaces_certified_audit: false,
 };
 

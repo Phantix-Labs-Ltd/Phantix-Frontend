@@ -19,7 +19,7 @@ export default function SocPlaybooks() {
   return (
     <div>
       <PageHeader
-        title="Playbooks & MITRE"
+        title="Playbooks and MITRE"
         description="Response playbooks, runbooks, and MITRE ATT&CK coverage mapping."
        actions={<DocLink docId="howto-app-25" label="SOC operations how-to" />} />
       <Tabs

@@ -29,12 +29,12 @@ Watch the product changelog or ask sales for availability.
 | Database name | e.g. `phantix_security` (separate from your app DB) |
 | Schema | `phantix` (default) |
 | User | Dedicated role with rights **only** on that DB/schema |
-| Network | Allow Phantix platform IPs / your staging IP on port 5432 (or provider SSL port) |
-| TLS | Prefer `require` / `verify-full` in production |
+| Network | Allow Phantix platform IPs and your staging IP on port 5432 (or provider SSL port) |
+| TLS | Prefer `require` and `verify-full` in production |
 
 ---
 
-## PostgreSQL — provider guides
+## PostgreSQL. Provider guides
 
 ### A. Supabase
 
@@ -55,12 +55,12 @@ Watch the product changelog or ask sales for availability.
 ### B. Neon
 
 1. Create a project at [neon.tech](https://neon.tech).
-2. Copy the connection string or host / db / user / password.
-3. Ensure the compute is not suspended when testing (wake the project).
+2. Copy the connection string or host and db and user and password.
+3. Ensure the compute is not suspended during a test (wake the project).
 4. SSL: `require`.
 5. Add in Phantix as PostgreSQL security storage → Test → Bootstrap.
 
-### C. Amazon RDS / Aurora PostgreSQL
+### C. Amazon RDS and Aurora PostgreSQL
 
 1. Create a PostgreSQL instance (private subnet OK if Phantix can reach it via VPN/allowlist).
 2. Security group: allow inbound **5432** from Phantix egress IPs (ask support for the list).
@@ -76,7 +76,7 @@ Watch the product changelog or ask sales for availability.
 4. Use the provided host, port, SSL mode.
 5. Phantix → Test → Bootstrap.
 
-### E. Railway / Render / other PaaS
+### E. Railway and Render and other PaaS
 
 1. Provision **PostgreSQL** add-on.
 2. Copy `DATABASE_URL` or discrete host/user/password/db.
@@ -84,7 +84,7 @@ Watch the product changelog or ask sales for availability.
 4. Open public networking only if required; prefer private + allowlist.
 5. Phantix → Test → Bootstrap.
 
-### F. Self-hosted / VPS Postgres
+### F. Self-hosted and VPS Postgres
 
 ```sql
 CREATE DATABASE phantix_security;
@@ -146,7 +146,7 @@ API equivalents (for advanced users):
 
 ## Optional: config inspection connection
 
-A separate connection type can inspect **security metadata** (roles, grants, policies) on a production DB **without reading business rows**. Use a least-privilege inspector role. Not required for basic inventory and scanning.
+A separate connection type can inspect **security metadata** (roles, grants, policies) on a production DB **without access to business rows**. Use a least-privilege inspector role. Not required for basic inventory and scans.
 
 ---
 
@@ -156,9 +156,9 @@ PostgreSQL is recommended. Also supported or optional for inspection:
 
 | Engine | Notes |
 |--------|--------|
-| PostgreSQL / Supabase / Neon / RDS | First-class |
+| PostgreSQL and Supabase and Neon and RDS | First-class |
 | MSSQL | Supported for inspection (ODBC on platform) |
-| MySQL / MariaDB, MongoDB, Firestore | Optional drivers |
+| MySQL and MariaDB, MongoDB, Firestore | Optional drivers |
 
 ---
 
@@ -172,4 +172,4 @@ PostgreSQL is recommended. Also supported or optional for inspection:
 - [ ] Bootstrap OK
 - [ ] Backup policy on your side
 
-**Next:** [Email & SMTP →](./03-email-and-smtp.md)
+**Next:** [Email and SMTP →](./03-email-and-smtp.md)

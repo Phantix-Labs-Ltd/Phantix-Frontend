@@ -55,7 +55,7 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
 
 export function ImpactBadge({ level, score }: { level?: string; score?: number }) {
   const cls = impactLevelColor(level);
-  const label = level ?? "—";
+  const label = level ?? "Not set";
   const num = score != null ? `· ${score}` : "";
   return <span className={cx("chip capitalize", cls)}>{label} {num}</span>;
 }
@@ -769,7 +769,7 @@ export function ErrorState({
       {/* Error text can carry a long unbroken token (a URL, an id); let it wrap
           instead of widening the page on a phone. */}
       <p className="mt-1.5 max-w-md text-sm leading-6 text-slate-400 [overflow-wrap:anywhere]">
-        {body ?? "We could not reach the SecureGraph API. Check your connection and retry — your session stays signed in."}
+        {body ?? "We could not reach the SecureGraph API. Check your connection and try again. Your session stays signed in."}
       </p>
       {onRetry && (
         <button onClick={onRetry} className="btn-primary mt-5 !py-2 text-xs">

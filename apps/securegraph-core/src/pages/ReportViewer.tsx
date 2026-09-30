@@ -124,7 +124,7 @@ export default function ReportViewer() {
             // rendering instead of a dead page, and say so.
             if (isArtifactMissing(err)) {
               setNotice(
-                "No stored PDF for this report — showing the HTML rendering, which you can Print → Save as PDF.",
+                "No stored PDF for this report. This shows the HTML rendering, which you can print and then save as a PDF.",
               );
               setFormat("html");
               await loadHtml();
@@ -138,7 +138,7 @@ export default function ReportViewer() {
       } catch (err) {
         setError(
           isArtifactMissing(err)
-            ? "This report's stored content is gone (usually after a redeploy without persistent storage). Regenerate it from the report library."
+            ? "The stored content of this report is gone, usually after a redeploy without persistent storage. Regenerate it from the report library."
             : err instanceof Error
               ? err.message
               : "Could not load this report",

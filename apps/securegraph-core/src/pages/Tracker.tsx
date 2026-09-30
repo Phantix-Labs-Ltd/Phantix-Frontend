@@ -203,8 +203,8 @@ export default function Tracker() {
       }));
       toast(
         s === "fixed" ? "success" : s === "retest_failed" ? "error" : "info",
-        s === "fixed" ? "Fix confirmed — finding closed" : "Retest complete",
-        s === "fixed" ? `${key} re-scanned clean — closed as fixed` : s === "retest_failed" ? `${key} still matches — stays open` : `${key} retest inconclusive — status unchanged`,
+        s === "fixed" ? "Fix confirmed. Finding closed." : "Retest complete",
+        s === "fixed" ? `${key} re-scanned clean. Closed as fixed.` : s === "retest_failed" ? `${key} still matches. It stays open.` : `${key} retest inconclusive. Status unchanged.`,
       );
       setRetestTarget(null);
       setRetestForm({ tool: "", note: "" });
@@ -219,7 +219,7 @@ export default function Tracker() {
 
   if (loading && findings.length === 0) return <PageSkeleton variant="table" rows={8} />;
   if (error && findings.length === 0) {
-    return <ErrorState onRetry={reload} body="We could not load the findings tracker. Check your connection and retry — your session stays signed in." />;
+    return <ErrorState onRetry={reload} body="We could not load the findings tracker. Check your connection and try again. Your session stays signed in." />;
   }
 
   const tiles: { key: string; label: string; value: number; icon: React.ReactNode; tone: string; hint: string }[] = [
@@ -253,10 +253,10 @@ export default function Tracker() {
     <div>
       <PageHeader
         title="Findings tracker"
-        description="The living remediation board — every tracked finding, who owns it, and where its fix stands."
+        description="The live remediation board: every tracked finding, its owner, and the state of its fix."
         actions={
           <>
-            <DocLink docId="howto-app-11" label="How the tracker works" />
+            <DocLink docId="howto-app-12" label="Findings tracker how-to" />
             <Link to="/reports" className="btn-secondary">
               <FileText size={15} /> Export as a report
             </Link>
@@ -367,7 +367,7 @@ export default function Tracker() {
             body={
               findings.length === 0
                 ? "Findings land here from scans, campaigns and agent sessions, and stay until they are fixed or accepted."
-                : "Widen the filters — or pick Any status to include fixed and accepted findings."
+                : "Widen the filters, or pick Any status to include fixed and accepted findings."
             }
             action={findings.length > 0 ? <button className="btn-secondary" onClick={() => update({ q: null, status: "all", severity: null, evidence: null, owner: null })}>Show every finding</button> : undefined}
           />
@@ -424,7 +424,7 @@ export default function Tracker() {
                             <span className={cx("text-[13px]", overdue ? "font-medium text-severity-high" : "text-slate-400")}>
                               {overdue ? "Overdue · " : ""}{new Date(f.target_fix_date).toLocaleDateString()}
                             </span>
-                          ) : <span className="text-slate-600">—</span>}
+                          ) : <span className="text-slate-600">Not set</span>}
                         </td>
                         <td className="td whitespace-nowrap"><VerificationBadge status={normalizeTrackerVerification(f.verification_status)} /></td>
                         <td className="td whitespace-nowrap">
@@ -457,7 +457,7 @@ export default function Tracker() {
                           </div>
                         </td>
                         <td className="td whitespace-nowrap" title={`Updated ${timeAgo(f.updated_at)}`}>
-                          <span className="text-[13px] text-slate-300">{days == null ? "—" : days === 0 ? "Today" : `${days}d`}</span>
+                          <span className="text-[13px] text-slate-300">{days == null ? "Not set" : days === 0 ? "Today" : `${days}d`}</span>
                         </td>
                       </tr>
                     );
@@ -489,7 +489,7 @@ export default function Tracker() {
         configured. Unverified findings stay off client reports but remain here until someone confirms or dismisses them.
       </p>
 
-      <Modal open={!!retestTarget} onClose={() => setRetestTarget(null)} title={retestTarget ? `Unit retest — ${retestTarget.finding_key}` : "Unit retest"}>
+      <Modal open={!!retestTarget} onClose={() => setRetestTarget(null)} title={retestTarget ? `Unit retest: ${retestTarget.finding_key}` : "Unit retest"}>
         {retestTarget && (
           <div className="space-y-4">
             <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/50 p-3 text-sm">

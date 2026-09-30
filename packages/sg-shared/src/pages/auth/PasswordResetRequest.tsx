@@ -63,7 +63,7 @@ export default function PasswordResetRequest() {
                 </div>
                 <div>
                   <h1 className="text-lg font-semibold text-white">Reset your password</h1>
-                  <p className="text-xs text-slate-400">We'll email you a secure reset link.</p>
+                  <p className="text-xs text-slate-400">We will email you a secure reset link.</p>
                 </div>
               </div>
 

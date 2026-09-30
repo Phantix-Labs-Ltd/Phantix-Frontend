@@ -1,6 +1,6 @@
-# For security engineers, CISOs & IT managers
+# For security engineers, CISOs and IT managers
 
-Phantix is built for people who have been burned by noisy scanners and unreadable PDFs.
+Phantix is built for people who were burned by noisy scanners and unreadable PDFs.
 
 ---
 
@@ -23,7 +23,7 @@ Findings are classified (auto-verified, manually verified, unverified, rejected)
 
 ### Impact analysis
 
-Verified findings receive structured impact context (including confidentiality / integrity / availability framing and business vs technical language) before they are collated into deliverables.
+Verified findings receive structured impact context (including confidentiality and integrity and availability framing and business vs technical language) before they are collated into deliverables.
 
 ### Dual-control
 
@@ -31,7 +31,7 @@ Destructive or high-risk actions (e.g. certain exploit or production-impacting s
 
 ### AI with boundaries
 
-Specialized agents (SOC, GRC, VAPT, threat intel, assets) **call engines** — they do not invent CVEs or hosts. Prompts and skills are versioned; sensitive data paths prefer local or minimized models under privacy rules.
+Specialized agents (SOC, GRC, VAPT, threat intel, assets) **call engines**: they do not invent CVEs or hosts. Prompts and skills are versioned; sensitive data paths prefer local or minimized models under privacy rules.
 
 ---
 
@@ -39,12 +39,12 @@ Specialized agents (SOC, GRC, VAPT, threat intel, assets) **call engines** — t
 
 | Surface | Purpose |
 |---------|---------|
-| **Assets & intelligence** | Inventory, criticality, exposure context |
+| **Assets and intelligence** | Inventory, criticality, exposure context |
 | **Scans** | On-demand and scheduled checks |
 | **VAPT campaigns** | Multi-step assessments, web pipeline, approvals |
 | **Risk register** | Prioritized posture after findings |
 | **Compliance** | Framework mapping and evidence path |
-| **Reports & tracker** | Deliverables and remediation ownership |
+| **Reports and tracker** | Deliverables and remediation ownership |
 | **Alerts** | Email and channel notifications |
 | **GitHub App** | Connect repos the modern way; Free = public only, Premium = private too |
 | **AI agents** | On-demand specialists for triage, write-ups, GRC narrative |
@@ -56,7 +56,7 @@ Specialized agents (SOC, GRC, VAPT, threat intel, assets) **call engines** — t
 - Prefer **GitHub App** over long-lived PATs
 - Use **org RBAC** and login MFA where configured
 - Export formats: Free includes data-friendly exports; board PDF packages sit on Premium
-- Never trust the UI alone for plan limits — the API enforces gates
+- Never trust the UI alone for plan limits. The API enforces gates
 
 ---
 

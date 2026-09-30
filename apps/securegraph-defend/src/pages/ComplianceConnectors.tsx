@@ -201,7 +201,7 @@ function ConnectorConfigModal({
     <Modal open onClose={onClose} title={`Configure ${connectorLabel(connector)}`} wide>
       <div className="space-y-4">
         <p className="text-sm leading-6 text-slate-400">
-          Connector settings are stored per organization. Secrets are stored encrypted — do not paste
+          Connector settings are stored per organization. Secrets are stored encrypted. Do not paste
           credentials you cannot rotate.
         </p>
         <div>

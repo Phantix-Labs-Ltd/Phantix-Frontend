@@ -654,7 +654,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             }
           } catch { /* genuinely unconfigured, or the realm cannot read it */ }
           if (!configured) {
-            toast("warning", "Dual control not set up", "Only dual-control configured users can perform this operation. Viewing and downloading reports is still available without dual control --- set up initiator + authorizer on the Platform to unlock writes.");
+            toast("warning", "Dual control not set up", "Only users with dual control configured can perform this operation. You can still view and download reports without dual control. Set up an initiator and an authorizer on the Platform to unlock writes.");
             return false;
           }
           return openOverlay();
@@ -788,7 +788,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (isDemoMode()) {
         await delay(500);
         const expected = sessionStorage.getItem("dc_dev_otp");
-        if (expected && code && code !== expected) throw new Error("That code isn't right");
+        if (expected && code && code !== expected) throw new Error("That code is not right");
         const email = dcEmail.current;
         const user =
           demo.orgUsers.find((u) => u.email.toLowerCase() === email.toLowerCase()) ||
@@ -874,7 +874,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (email: string, code: string) => {
       await requestDualControlOtp(email);
       const res = await verifyDualControlOtp(code);
-      if (res.deviceRequired) throw new Error("Device verification required --- complete the dual-control overlay");
+      if (res.deviceRequired) throw new Error("Device verification is required. Complete the dual-control overlay");
     },
     [requestDualControlOtp, verifyDualControlOtp],
   );

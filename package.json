@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Phantix Security Solutions \u2014 Product Delivery Command Centre frontend",
+  "description": "Phantix Labs ltd \u2014 Product Delivery Command Centre frontend",
   "scripts": {
     "dev": "cd apps/securegraph-core && npm run dev",
     "build": "cd apps/securegraph-core && npm run build",

@@ -304,7 +304,7 @@ export default function AlertNotifications() {
     const now = Date.now();
     ingest({ id: 9992, severity: "high", title: "New risk: JWT algorithm confusion", eventType: "risk.created", createdAt: new Date(now - 15_000).toISOString() });
     window.setTimeout(() => {
-      ingest({ id: 9993, severity: "medium", title: "Scan #87 completed — 23 findings", eventType: "scan.completed", createdAt: new Date(now - 25_000).toISOString() });
+      ingest({ id: 9993, severity: "medium", title: "Scan #87 completed with 23 findings", eventType: "scan.completed", createdAt: new Date(now - 25_000).toISOString() });
     }, 400);
   }, [ingest]);
 

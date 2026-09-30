@@ -477,7 +477,7 @@ export function ApplicationShell({
               end={item.to === "/"}
               title={
                 item.locked
-                  ? `${item.label} — ${item.lockReason || "Included with a paid plan"}`
+                  ? `${item.label}: ${item.lockReason || "Included with a paid plan"}`
                   : item.label
               }
               className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
@@ -601,7 +601,7 @@ export function ApplicationShell({
                     <>
                       <p className="text-[13px] leading-4 text-slate-500">Dual control not set up</p>
                       <p className="mt-0.5 text-[12px] leading-4 text-slate-600">
-                        Reports &amp; views work without it. Mutations require setup on the Platform.
+                        Reports and views work without it. Mutations require setup on the Platform.
                       </p>
                       <a
                         href={PLATFORM_IDENTITY_URL}
@@ -827,10 +827,10 @@ export function ApplicationShell({
                         </a>
                         <CoreLink
                           path="/settings/privacy"
-                          title="Privacy & data requests"
+                          title="Privacy and data requests"
                           className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-phantix-800"
                         >
-                          <ShieldCheck size={15} /> Privacy &amp; data requests
+                          <ShieldCheck size={15} /> Privacy and data requests
                         </CoreLink>
                         <CoreLink
                           path="/docs"
@@ -902,7 +902,7 @@ export function ApplicationShell({
                       </button>
                     ) : (
                       <p className="mt-1 text-[13px] text-slate-500">
-                        Not set up — configure on the Platform
+                        Not set up. Configure it on the Platform
                       </p>
                     )}
                   </div>
@@ -919,7 +919,7 @@ export function ApplicationShell({
               </span>
               <p className="text-xs text-slate-400">
                 You're exploring{" "}
-                <strong className="text-slate-200">Acme Financial Group</strong> --- simulated data,
+                <strong className="text-slate-200">Acme Financial Group</strong>. Simulated data,
                 full product.
               </p>
               {hasLiveApi && (
@@ -961,7 +961,7 @@ export function ApplicationShell({
 
           <footer className="flex items-center justify-between border-t border-phantix-700/60 px-6 py-4 text-[13px] text-slate-600 lg:px-8">
             <span>
-              Phantix Security Solutions · Privacy-first by architecture --- security data never
+              Phantix Labs ltd · Privacy-first by architecture. Security data never
               leaves your database
             </span>
             <span className="flex items-center gap-1.5">

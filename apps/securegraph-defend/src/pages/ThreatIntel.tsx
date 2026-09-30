@@ -140,7 +140,7 @@ export default function ThreatIntel() {
     return (
       <ErrorState
         onRetry={dash.reload}
-        body="We could not load threat intelligence. Check your connection and retry — your session stays signed in."
+        body="We could not load threat intelligence. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -252,7 +252,7 @@ export default function ThreatIntel() {
                         return (
                           <tr key={s.id} className={cx("h-10 border-b border-phantix-800/40 hover:bg-phantix-800/35 transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-gold-400/60 focus:ring-inset", isNew && "bg-emerald-400/5")} onClick={() => setOpenIoc(s)} {...clickableRowProps(() => setOpenIoc(s))}>
                             <td className="td">
-                              <div className="flex max-w-[26rem] min-w-0 items-center gap-2" title={s.title ? `${s.ioc} — ${s.title}` : s.ioc}>
+                              <div className="flex max-w-[26rem] min-w-0 items-center gap-2" title={s.title ? `${s.ioc}: ${s.title}` : s.ioc}>
                                 <span className="shrink-0 font-mono text-[13px] text-slate-100">{s.ioc}</span>
                                 {isNew && <span className="chip text-[12px] shrink-0 text-emerald-300 bg-emerald-400/10 border-emerald-400/20">NEW</span>}
                                 {s.title && <span className="truncate text-[13px] text-slate-500">{s.title}</span>}
@@ -260,7 +260,7 @@ export default function ThreatIntel() {
                             </td>
                             <td className="td"><IocBadge type={s.iocType} /></td>
                             <td className="td"><SeverityBadge severity={sevOf(String(s.severity))} /></td>
-                            <td className="td"><span className="chip text-[12px]">{s.source || "—"}</span></td>
+                            <td className="td"><span className="chip text-[12px]">{s.source || "Not set"}</span></td>
                             <td className="td">
                               {matched.length > 0 ? (
                                 <span className="chip text-emerald-300 bg-emerald-400/10 border-emerald-400/20">{matched.length} asset(s)</span>
@@ -269,7 +269,7 @@ export default function ThreatIntel() {
                               )}
                             </td>
                             <td className="td font-mono tabular-nums text-slate-300">{s.occurrenceCount ?? 1}</td>
-                            <td className="td text-xs text-slate-500 whitespace-nowrap">{s.lastSeenAt ? timeAgo(s.lastSeenAt) : "—"}</td>
+                            <td className="td text-xs text-slate-500 whitespace-nowrap">{s.lastSeenAt ? timeAgo(s.lastSeenAt) : "Not set"}</td>
                             <td className="td"><ArrowUpRight size={14} className="text-slate-500" /></td>
                           </tr>
                         );
@@ -284,7 +284,7 @@ export default function ThreatIntel() {
           {tab === "events" && (
             <Card className="!p-0 overflow-hidden">
               {events.data.length === 0 ? (
-                <EmptyState icon={<Activity size={24} />} title="No connector events" body="Events appear when cloud / VPS / PaaS webhooks deliver telemetry." />
+                <EmptyState icon={<Activity size={24} />} title="No connector events" body="Events appear when cloud, VPS or PaaS webhooks deliver telemetry." />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -313,7 +313,7 @@ export default function ThreatIntel() {
                           <td className="td">
                             <div className="flex flex-nowrap gap-1">{(e.mappedEngines ?? e.mapped_engines ?? []).map((m) => <span key={m} className="chip text-[12px] text-slate-400">{m}</span>)}</div>
                           </td>
-                          <td className="td text-xs text-slate-500 whitespace-nowrap">{e.receivedAt ?? e.received_at ? timeAgo((e.receivedAt ?? e.received_at) as string) : "—"}</td>
+                          <td className="td text-xs text-slate-500 whitespace-nowrap">{e.receivedAt ?? e.received_at ? timeAgo((e.receivedAt ?? e.received_at) as string) : "Not set"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -349,8 +349,8 @@ export default function ThreatIntel() {
                           <td className="td font-medium text-slate-100">{r.title}</td>
                           <td className="td"><span className="chip text-[12px]">{r.tool ?? "yaml_ti"}</span></td>
                           <td className="td"><SeverityBadge severity={sevOf(String(r.severity))} /></td>
-                          <td className="td font-mono text-xs text-slate-300">{r.ioc ?? r.asset_value ?? "—"}</td>
-                          <td className="td text-xs text-slate-500 whitespace-nowrap">{r.created_at ?? r.createdAt ? timeAgo((r.created_at ?? r.createdAt) as string) : "—"}</td>
+                          <td className="td font-mono text-xs text-slate-300">{r.ioc ?? r.asset_value ?? "Not set"}</td>
+                          <td className="td text-xs text-slate-500 whitespace-nowrap">{r.created_at ?? r.createdAt ? timeAgo((r.created_at ?? r.createdAt) as string) : "Not set"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -363,7 +363,7 @@ export default function ThreatIntel() {
       )}
 
       {/* IOC detail drawer */}
-      <Modal open={openIoc !== null} onClose={() => setOpenIoc(null)} title={openIoc ? `Signal — ${openIoc.ioc}` : ""} wide>
+      <Modal open={openIoc !== null} onClose={() => setOpenIoc(null)} title={openIoc ? `Signal: ${openIoc.ioc}` : ""} wide>
         {openIoc && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -376,7 +376,7 @@ export default function ThreatIntel() {
             </div>
             <p className="text-sm text-slate-300">{openIoc.title}</p>
             <div className="grid grid-cols-2 gap-3 text-xs">
-              {[["First seen", openIoc.firstSeenAt ? timeAgo(openIoc.firstSeenAt) : "—"], ["Last seen", openIoc.lastSeenAt ? timeAgo(openIoc.lastSeenAt) : "—"], ["Occurrences", `${openIoc.occurrenceCount ?? 1}`], ["ID", `#${openIoc.id}`]].map(([k, v]) => (
+              {[["First seen", openIoc.firstSeenAt ? timeAgo(openIoc.firstSeenAt) : "Not set"], ["Last seen", openIoc.lastSeenAt ? timeAgo(openIoc.lastSeenAt) : "Not set"], ["Occurrences", `${openIoc.occurrenceCount ?? 1}`], ["ID", `#${openIoc.id}`]].map(([k, v]) => (
                 <div key={k} className="rounded-lg bg-phantix-950/50 border border-phantix-700/40 p-3">
                   <p className="text-[12px] uppercase tracking-wider text-slate-500">{k}</p>
                   <p className="mt-0.5 font-medium text-slate-200">{v}</p>

@@ -203,7 +203,7 @@ function demoSnapshot(): ApplicationsSnapshot {
         label: "Core",
         tagline: "Connect the security picture",
         description:
-          "Core is the security graph every other application writes into — assets, findings, risk, reports and alerts in one place.",
+          "Core is the security graph every other application . Assets, findings, risk, reports and alerts in one placece.",
         capabilities: ["Overview", "Findings", "Risk", "Reports", "Alerts", "AI"],
         order: 0,
         base: true,
@@ -244,7 +244,7 @@ function demoSnapshot(): ApplicationsSnapshot {
         label: "Code",
         tagline: "Design and build it securely",
         description:
-          "Code catches security problems before they ship: repository review with the fix offered back as a pull request, plus the threat models and product context that define what secure means for your system.",
+          "Code catches security problems before they ship. It reviews the repository and offers the fix back as a pull request. It also builds the threat models and product context that define what secure means for your system.",
         capabilities: ["Code review", "Code graph", "Threat models", "Product context"],
         order: 3,
         base: false,

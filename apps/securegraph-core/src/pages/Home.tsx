@@ -252,9 +252,9 @@ export default function Home() {
                   </div>
                   <p className="mt-2 text-xs leading-5 text-slate-500">
                     {custom ? (
-                      <>{t.heroUnit || "Custom AI credits & volume"} — scoped and quoted per organization</>
+                      <>{t.heroUnit || "Custom AI credits and volume"}. It is scoped and quoted per organization.</>
                     ) : yearly ? (
-                      <>Billed once a year — that&rsquo;s ≈₦{Math.round((t.yearly_price_ngn ?? 0) / 12).toLocaleString()}/mo</>
+                      <>Billed once a year. That is ≈₦{Math.round((t.yearly_price_ngn ?? 0) / 12).toLocaleString()}/mo</>
                     ) : (
                       <>
                         {t.heroMetric} AI credits / month
@@ -293,7 +293,7 @@ export default function Home() {
         <motion.div {...fadeUp(0.1)} className="mt-10 flex justify-center">
           <a href={`${PLATFORM_URL}/register`} className="btn-secondary !px-6">
             <Sparkles size={15} className="text-gold-400" />
-            {freeTier?.cta ?? "Start free"} — no card required
+            {freeTier?.cta ?? "Start free"}. No card required.
           </a>
         </motion.div>
 
@@ -327,7 +327,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 text-xs text-slate-600">
           <div className="flex items-center gap-2.5">
             <BrandMark alt="" className="h-6 w-6" />
-            <span>© 2026 Phantix Security Solutions</span>
+            <span>© 2026 Phantix Labs ltd</span>
           </div>
           <div className="flex items-center gap-6">
             <Link to="/docs" className="flex items-center gap-1.5 hover:text-slate-300"><BookOpen size={12} /> Documentation</Link>

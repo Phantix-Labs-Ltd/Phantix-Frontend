@@ -107,7 +107,7 @@ function AttackDashboard() {
           {findings.length ? <Donut slices={severitySlices(countBy(findings, (f) => String(f.severity).toLowerCase()))} centerLabel="findings" /> : <PanelEmpty>No campaign findings yet.</PanelEmpty>}
         </Panel>
         <Panel title="Campaigns by status" delay={0.14} action={<ViewAll to="/vapt" />}>
-          {statusRows.length ? <RankedBars rows={statusRows} /> : <PanelEmpty>No campaigns yet — start one from Campaigns.</PanelEmpty>}
+          {statusRows.length ? <RankedBars rows={statusRows} /> : <PanelEmpty>No campaigns yet. Start one from Campaigns.</PanelEmpty>}
         </Panel>
         <Panel title="Recent campaigns" delay={0.18} action={<ViewAll to="/vapt" />} className="lg:col-span-2 2xl:col-span-1">
           <MiniTable rows={campaigns.slice(0, 6)} columns={cols} rowKey={(c, i) => Number(c.id) || i} rowHref={() => "/vapt"} empty="No campaigns yet." />
@@ -145,7 +145,7 @@ function DefendDashboard() {
   const cols: Column<Row>[] = [
     { key: "title", header: "Risk", render: (r) => <span className="text-slate-200">{String(r.title ?? "")}</span> },
     { key: "level", header: "Level", render: (r) => <SeverityBadge severity={String(r.level ?? "info") as any} /> },
-    { key: "band", header: "Priority", className: "text-right font-mono", render: (r) => String(r.priority_band ?? "—") },
+    { key: "band", header: "Priority", className: "text-right font-mono", render: (r) => String(r.priority_band ?? "Not set") },
   ];
 
   return (

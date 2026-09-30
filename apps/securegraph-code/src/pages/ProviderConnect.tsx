@@ -108,7 +108,7 @@ export default function ProviderConnect() {
     navigator.clipboard
       ?.writeText(text)
       .then(() => toast("success", `${what} copied`))
-      .catch(() => toast("info", `${what} — select to copy`, text));
+      .catch(() => toast("info", `${what}. Select it to copy`, text));
 
   const connectGithub = useCallback(async () => {
     setBusy(true);
@@ -143,7 +143,7 @@ export default function ProviderConnect() {
       if (needsToken) body.secrets = { api_key: token.trim() };
       const res = await installHubIntegration(body);
       if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", "Install is parked for an authorizer — approve it from Authorizations.");
+        toast("info", "Sent for approval", "Install is parked for an authorizer. Approve it from Authorizations.");
         await load();
         return;
       }
@@ -260,7 +260,7 @@ export default function ProviderConnect() {
               <div className="space-y-4 p-4">
                 <p className="text-sm leading-6 text-slate-300">
                   SecureGraph reviews every push to watched branches and opens <strong className="text-slate-100">draft pull requests</strong> for
-                  verified fixes. No token is stored — access is granted through the App installation.
+                  verified fixes. SecureGraph stores no token. Access comes through the App installation.
                 </p>
                 {!githubConnected ? (
                   <button className="btn-primary w-full" disabled={busy} onClick={() => void connectGithub()}>
@@ -431,7 +431,7 @@ export default function ProviderConnect() {
                       <td className="td text-xs text-slate-400">{humanize(i.auth_mode)}</td>
                       <td className="td"><span className={cx("chip text-[12px]", providerTone(i.status))}>{humanize(i.status)}</span></td>
                       <td className="td text-xs text-slate-500">
-                        {i.last_test_at ? `${timeAgo(i.last_test_at)}${i.last_test_ok === false ? " · failed" : ""}` : "—"}
+                        {i.last_test_at ? `${timeAgo(i.last_test_at)}${i.last_test_ok === false ? " · failed" : ""}` : "Not set"}
                       </td>
                       <td className="td text-right">
                         <div className="flex justify-end gap-1">

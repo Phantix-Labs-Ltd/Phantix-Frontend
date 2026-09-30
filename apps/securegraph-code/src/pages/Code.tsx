@@ -245,7 +245,7 @@ export default function Code() {
         <button
           type="button"
           onClick={() => navigate("/code-review/providers/github")}
-          title={connected ? "GitHub — connected" : "GitHub — not connected"}
+          title={connected ? "GitHub: connected" : "GitHub: not connected"}
           aria-label={connected ? "GitHub connected" : "GitHub not connected"}
           className={cx(
             "relative flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
@@ -271,7 +271,7 @@ export default function Code() {
                 else if (scmInstallable(c)) setConnectId(c.connector_id);
                 else toast("info", "Coming soon", `${c.name || c.connector_id} is in the catalogue and not installable yet.`);
               }}
-              title={`${c.name || c.connector_id} — ${active ? "connected" : install ? install.status : "not connected"}`}
+              title={`${c.name || c.connector_id}: ${active ? "connected" : install ? install.status : "not connected"}`}
               aria-label={c.name || c.connector_id}
               className={cx(
                 "relative flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
@@ -352,7 +352,7 @@ export default function Code() {
                             <span className="text-sm text-slate-200">{r.full_name || r.name}</span>
                           </div>
                         </td>
-                        <td className="td text-xs font-mono text-slate-400">{r.default_branch || s?.watched_branch || "—"}</td>
+                        <td className="td text-xs font-mono text-slate-400">{r.default_branch || s?.watched_branch || "Not set"}</td>
                         <td className="td">
                           {s?.enabled ? (
                             <span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
@@ -384,7 +384,7 @@ export default function Code() {
       {tab === "pull-requests" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
-          <CardHeader title="Recent branch-review runs" subtitle="Every push the reviewer processed — PR safety before merge" action={<GitPullRequest size={16} className="text-gold-300" />} />
+          <CardHeader title="Recent branch-review runs" subtitle="Every push the reviewer processed, with pull request safety before merge" action={<GitPullRequest size={16} className="text-gold-300" />} />
           {loading ? (
             <CardListSkeleton rows={4} className="p-4" />
           ) : events.length === 0 ? (
@@ -405,12 +405,12 @@ export default function Code() {
                 <tbody>
                   {events.map((e) => (
                     <tr key={e.id} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
-                      <td className="td text-sm text-slate-200">{e.repo || "—"}</td>
+                      <td className="td text-sm text-slate-200">{e.repo || "Not set"}</td>
                       <td className="td text-xs font-mono text-slate-400">{e.ref}</td>
                       <td className="td text-xs font-mono text-slate-500">{e.sha?.slice(0, 10)}</td>
                       <td className="td text-xs text-slate-300">{e.size_tier}</td>
                       <td className="td"><span className={cx("chip text-[12px]", statusTone(e.status))}>{humanize(e.status)}</span></td>
-                      <td className="td text-xs text-slate-500">{e.created_at ? timeAgo(e.created_at) : "—"}</td>
+                      <td className="td text-xs text-slate-500">{e.created_at ? timeAgo(e.created_at) : "Not set"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -424,7 +424,7 @@ export default function Code() {
       {tab === "autofix" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
-          <CardHeader title="AutoFix" subtitle="Block-scoped, verified fixes — proposed for human review" action={<Wrench size={16} className="text-gold-300" />} />
+          <CardHeader title="AutoFix" subtitle="Block-scoped verified fixes, proposed for human review" action={<Wrench size={16} className="text-gold-300" />} />
           <div className="space-y-3 text-sm leading-6 text-slate-300">
             <p>
               AutoFix runs only on <strong className="text-slate-100">verified</strong> findings. It generates the
@@ -433,8 +433,8 @@ export default function Code() {
             </p>
             <p className="text-slate-400">
               Generate a fix from a finding's detail, then open it as a <strong className="text-slate-200">Continuous PR</strong>{" "}
-              — SecureGraph clones the repo into an ephemeral directory, commits the fix <strong>signed by the app</strong>,
-              and opens a draft PR that your developers merge.
+              . SecureGraph clones the repository into an ephemeral directory, commits the fix <strong>signed by the app</strong>,
+              and opens a draft pull request that your developers merge.
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               <span className="chip text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300">gates: scope · no-op · re-validation · credits</span>
@@ -456,7 +456,7 @@ export default function Code() {
           <Card>
             <CardHeader
               title="Source-control providers"
-              subtitle="GitHub App plus Integrations Hub SCM connectors — all feed the same verified-only review flow"
+              subtitle="GitHub App plus Integrations Hub SCM connectors. All feed the same verified-only review flow"
               action={<Webhook size={16} className="text-gold-300" />}
             />
             {loading ? (
@@ -510,7 +510,7 @@ export default function Code() {
                                   : install?.status || (scmInstallable(c) ? "not connected" : "coming soon")}
                               </span>
                             </td>
-                            <td className="td text-xs font-mono text-slate-500">{SCM_WEBHOOK_PATH[c.connector_id] || "—"}</td>
+                            <td className="td text-xs font-mono text-slate-500">{SCM_WEBHOOK_PATH[c.connector_id] || "Not set"}</td>
                             <td className="td text-right">
                               <div className="flex justify-end gap-1">
                                 {SCM_PROVIDER_SETUP[c.connector_id] && (
@@ -546,7 +546,7 @@ export default function Code() {
                 <p className="p-3 text-[13px] leading-4 text-slate-500">
                   Point the provider webhook at <code className="mx-1">&#123;API_BASE&#125;{SCM_WEBHOOK_PATH.gitlab}</code> for GitLab
                   or <code className="mx-1">&#123;API_BASE&#125;{SCM_WEBHOOK_PATH.gitea}</code> for Gitea. Signatures are verified with the
-                  connector secret (<code>X-Gitlab-Token</code> / <code>X-Gitea-Signature</code>); GitHub uses the App's <code>X-Hub-Signature-256</code>.
+                  connector secret: <code>X-Gitlab-Token</code> or <code>X-Gitea-Signature</code>. GitHub uses the App's <code>X-Hub-Signature-256</code>.
                 </p>
               </>
             )}
@@ -589,7 +589,7 @@ function ScmConnectModal({ connector, onClose, onDone }: { connector: Integratio
       if (needsToken) body.secrets = { api_key: token.trim() };
       const res = await installHubIntegration(body);
       if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", "Install is parked for an authorizer — approve it from Authorizations.");
+        toast("info", "Sent for approval", "Install is parked for an authorizer. Approve it from Authorizations.");
         onDone();
         return;
       }
@@ -690,7 +690,7 @@ function ContinuousPrForm({ repos, onDone }: { repos: Repo[]; onDone: () => void
         repo,
         base_branch: baseBranch || selected?.default_branch || undefined,
       });
-      setResult({ kind: "queued", message: `Queued as task ${res?.task_id ?? "—"}. A draft PR will open; it is never merged automatically.` });
+      setResult({ kind: "queued", message: `Queued as task ${res?.task_id ?? "Not set"}. A draft pull request will open. The system never merges it automatically.` });
       onDone();
     } catch (e: any) {
       const detail = e?.detail ?? {};
@@ -751,7 +751,7 @@ function ContinuousPrForm({ repos, onDone }: { repos: Repo[]; onDone: () => void
             <p>{result.message}</p>
             {result.requestUrl && (
               <a href={result.requestUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 underline">
-                <ExternalLink size={11} /> Grant access / open link
+                <ExternalLink size={11} /> Grant access or open link
               </a>
             )}
           </div>
@@ -765,7 +765,7 @@ function ContinuousPrForm({ repos, onDone }: { repos: Repo[]; onDone: () => void
         </div>
         <p className="text-[13px] leading-4 text-slate-500">
           Dual-controlled: the request is parked for an authorizer before it runs. It never forks and never
-          merges — the pull request opens as a draft.
+          merges. The pull request opens as a draft.
         </p>
       </div>
     </Card>

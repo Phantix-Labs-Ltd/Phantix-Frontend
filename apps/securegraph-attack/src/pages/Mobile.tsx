@@ -98,8 +98,8 @@ export default function Mobile() {
     <div>
       <PageHeader
         title="Mobile"
-        description="Static analysis of Android APK/AAB and iOS IPA packages"
-        actions={<DocLink docId="howto-app-21" label="Mobile testing how-to" />}
+        description="Static analysis of Android APK files, Android App Bundles and iOS app packages"
+        actions={<DocLink docId="howto-app-32" label="Mobile testing how-to" />}
       />
 
       {/* Dynamic runtime (AVD) testing is an engagement, not a self-serve scan. */}
@@ -110,7 +110,7 @@ export default function Mobile() {
           <Card>
             <CardHeader
               title="Analyze a package"
-              subtitle="Upload an APK for inventory analysis. Runs statically — the binary is never executed."
+              subtitle="Upload an APK for inventory analysis. SecureGraph analyzes it statically and never runs the binary."
               action={<Upload size={16} className="text-gold-300" />}
             />
             <div className="space-y-3 p-4">
@@ -129,7 +129,7 @@ export default function Mobile() {
                   }}
                 />
                 <p className="mt-1 text-[13px] text-slate-500">
-                  For AAB/IPA, upload to storage first and analyze by storage key below.
+                  For an Android App Bundle or an iOS app package, upload the file to storage first, then analyze it by storage key below.
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -164,7 +164,7 @@ export default function Mobile() {
           <Card>
             <CardHeader
               title="Analyze a stored package"
-              subtitle="AAB / IPA or an object already in storage — analyze by storage key."
+              subtitle="An Android App Bundle or an iOS app package, or an object that is already in storage. Analyze it by storage key."
               action={<ScanSearch size={16} className="text-gold-300" />}
             />
             <div className="space-y-3 p-4">

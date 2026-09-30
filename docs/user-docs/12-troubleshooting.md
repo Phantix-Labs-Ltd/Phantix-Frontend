@@ -2,7 +2,7 @@
 
 ---
 
-## Setup & login
+## Setup and login
 
 | Symptom | What to try |
 |---------|-------------|
@@ -37,20 +37,20 @@
 
 | Symptom | What to try |
 |---------|-------------|
-| Connect not configured | Phantix App credentials missing — contact support |
+| Connect not configured | Phantix App credentials missing. Contact support |
 | Empty repos | Re-install and grant repositories; Sync |
 | 402 on Analyze | Private repo on Free → upgrade Premium |
 
 ---
 
-## Scans & VAPT
+## Scans and VAPT
 
 | Symptom | What to try |
 |---------|-------------|
-| 402 / locked tool | Check Billing entitlements; Premium/pack required |
-| Waiting forever | Async job — refresh status; ensure workers healthy (support) |
+| 402 and locked tool | Check Billing entitlements; Premium/pack required |
+| Waiting forever | Async job. Refresh status; ensure workers healthy (support) |
 | Stuck on approval | Authorizer must approve dual-control request |
-| Findings not in report | May be **unverified** — check verification status |
+| Findings not in report | May be **unverified**: check verification status |
 
 ---
 
@@ -58,7 +58,7 @@
 
 | Symptom | What to try |
 |---------|-------------|
-| 402 on invoke | AI Agent plan / Premium entitlement required |
+| 402 on invoke | AI Agent plan or Premium entitlement required |
 | Run stuck queued | Async worker; poll `GET .../runs/{id}` |
 | Thin results | Connect security DB; ensure campaign/assets exist |
 

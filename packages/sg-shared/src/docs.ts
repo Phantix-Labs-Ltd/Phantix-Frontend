@@ -76,8 +76,8 @@ function classifyDoc(d: Omit<DocEntry, "application">): DocApplication {
     has(
       "platform", "company setup", "organization setup", "org setup", "service key",
       "login link", "billing", "invoice", "subscription", "plan and pricing", "pricing",
-      "people & control", "roles and permissions", "user management", "dual control",
-      "identity & keys", "credit top-up", "payment",
+      "people and control", "roles and permissions", "user management", "dual control",
+      "identity and keys", "credit top-up", "payment",
     )
   )
     return "platform";
@@ -118,29 +118,29 @@ export const docCategories = [
 const RAW_DOCS: Omit<DocEntry, "application">[] = [
   // Help Centre
   { id: "hc-getting-started", title: "Getting started", description: "Register your organization, complete setup, and take your first security actions.", category: "help", content: hcGettingStarted, badge: "Start here" },
-  { id: "hc-security-database", title: "Connect a security database", description: "Set up PostgreSQL (Supabase, Neon, RDS, DigitalOcean, Railway) — SecureGraph-hosted coming soon.", category: "help", content: hcSecurityDb },
-  { id: "hc-email-smtp", title: "Email & SMTP", description: "Configure SES, Brevo, Mailgun, SendGrid, Google, or Microsoft 365 for OTPs and alerts.", category: "help", content: hcEmail },
+  { id: "hc-security-database", title: "Connect a security database", description: "Set up PostgreSQL (Supabase, Neon, RDS, DigitalOcean, Railway). A SecureGraph-hosted option is coming soon.", category: "help", content: hcSecurityDb },
+  { id: "hc-email-smtp", title: "Email and SMTP", description: "Configure SES, Brevo, Mailgun, SendGrid, Google, or Microsoft 365 for OTPs and alerts.", category: "help", content: hcEmail },
   { id: "hc-alert-channels", title: "Alert channels", description: "Set up WhatsApp (Meta) and Telegram Bot alerts for security events.", category: "help", content: hcAlerts },
   { id: "hc-github", title: "Connect GitHub", description: "Install the SecureGraph GitHub App and analyze public or private repositories.", category: "help", content: hcGithub },
-  { id: "hc-plans-billing", title: "Plans & billing", description: "Understand Free, Starter, Growth, Enterprise, and the public AI Agent API plan.", category: "help", content: hcBilling },
+  { id: "hc-plans-billing", title: "Plans and billing", description: "Understand Free, Starter, Growth, Enterprise, and the public AI Agent API plan.", category: "help", content: hcBilling },
   { id: "hc-daily-activities", title: "Daily activities", description: "Recommended day/week/month workflows to keep your posture current.", category: "help", content: hcDaily },
-  { id: "hc-features", title: "Features overview", description: "The public feature set — assets, scans, VAPT, risks, compliance, reporting.", category: "help", content: hcFeatures },
-  { id: "hc-users-approvals", title: "Users & approvals", description: "Invite users, set up dual-control initiator/authorizer, and approve sensitive actions.", category: "help", content: hcUsers },
+  { id: "hc-features", title: "Features overview", description: "The public feature set: assets, scans, VAPT, risks, compliance and reports.", category: "help", content: hcFeatures },
+  { id: "hc-users-approvals", title: "Users and approvals", description: "Invite users, set up dual-control initiator/authorizer, and approve sensitive actions.", category: "help", content: hcUsers },
   { id: "hc-ai-agent", title: "AI Agent API", description: "Use the public SecureGraph Agent API for programmatic security investigations.", category: "help", content: hcAiAgent },
-  { id: "hc-privacy", title: "Privacy & security", description: "How your security data stays under your keys with the hybrid database model.", category: "help", content: hcPrivacy },
+  { id: "hc-privacy", title: "Privacy and security", description: "How your security data stays under your keys with the hybrid database model.", category: "help", content: hcPrivacy },
   { id: "hc-troubleshooting", title: "Troubleshooting", description: "Common setup and connection issues and how to fix them.", category: "help", content: hcTroubleshoot },
-  { id: "hc-compliance-frameworks", title: "Compliance frameworks", description: "The framework catalog — international, application-security, and the Nigerian fintech set.", category: "help", content: hcComplianceFrameworks },
+  { id: "hc-compliance-frameworks", title: "Compliance frameworks", description: "The framework catalog: international, application-security and the Nigerian fintech set.", category: "help", content: hcComplianceFrameworks },
 
   // Public guides
   { id: "what-is-securegraph", title: "What is SecureGraph", description: "The one-liner, positioning, and value for organizations.", category: "guides", content: whatIsSecureGraph },
   { id: "for-business-leaders", title: "For business leaders", description: "Board-level outcomes: continuity, trust, and faster audits.", category: "guides", content: businessLeaders },
-  { id: "for-security-it", title: "For security & IT", description: "What CISOs, IT managers, and security engineers get.", category: "guides", content: securityIt },
-  { id: "for-investors-partners", title: "For investors & partners", description: "Investor, MSSP, and reseller perspective on the platform.", category: "guides", content: investorsPartners },
+  { id: "for-security-it", title: "For security and IT", description: "What CISOs, IT managers, and security engineers get.", category: "guides", content: securityIt },
+  { id: "for-investors-partners", title: "For investors and partners", description: "Investor, MSSP, and reseller perspective on the platform.", category: "guides", content: investorsPartners },
   { id: "product-capabilities", title: "Product capabilities", description: "Product depth across surfaces and modules.", category: "guides", content: capabilities },
-  { id: "privacy-trust", title: "Privacy & trust", description: "The privacy model, NDPA, and dual-control safeguards.", category: "guides", content: privacyTrust },
-  { id: "pricing-plans", title: "Pricing & plans", description: "Free, Starter, Growth, Enterprise, and engagements — priced in NGN.", category: "guides", content: pricingPlans },
+  { id: "privacy-trust", title: "Privacy and trust", description: "The privacy model, NDPA, and dual-control safeguards.", category: "guides", content: privacyTrust },
+  { id: "pricing-plans", title: "Pricing and plans", description: "Free, Starter, Growth, Enterprise and engagements, priced in NGN.", category: "guides", content: pricingPlans },
   { id: "how-it-works", title: "How it works", description: "The journey from signup to board-ready report.", category: "guides", content: howItWorks },
-  { id: "ai-accountability", title: "AI with accountability", description: "AI that advises — it never invents security facts.", category: "guides", content: aiAccountability },
+  { id: "ai-accountability", title: "AI with accountability", description: "AI that advises. It never invents security facts.", category: "guides", content: aiAccountability },
   { id: "for-developers", title: "For developers", description: "Public API overview and the AI Agent API plan.", category: "guides", content: forDevelopers },
   { id: "faq", title: "FAQ", description: "Answers for first contact and common questions.", category: "guides", content: faq },
   { id: "getting-started", title: "Getting started", description: "CTAs and the onboarding path for new organizations.", category: "guides", content: gettingStarted },
@@ -152,7 +152,27 @@ export function getDoc(id: string): DocEntry | undefined {
   return docs.find((d) => d.id === id);
 }
 
-export const docs: DocEntry[] = RAW_DOCS.map((d) => ({ ...d, application: classifyDoc(d) }));
+/** Explicit application for docs whose keywords are ambiguous. */
+const FORCE_APPLICATION: Partial<Record<string, DocApplication>> = {
+  "howto-app-08": "defend",
+  "howto-app-31": "core",
+  "howto-app-33": "attack",
+  "howto-app-34": "attack",
+  "howto-app-37": "code",
+};
+
+/** Rewrite relative diagram paths so the served `/diagrams/` route loads them. */
+function toWebDiagrams(md: string): string {
+  return md
+    .replace(/(?:\.\.\/)+diagrams\//g, "/diagrams/")
+    .replace(/\.\/diagrams\//g, "/diagrams/");
+}
+
+export const docs: DocEntry[] = RAW_DOCS.map((d) => ({
+  ...d,
+  content: toWebDiagrams(d.content),
+  application: FORCE_APPLICATION[d.id] ?? classifyDoc(d),
+}));
 
 /** Documents for one application (its own section of the help centre). */
 export function docsForApplication(app: ApplicationKey): DocEntry[] {
@@ -236,6 +256,16 @@ const DOC_ID_BY_FILE: Record<string, string> = {
   "26-pentest-scope.md": "howto-app-26",
   "27-admin-and-audit.md": "howto-app-27",
   "28-analytics.md": "howto-app-28",
+  "29-dashboard.md": "howto-app-29",
+  "30-findings-intake.md": "howto-app-30",
+  "31-asset-removal.md": "howto-app-31",
+  "32-mobile-testing.md": "howto-app-32",
+  "33-remediation.md": "howto-app-33",
+  "34-prior-reports.md": "howto-app-34",
+  "35-asset-intelligence.md": "howto-app-35",
+  "36-incidents.md": "howto-app-36",
+  "37-product-context.md": "howto-app-37",
+  "38-overview.md": "howto-app-38",
 };
 
 /**

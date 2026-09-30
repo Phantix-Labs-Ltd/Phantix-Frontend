@@ -49,7 +49,7 @@ export function Post() {
         </div>
 
         <footer className="post-footer" data-reveal style={d(350)}>
-          <Link className="back-link" to="/">← Back to this week's issue</Link>
+          <Link className="back-link" to="/">← Back to the issue for this week</Link>
           <div className="colophon">
             <p className="colophon-label">{issue.newsletterLabel}</p>
             <p>{issue.newsletterBlurb}</p>

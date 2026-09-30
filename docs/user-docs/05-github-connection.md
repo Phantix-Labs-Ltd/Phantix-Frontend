@@ -1,6 +1,6 @@
 # Connect GitHub
 
-Phantix uses a **GitHub App** (same idea as Vercel / Netlify): install once, choose repositories, no long-lived personal tokens required.
+Phantix uses a **GitHub App** (same idea as Vercel and Netlify): install once, choose repositories, no long-lived personal tokens required.
 
 Legacy “paste PAT” remains available temporarily; prefer the App.
 
@@ -25,7 +25,7 @@ The product enforces this (HTTP **402** if Free tries private analysis).
 4. Choose **All repositories** or **Only select repositories**.
 5. Approve.
 6. You return to Phantix; status should show **Connected** with your GitHub account/org name.
-7. Open **Repositories** to see the list (Public / Private badges).
+7. Open **Repositories** to see the list (Public and Private badges).
 
 **Disconnect** removes the installation link in Phantix (you can also uninstall the app in GitHub settings).
 
@@ -34,9 +34,9 @@ The product enforces this (HTTP **402** if Free tries private analysis).
 ## Analyze a repository
 
 1. Select a repo → **Analyze**.
-2. Free users: private rows show lock / Upgrade.
+2. Free users: private rows show lock and Upgrade.
 3. Analysis runs in an **ephemeral** workspace (clone → scan → destroy).
-4. Findings appear in your **security database** — source code is not kept.
+4. Findings appear in your **security database**: source code is not kept.
 
 ---
 
@@ -50,9 +50,9 @@ Read-only **Contents** + **Metadata** so Phantix can list and analyze granted re
 
 | Issue | What to try |
 |-------|-------------|
-| Connect button errors “not configured” | Phantix GitHub App not set on the server — contact support |
-| Empty repo list | Sync / refresh; ensure you granted repos on install |
-| 402 on Analyze | Private repo on Free — upgrade to Premium |
+| Connect button errors “not configured” | Phantix GitHub App not set on the server. Contact support |
+| Empty repo list | Sync and refresh; ensure you granted repos on install |
+| 402 on Analyze | Private repo on Free. Upgrade to Premium |
 | Analysis fails to clone | Re-install app; check network; confirm installation still active |
 
-**Next:** [Plans & billing →](./06-plans-and-billing.md)
+**Next:** [Plans and billing →](./06-plans-and-billing.md)

@@ -48,7 +48,7 @@ export default function MobileHandoffCard() {
       toast(
         "success",
         "Handoff proposed",
-        "Returned a scope proposal requiring authorization — no scans were started.",
+        "Returned a scope proposal requiring authorization. No scans were started.",
       );
     } catch (e: any) {
       toast("error", "Handoff failed", e?.message || "");
@@ -83,7 +83,7 @@ export default function MobileHandoffCard() {
             onChange={(e) => setAnalysis(e.target.value)}
           />
           <p className="mt-1 text-[13px] text-slate-500">
-            From a static APK/AAB/IPA analysis. Only endpoints that are in an authorized scope can be reassessed.
+            From a static APK, Android App Bundle or iOS app package analysis. Only endpoints that are in an authorized scope can be reassessed.
           </p>
         </div>
 
@@ -97,7 +97,7 @@ export default function MobileHandoffCard() {
             )}
           >
             <p className="flex items-center gap-1.5">
-              <AlertTriangle size={12} /> {result.requires_authorization ? "Requires authorization — parked for an authorizer." : "Proposal created."}
+              <AlertTriangle size={12} /> {result.requires_authorization ? "Requires authorization. Parked for an authorizer." : "Proposal created."}
             </p>
             {result.hosts?.length ? (
               <p className="mt-1 font-mono text-[12px] text-slate-400">{result.hosts.slice(0, 8).join(", ")}</p>

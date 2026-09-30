@@ -57,14 +57,14 @@ export default function Docs({ application = "all" }: DocsProps) {
             Help, arranged by application
           </h1>
           <p className="mt-3 text-[15px] leading-7 text-slate-400">
-            Core, Attack, Defend and Code each have their own section — setup and
+            Core, Attack, Defend and Code each have their own section: setup and
             day-to-day workflows for the app you are working in.
           </p>
           <div className="relative mt-6 max-w-lg">
             <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               className="input !py-3.5 !pl-11 !text-[15px]"
-              placeholder="Search the docs — try 'security database' or 'dual control'..."
+              placeholder="Search the docs. Try 'security database' or 'dual control'."
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
