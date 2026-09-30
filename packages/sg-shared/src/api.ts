@@ -475,6 +475,38 @@ export function getActiveApplication(): ApplicationDeclaration {
   return activeApplication;
 }
 
+/**
+ * The bearer a realm is using right now, or null.
+ *
+ * A 401 rejects the token that was *sent*, not whichever token happens to be
+ * stored when the response lands. Sign-in replaces a revoked token while the
+ * rejected request is still in flight, so the two can differ.
+ */
+function currentBearer(realm: Realm): string | null {
+  return realm === "staff"
+    ? tokens.staff
+    : realm === "application"
+      ? tokens.appSession
+      : tokens.orgUser ?? tokens.platform;
+}
+
+/**
+ * True on the pages that *are* the sign-in flow.
+ *
+ * A dropped session there must never reload the page: the operator is signing
+ * in (or about to), so a reload discards the half-finished sign-in and, when the
+ * rejected request repeats it, reloads the sign-in page forever.
+ */
+function onSignInRoute(): boolean {
+  const path = window.location.pathname;
+  return (
+    path.startsWith("/login") ||
+    path.startsWith("/password-reset") ||
+    path.startsWith("/reset-password") ||
+    path.startsWith("/device-confirm")
+  );
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -486,13 +518,10 @@ async function request<T>(
   // fired during the cross-app handoff, before the session was redeemed — and it
   // must never tear down or invalidate a session that is valid or still being
   // established. Only a token that was sent and then rejected is a dropped session.
-  const hadBearer = !!(
-    realm === "staff"
-      ? tokens.staff
-      : realm === "application"
-        ? tokens.appSession
-        : tokens.orgUser ?? tokens.platform
-  );
+  const hadBearer = !!currentBearer(realm);
+  // The exact token each attempt carries, so a late response can be matched
+  // against the session that produced it (see the 401 branch below).
+  let sentBearer: string | null = null;
 
   // Demo mode never touches the backend: mutations resolve as a no-op success so
   // every gated action (approve/start/pause/cancel/create, decisions, etc.) passes
@@ -506,8 +535,8 @@ async function request<T>(
   // in-flight response is picked up on retry.
   const doFetch = async (): Promise<Response> => {
     const headers: Record<string, string> = {};
-    const bearer =
-      realm === "staff" ? tokens.staff : realm === "application" ? tokens.appSession : tokens.orgUser ?? tokens.platform;
+    const bearer = currentBearer(realm);
+    sentBearer = bearer;
     if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
     if (realm === "application" && tokens.device) headers["X-Device-Token"] = tokens.device!;
     // Per 03_APPLICATION_IMPLEMENTATION.md §2.4: every app API call carries X-Device-Id
@@ -612,9 +641,12 @@ async function request<T>(
 
     // Main-session authentication failure phrasings (narrow on purpose — a bare
     // "expired" must NOT clear the app session, because it is equally likely to
-    // describe the short-lived dual-control operate session).
+    // describe the short-lived dual-control operate session). The backend's
+    // app-session rejections are "Invalid or expired app session" / "Invalid or
+    // expired token"; without them a revoked token stayed in storage and kept
+    // being sent on every page, including the sign-in screen.
     const mainSessionAuthFailure =
-      /session expired|token expired|authentication expired|jwt expired|bearer token|not authenticated|unauthorized/i.test(msg);
+      /session expired|token expired|authentication expired|jwt expired|bearer token|not authenticated|unauthorized|invalid or expired (?:app )?session|invalid or expired token/i.test(msg);
 
     // A missing/expired dual-control operate session is NOT a dropped org/app
     // session. Match the explicit ``WWW-Authenticate: DualControl`` challenge the
@@ -654,17 +686,27 @@ async function request<T>(
       hadBearer &&
       (explicitMainSessionInvalid || (mainSessionAuthFailure && !dualControlScoped));
     if (res.status === 401) {
-      if (sessionInvalid && !dcSessionIssue && !superseded) {
+      // This 401 rejects the token that was *sent*. If the stored token has
+      // changed since — the operator signed in again from the sign-in screen and
+      // stored a fresh one, or a renewal landed — then this response belongs to a
+      // session that no longer exists. It must not clear the new token and must
+      // not navigate away: that combination is what made sign-in loop, as the
+      // pre-sign-in "session revoked" 401 arrived after the fresh token was
+      // stored, wiped it, and reloaded the sign-in page.
+      const stillCurrentSession = sentBearer != null && currentBearer(realm) === sentBearer;
+      if (sessionInvalid && !dcSessionIssue && !superseded && stillCurrentSession) {
         if (realm === "staff") tokens.staff = null;
         else if (realm === "application") { tokens.appSession = null; tokens.device = null; }
         else { tokens.platform = null; tokens.orgUser = null; }
       }
-      if (realm === "application" && hadBearer && relogin && !dcSessionIssue && !superseded) {
+      if (realm === "application" && hadBearer && relogin && !dcSessionIssue && !superseded && stillCurrentSession) {
         // A mounted shell holds the current page under its "session expired"
         // card, so the operator keeps what they were doing and chooses to sign
-        // in again. With no shell (a public page), fall back to the redirect.
+        // in again. With no shell (a public page), fall back to the redirect —
+        // but never from the sign-in pages themselves, where reloading only
+        // throws away the sign-in that is already under way.
         if (sessionCardMounted) window.dispatchEvent(new CustomEvent("phantix:session-expired"));
-        else window.location.assign("/login");
+        else if (!onSignInRoute()) window.location.assign("/login");
       }
     }
     // AI credits exhausted gets its own message. The person at the keyboard is
