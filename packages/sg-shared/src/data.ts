@@ -444,6 +444,15 @@ export async function verifyScanResult(
       },
     };
     demo.scanResults[idx] = updated;
+    // The tracker reads the same store, so the decision has to land on the board
+    // too — otherwise the demo verifies a finding and then contradicts itself.
+    // An excluded finding has no board level of its own, so it reads unverified.
+    for (const trackerRow of demo.trackerFindings) {
+      if (trackerRow.source_finding_id === resultId) {
+        trackerRow.verification_status =
+          body.verification_status === "manually_verified" ? "manually_verified" : "unverified";
+      }
+    }
     return updated;
   }
   const raw = await api.patch<any>(`/scans/results/${resultId}/verification`, body);
