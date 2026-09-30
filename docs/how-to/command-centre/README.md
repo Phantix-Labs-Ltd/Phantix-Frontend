@@ -42,7 +42,7 @@ Platform must have setup complete + security DB bootstrapped first.
 | 30 | Findings intake | [30-findings-intake.md](./30-findings-intake.md) |
 | 31 | Asset removal | [31-asset-removal.md](./31-asset-removal.md) |
 | 32 | Mobile package analysis | [32-mobile-testing.md](./32-mobile-testing.md) |
-| 33 | Remediation queue | [33-remediation.md](./33-remediation.md) |
+| 33 | Findings tracker: the fix queue | [33-remediation.md](./33-remediation.md) |
 | 34 | Prior reports | [34-prior-reports.md](./34-prior-reports.md) |
 | 35 | Asset intelligence | [35-asset-intelligence.md](./35-asset-intelligence.md) |
 | 36 | Alerts and incidents | [36-incidents.md](./36-incidents.md) |

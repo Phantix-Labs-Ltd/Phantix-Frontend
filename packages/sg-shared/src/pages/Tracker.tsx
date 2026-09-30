@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  AlarmClock, ArrowDown, ArrowUp, ArrowUpDown, BookOpen, CheckCircle2, CircleDot, FileText, KanbanSquare, Loader2, Lock, RefreshCw,
-  Search, ShieldAlert, Sparkles, Timer, UserX, Wrench, X,
+  AlarmClock, AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Ban, BookOpen, CheckCircle2, CircleDot, FileText, KanbanSquare, Loader2, Lock, RefreshCw,
+  Search, ShieldAlert, ShieldCheck, Sparkles, Timer, UserX, Wrench, X,
 } from "lucide-react";
 import { EmptyState, ErrorState, Modal, PageHeader, PageSkeleton, SeverityBadge, Spinner, VerificationBadge, Card } from "../ui";
 import { Pagination, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS as PAGE_SIZES } from "../components/Pagination";
 import DocLink from "../components/DocLink";
-import { loadTrackerBundle, patchTrackerFinding, retestTrackerFinding } from "../data";
+import { loadTrackerBundle, patchTrackerFinding, retestTrackerFinding, verifyScanResult } from "../data";
 import { api, isDemoMode } from "../api";
 import { useSseStream } from "../useSse";
 import { useResource } from "../useResource";
@@ -67,6 +67,10 @@ type FixBlock = {
 
 const STATUS_ORDER = ["regressed", "retest_failed", "open", "in_progress", "accepted", "fixed"];
 
+/** The Key column is a glance, not the identifier: the full key stays in the
+ *  row's title/aria-label and in the deep link. */
+const KEY_DISPLAY_MAX = 10;
+
 const SORTERS: Record<SortKey, (a: TrackerFinding, b: TrackerFinding) => number> = {
   severity: (a, b) => (SEV_RANK[a.severity] ?? 0) - (SEV_RANK[b.severity] ?? 0),
   status: (a, b) => STATUS_ORDER.indexOf(String(b.status)) - STATUS_ORDER.indexOf(String(a.status)),
@@ -99,6 +103,8 @@ function summaryFrom(findings: TrackerFinding[], server: TrackerSummary | null) 
     overdue: findings.filter(isOverdue).length,
   };
 }
+
+type VerifyDecision = "manually_verified" | "rejected" | "false_positive";
 
 export default function Tracker({ reportHref = "/reports", assetBase = "/assets" }: TrackerProps = {}) {
   const { toast, requireDualControl } = useStore();
@@ -311,6 +317,48 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
     }
   };
 
+  // Verification popup: an unverified candidate is confirmed (or excluded) from
+  // the board itself, so triage, the fix queue and the report gate stay on one
+  // page instead of sending the operator back to the scan that produced it.
+  const [verifyTarget, setVerifyTarget] = useState<TrackerFinding | null>(null);
+  const [verifyBusy, setVerifyBusy] = useState<VerifyDecision | null>(null);
+  const [verifyNote, setVerifyNote] = useState("");
+  const runVerify = async (decision: VerifyDecision) => {
+    const target = verifyTarget;
+    if (!target || target.source_finding_id == null) return;
+    if (!(await requireDualControl("Changing the verification status of a finding requires a dual-control operate session."))) return;
+    setVerifyBusy(decision);
+    const key = target.finding_key;
+    const previous = data;
+    // Confirming makes the finding reportable. The board's evidence axis has
+    // three levels and cannot name an excluded finding, so a rejected row reads
+    // as unverified until the reload brings the server's own value back.
+    setData((b) => ({
+      ...b,
+      trackerFindings: b.trackerFindings.map((tf) =>
+        tf.finding_key === key
+          ? { ...tf, verification_status: decision === "manually_verified" ? "manually_verified" : "unverified" }
+          : tf,
+      ),
+    }));
+    try {
+      await verifyScanResult(target.source_finding_id, { verification_status: decision, note: verifyNote.trim() || undefined });
+      toast(
+        "success",
+        decision === "manually_verified" ? "Finding verified" : decision === "false_positive" ? "Marked false positive" : "Finding rejected",
+        decision === "manually_verified" ? `${key} is now reportable evidence.` : `${key} stays off client reports.`,
+      );
+      setVerifyTarget(null);
+      setVerifyNote("");
+      reload();
+    } catch (err: any) {
+      setData(previous);
+      toast("error", err?.status === 403 ? "Dual-control required" : "Verification failed", err?.message ?? "Could not update verification");
+    } finally {
+      setVerifyBusy(null);
+    }
+  };
+
   if (loading && findings.length === 0) return <PageSkeleton variant="table" rows={8} />;
   if (error && findings.length === 0) {
     return <ErrorState onRetry={reload} body="We could not load the findings tracker. Check your connection and try again. Your session stays signed in." />;
@@ -469,18 +517,19 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px]">
+              <table className="w-full min-w-[1120px]">
                 <thead>
                   <tr className="border-b border-phantix-700/40">
-                    <SortHeader k="key" className="w-28">Key</SortHeader>
+                    <SortHeader k="key" className="w-24">Key</SortHeader>
                     <th className="th">Finding</th>
                     <SortHeader k="severity">Severity</SortHeader>
                     <th className="th">Asset</th>
-                    <th className="th hidden xl:table-cell">Owner</th>
+                    <th className="th hidden 2xl:table-cell">Owner</th>
                     <th className="th hidden 2xl:table-cell">Due</th>
                     <th className="th">Evidence</th>
                     <SortHeader k="status">Status</SortHeader>
-                    <SortHeader k="age">Age</SortHeader>
+                    <SortHeader k="age" className="hidden 2xl:table-cell">Age</SortHeader>
+                    <th className="th sticky right-0 z-20 border-l border-phantix-700/40 bg-card text-right shadow-[-10px_0_10px_-10px_rgba(0,0,0,0.55)]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -493,10 +542,16 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                         id={`tracker-${f.finding_key}`}
                         className={cx("h-10 border-b border-phantix-800/40 hover:bg-phantix-800/35", highlightKey === f.finding_key && "bg-gold-400/10 ring-1 ring-inset ring-gold-400/30")}
                       >
-                        <td className="td w-28 whitespace-nowrap">
-                          <span className="font-mono text-[13px] font-semibold text-gold-300" title={f.finding_key}>{f.finding_key}</span>
+                        <td className="td w-24 whitespace-nowrap">
+                          <span
+                            className="font-mono text-[13px] font-semibold text-gold-300"
+                            title={f.finding_key}
+                            aria-label={f.finding_key}
+                          >
+                            {f.finding_key.slice(0, KEY_DISPLAY_MAX)}
+                          </span>
                         </td>
-                        <td className="td max-w-[22rem]">
+                        <td className="td max-w-[14rem]">
                           <span
                             className="block truncate font-medium text-slate-100"
                             title={[f.title, f.campaign_name, f.priority, f.surface ? humanize(f.surface) : ""].filter(Boolean).join(" · ")}
@@ -511,7 +566,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                             {f.asset_id != null ? <Link to={`${assetBase}?q=${encodeURIComponent(f.asset_value || "")}`} className="hover:text-gold-300">{f.asset_value}</Link> : f.asset_value}
                           </span>
                         </td>
-                        <td className="td hidden max-w-[12rem] xl:table-cell">
+                        <td className="td hidden max-w-[10rem] 2xl:table-cell">
                           {f.owner ? <span className="block truncate text-[13px] text-slate-300" title={f.owner}>{f.owner}</span> : <span className="text-[13px] text-slate-500">Unassigned</span>}
                         </td>
                         <td className="td hidden whitespace-nowrap 2xl:table-cell">
@@ -534,15 +589,46 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                                 <option key={s} value={s}>{titleCase(s)}</option>
                               ))}
                             </select>
-                            {inEvidence(f, "verified") && f.source_finding_id != null && (
+                            {f.retest_status && (
+                              <span className={cx("chip text-[12px]", f.retest_status === "confirmed" ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" : f.retest_status === "failed" ? "border-severity-critical/40 bg-severity-critical/10 text-severity-critical" : "border-slate-500/40 bg-slate-500/10 text-slate-400")}>
+                                {f.retest_status}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="td hidden whitespace-nowrap 2xl:table-cell" title={`Updated ${timeAgo(f.updated_at)}`}>
+                          <span className="text-[13px] text-slate-300">{days == null ? "Not set" : days === 0 ? "Today" : `${days}d`}</span>
+                        </td>
+                        {/* Last column: the two decisions an operator makes on this
+                            page — remediate the finding, or verify it so it can be. */}
+                        <td className="td sticky right-0 z-10 whitespace-nowrap border-l border-phantix-700/40 bg-card text-right shadow-[-10px_0_10px_-10px_rgba(0,0,0,0.55)]">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              title={
+                                f.source_finding_id == null
+                                  ? "This finding has no source row to attach fix guidance to"
+                                  : inEvidence(f, "verified")
+                                    ? "Open the AI remediation guidance for this finding"
+                                    : "Verify this finding first: remediation guidance is for evidenced findings"
+                              }
+                              aria-label={`Remediation guidance for ${f.finding_key}`}
+                              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2.5 text-[12px] font-medium text-emerald-300 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+                              disabled={f.source_finding_id == null || !inEvidence(f, "verified")}
+                              onClick={() => void openFix(f)}
+                            >
+                              <Wrench size={13} /> Remediation
+                            </button>
+                            {normalizeTrackerVerification(f.verification_status) === "unverified" && (
                               <button
                                 type="button"
-                                title="Open the AI fix guidance for this verified finding"
-                                aria-label={`Fix guidance for ${f.finding_key}`}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20"
-                                onClick={() => void openFix(f)}
+                                title={f.source_finding_id == null ? "This finding has no source row to verify" : "Confirm this finding as evidence, or exclude it"}
+                                aria-label={`Verify ${f.finding_key}`}
+                                className="inline-flex h-7 items-center gap-1.5 rounded-md border border-severity-medium/40 bg-severity-medium/10 px-2.5 text-[12px] font-medium text-severity-medium hover:bg-severity-medium/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                disabled={f.source_finding_id == null}
+                                onClick={() => { setVerifyTarget(f); setVerifyNote(""); }}
                               >
-                                <Wrench size={13} />
+                                <ShieldCheck size={13} /> Verify
                               </button>
                             )}
                             <button
@@ -555,15 +641,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                             >
                               <RefreshCw size={13} />
                             </button>
-                            {f.retest_status && (
-                              <span className={cx("chip text-[12px]", f.retest_status === "confirmed" ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" : f.retest_status === "failed" ? "border-severity-critical/40 bg-severity-critical/10 text-severity-critical" : "border-slate-500/40 bg-slate-500/10 text-slate-400")}>
-                                {f.retest_status}
-                              </span>
-                            )}
                           </div>
-                        </td>
-                        <td className="td whitespace-nowrap" title={`Updated ${timeAgo(f.updated_at)}`}>
-                          <span className="text-[13px] text-slate-300">{days == null ? "Not set" : days === 0 ? "Today" : `${days}d`}</span>
                         </td>
                       </tr>
                     );
@@ -591,8 +669,10 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
 
       <p className="mt-3 text-xs leading-5 text-slate-500">
         Statuses move <strong className="text-slate-300">open → in progress → fixed</strong> (or accepted). A fixed finding that
-        reappears is marked <strong className="text-severity-critical">regressed</strong>. Changing a status needs dual control when it is
-        configured. Unverified findings stay off client reports but remain here until someone confirms or dismisses them.
+        reappears is marked <strong className="text-severity-critical">regressed</strong>. The <strong className="text-slate-300">Actions</strong> column
+        carries the two decisions: <strong className="text-emerald-300">Remediation</strong> opens the fix guidance for a verified
+        finding, and <strong className="text-severity-medium">Verify</strong> confirms an unverified candidate or excludes it. Both need dual
+        control when it is configured. Unverified findings stay off client reports but remain here until someone decides.
       </p>
 
       <Modal open={!!retestTarget} onClose={() => setRetestTarget(null)} title={retestTarget ? `Unit retest: ${retestTarget.finding_key}` : "Unit retest"}>
@@ -626,6 +706,71 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                 <Lock size={10} className="mr-1 inline text-gold-400" /> Retesting needs an operate session when dual control is configured.
               </p>
             </form>
+          </div>
+        )}
+      </Modal>
+
+      {/* Verification: the second half of the Actions column. Confirming a
+          finding makes it reportable; excluding keeps it off the report. */}
+      <Modal
+        open={!!verifyTarget}
+        onClose={() => setVerifyTarget(null)}
+        title={verifyTarget ? `Verify: ${verifyTarget.finding_key}` : "Verify finding"}
+      >
+        {verifyTarget && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/50 p-3 text-sm">
+              <p className="font-medium text-slate-100">{verifyTarget.title}</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <SeverityBadge severity={verifyTarget.severity} />
+                {verifyTarget.asset_value && <span className="font-mono">{verifyTarget.asset_value}</span>}
+                {verifyTarget.priority && <span>· {verifyTarget.priority}</span>}
+                <VerificationBadge status={normalizeTrackerVerification(verifyTarget.verification_status)} />
+              </div>
+            </div>
+            <p className="rounded-lg bg-phantix-800/40 p-2.5 text-[13px] leading-5 text-slate-400">
+              Confirming makes this finding reportable evidence: it enters the client report and unlocks the remediation guidance
+              for it. A false positive or a rejected finding stays off reports.
+            </p>
+            <div>
+              <label className="label" htmlFor="verify-note">Note (optional)</label>
+              <textarea
+                id="verify-note"
+                className="input min-h-[64px] w-full resize-y"
+                placeholder="e.g. reproduced against production, impact confirmed"
+                value={verifyNote}
+                onChange={(e) => setVerifyNote(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="btn-primary !py-2 text-sm"
+                type="button"
+                disabled={verifyBusy !== null || normalizeTrackerVerification(verifyTarget.verification_status) === "manually_verified"}
+                onClick={() => void runVerify("manually_verified")}
+              >
+                {verifyBusy === "manually_verified" ? <Spinner className="h-3.5 w-3.5" /> : <CheckCircle2 size={14} />} Verify
+              </button>
+              <button
+                className="btn-danger !py-2 text-sm"
+                type="button"
+                disabled={verifyBusy !== null}
+                onClick={() => void runVerify("false_positive")}
+              >
+                {verifyBusy === "false_positive" ? <Spinner className="h-3.5 w-3.5" /> : <AlertTriangle size={14} />} False positive
+              </button>
+              <button
+                className="btn-secondary !py-2 text-sm"
+                type="button"
+                disabled={verifyBusy !== null}
+                onClick={() => void runVerify("rejected")}
+              >
+                {verifyBusy === "rejected" ? <Spinner className="h-3.5 w-3.5" /> : <Ban size={14} />} Reject
+              </button>
+            </div>
+            <p className="text-[12px] text-slate-500">
+              <Lock size={10} className="mr-1 inline text-gold-400" /> Verification needs an operate session when dual control is configured.
+            </p>
           </div>
         )}
       </Modal>

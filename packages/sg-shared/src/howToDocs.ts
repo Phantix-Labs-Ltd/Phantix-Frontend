@@ -118,7 +118,7 @@ export const howToDocs: Entry[] = [
   e("howto-app-30", "App: Findings intake", "Findings that are not yet on the remediation tracker.", "how-to-app", app30),
   e("howto-app-31", "App: Asset removal", "Remove an asset and its data from the Danger zone.", "how-to-app", app31),
   e("howto-app-32", "App: Mobile package analysis", "Static analysis of an APK, AAB or IPA package.", "how-to-app", app32),
-  e("howto-app-33", "App: Remediation queue", "The fix queue for verified findings.", "how-to-app", app33),
+  e("howto-app-33", "App: Findings tracker: the fix queue", "Fix guidance for a verified finding.", "how-to-app", app33),
   e("howto-app-34", "App: Prior reports", "Upload and read reports from earlier engagements.", "how-to-app", app34),
   e("howto-app-35", "App: Asset intelligence", "Live asset events and the relationship graph.", "how-to-app", app35),
   e("howto-app-36", "App: Alerts and incidents", "Delivery log, SMTP, channels and event toggles.", "how-to-app", app36),
