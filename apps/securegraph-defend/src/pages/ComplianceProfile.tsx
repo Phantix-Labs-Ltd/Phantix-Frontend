@@ -22,7 +22,7 @@ const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-1000", "1000+"];
 const CLOUD_PROVIDERS = ["aws", "azure", "gcp", "digitalocean", "on-prem", "other"];
 
 const DATA_FLAGS: Array<{ key: keyof BusinessProfileUpdate; label: string; hint: string }> = [
-  { key: "handles_personal_data", label: "Personal data", hint: "Drives NDPR / GDPR applicability" },
+  { key: "handles_personal_data", label: "Personal data", hint: "Drives NDPR and GDPR applicability" },
   { key: "handles_health_records", label: "Health records", hint: "Drives HIPAA-style controls" },
   { key: "handles_payment_cards", label: "Payment cards", hint: "Drives PCI DSS" },
   { key: "handles_financial_transactions", label: "Financial transactions", hint: "Drives financial-sector controls" },
@@ -123,7 +123,7 @@ export default function ComplianceProfile() {
         <div className="space-y-5">
           {!profile && (
             <p className="rounded-md border border-gold-400/30 bg-gold-400/10 p-3 text-xs leading-5 text-gold-200">
-              No profile yet. Fill this in and save — framework recommendations and the questionnaire scope both depend on it.
+              No profile yet. Fill this in and save. Framework recommendations and the questionnaire scope both depend on it.
             </p>
           )}
 
@@ -236,7 +236,7 @@ export default function ComplianceProfile() {
                   placeholder="NG, GH, KE"
                   className="input mt-1"
                 />
-                <p className="mt-1 text-[13px] text-slate-500">Comma separated — drives cross-border data rules.</p>
+                <p className="mt-1 text-[13px] text-slate-500">Comma separated. This drives the cross-border data rules.</p>
               </div>
             </Card>
 

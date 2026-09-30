@@ -31,7 +31,7 @@ const MODULES: ModuleEntry[] = [
   { route: "/assets/intelligence", label: "Intelligence", section: "Attack Surface", desc: "per-asset intelligence, exposure and priority", keywords: ["intelligence", "asset intelligence", "exposure", "asset risk", "priority", "asset analysis"] },
   { route: "/soc", label: "SOC Monitor", section: "Attack Surface", desc: "live detections, triage and SOC cases", keywords: ["soc", "detections", "triage", "alerts", "incidents", "monitor", "security operations", "cases"] },
   { route: "/soc/war-room", label: "War Room", section: "Attack Surface", desc: "incident case management with checklists and SLA", keywords: ["war room", "incident", "case", "checklist", "sla", "evidence", "kill chain"] },
-  { route: "/soc/playbooks", label: "Playbooks & MITRE", section: "Attack Surface", desc: "response playbooks and MITRE ATT&CK coverage", keywords: ["playbook", "mitre", "runbook", "response", "procedure", "technique", "coverage"] },
+  { route: "/soc/playbooks", label: "Playbooks and MITRE", section: "Attack Surface", desc: "response playbooks and MITRE ATT&CK coverage", keywords: ["playbook", "mitre", "runbook", "response", "procedure", "technique", "coverage"] },
   { route: "/soc/advisor", label: "SOC Advisor", section: "Attack Surface", desc: "posture score, trends, readiness and recommendations", keywords: ["advisor", "posture", "readiness", "recommendation", "benchmark", "trend", "score"] },
   { route: "/soc/logs", label: "Log Pipeline", section: "Attack Surface", desc: "security log search and pipeline statistics", keywords: ["log", "logs", "pipeline", "agent log", "search log", "log search"] },
   { route: "/soc/agents", label: "Agents", section: "Attack Surface", desc: "agent fleet health, registration and install", keywords: ["agent", "agents", "fleet", "install", "deploy", "download agent", "host agent"] },
@@ -72,7 +72,7 @@ function resultFor(modules: ModuleEntry[]): NavGuideResult | null {
   if (modules.length === 0) return null;
   const top = modules[0];
   const section = top.section === "Overview" || top.section === "System" ? `the ${top.section}` : `${top.section} section`;
-  const text = `You'll find it under **${section} → ${top.label}** (${top.desc}).`;
+  const text = `You will find it under **${section} → ${top.label}** (${top.desc}).`;
   const also = modules.slice(1, 3).map((m) => ({ route: m.route, label: m.label }));
   return { text, route: top.route, label: top.label, also };
 }
@@ -102,16 +102,16 @@ export function tryNavigationAnswer(raw: string): NavGuideResult | null {
 /** Free, local "what can I do here / how do I" overview (no AI call). */
 export function helpOverview(): string {
   return (
-    "Here's where everything lives:\n" +
-    "· Dashboard (/dashboard) — posture & key stats\n" +
-    "· Assets (/assets) + Intelligence (/assets/intelligence) — inventory & exposure\n" +
-    "· SOC Monitor (/soc) with War Room, Playbooks, Advisor, Logs, Agents & Cloud Integrations\n" +
-    "· Scans (/scans), VAPT Campaigns (/vapt) — monitoring & testing\n" +
-    "· Integrations Hub (/integrations) — connectors, SSO, SCIM & webhooks\n" +
-    "· Risks (/risks), Compliance (/compliance), Reports (/reports) — governance\n" +
-    "· SecureGraph Agent (/agent) — chat & investigations\n" +
+    "This is where everything lives:\n" +
+    "· Dashboard (/dashboard) : posture and key stats\n" +
+    "· Assets (/assets) + Intelligence (/assets/intelligence): inventory and exposure\n" +
+    "· SOC Monitor (/soc) with War Room, Playbooks, Advisor, Logs, Agents and Cloud Integrations\n" +
+    "· Scans (/scans), VAPT Campaigns (/vapt): monitoring and testing\n" +
+    "· Integrations Hub (/integrations): connectors, SSO, SCIM and webhooks\n" +
+    "· Risks (/risks), Compliance (/compliance), Reports (/reports): governance\n" +
+    "· SecureGraph Agent (/agent): chat and investigations\n" +
     "· Alerts (/alerts), Audit (/audit), People (/people), Support (/support)\n" +
-    "· Documentation (/docs) — in-app guides\n\n" +
-    "Ask me things like \"where do I find my risk register?\" and I'll point you to the right page."
+    "· Documentation (/docs): in-app guides\n\n" +
+    "Ask me things like \"where do I find my risk register?\" and I will point you to the right page."
   );
 }

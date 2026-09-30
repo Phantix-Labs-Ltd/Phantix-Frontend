@@ -38,7 +38,7 @@ export default function Alerts() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load alert events. Check your connection and retry — your session stays signed in."
+        body="We could not load alert events. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -50,7 +50,7 @@ export default function Alerts() {
         description="Decide how you stay informed about security events."
         actions={
           <>
-          <DocLink docId="hc-alert-channels" label="Alerts how-to" />
+          <DocLink docId="howto-app-36" label="Alerts how-to" />
           <button
             className="btn-primary"
             onClick={() =>
@@ -69,7 +69,7 @@ export default function Alerts() {
       <Tabs
         tabs={[
           { id: "events", label: "Delivery log", count: alertEvents.length },
-          { id: "settings", label: "Channels & SMTP" },
+          { id: "settings", label: "Channels and SMTP" },
         ]}
         active={tab}
         onChange={setTab}

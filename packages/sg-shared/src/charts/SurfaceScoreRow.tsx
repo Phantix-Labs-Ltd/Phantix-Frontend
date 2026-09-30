@@ -72,7 +72,7 @@ export default function SurfaceScoreRow({
             </div>
 
             <p className="mt-1.5 font-display text-2xl font-semibold leading-none" style={{ color: untested ? undefined : tone.color }}>
-              {untested ? <span className="text-slate-600">—</span> : score}
+              {untested ? <span className="text-slate-600">Not set</span> : score}
             </p>
 
             {/* Meter: the ratio against the limit, on the same ramp as the value. */}

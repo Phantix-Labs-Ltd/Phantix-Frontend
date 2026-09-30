@@ -2,7 +2,7 @@
 // Mirrors app/engines/ai_engine/agi/customer_api.py. Demo-mode fallbacks so the
 // UI is testable without a live runner.
 
-import { api, ApiError, delay, isDemoMode, streamSse } from "./api";
+import { api, ApiError, delay, isDemoMode, publicDetailCopy, streamSse } from "./api";
 import { AGI_ENABLED as AGI_FLAG } from "./config";
 import type {
   AgiAccess,
@@ -191,7 +191,7 @@ function demoAccess(): AgiAccess {
       agent: {
         id: "agent",
         label: "SecureGraph Agent",
-        description: "Analysis, triage, narratives — grounded in existing engine data.",
+        description: "Analysis, triage and narratives, grounded in engine data.",
         cost_tier: "standard",
         available: true,
       },
@@ -227,7 +227,7 @@ function demoAccess(): AgiAccess {
       title: "Autonomous Pentest Agent Usage Agreement",
       body_md: demoAgreed
         ? null
-        : "# Autonomous Pentest Agent — Usage Agreement\n\nThis agent runs **only** against targets in your approved engagement allowlist.\n\n- **Read-only** steps stream live.\n- **State-changing** steps pause for your approval.\n- Sessions destroy their containers when stopped.\n- No host / server information, no other organizations, no direct database access.\n\nBy accepting you confirm you are authorized to test the listed targets.",
+        : "# Autonomous Pentest Agent: Usage Agreement\n\nThis agent runs **only** against targets in your approved engagement allowlist.\n\n- **Read-only** steps stream live.\n- **State-changing** steps pause for your approval.\n- Sessions destroy their containers when stopped.\n- No host or server information, no other organizations, and no direct database access.\n\nBy accepting you confirm you are authorized to test the listed targets.",
       security_policy: demoAgreed
         ? null
         : { principles: ["scope-limited", "approval-gated", "container-isolated"] },
@@ -241,7 +241,7 @@ function demoAgreement(): AgiAgreement {
     version: "1.0.0",
     title: "Autonomous Pentest Agent Usage Agreement",
     body_md:
-      "# Autonomous Pentest Agent — Usage Agreement\n\nThis agent runs **only** against targets in your approved engagement allowlist.\n\n- **Read-only** steps stream live.\n- **State-changing** steps pause for your approval.\n- Sessions destroy their containers when stopped.\n- No host / server information, no other organizations, no direct database access.\n\nBy accepting you confirm you are authorized to test the listed targets.",
+      "# Autonomous Pentest Agent: Usage Agreement\n\nThis agent runs **only** against targets in your approved engagement allowlist.\n\n- **Read-only** steps stream live.\n- **State-changing** steps pause for your approval.\n- Sessions destroy their containers when stopped.\n- No host or server information, no other organizations, and no direct database access.\n\nBy accepting you confirm you are authorized to test the listed targets.",
     security_policy: { principles: ["scope-limited", "approval-gated", "container-isolated"] },
     accepted: demoAgreed,
     must_accept: !demoAgreed,
@@ -288,22 +288,22 @@ function demoSeedEngagements(): void {
 
 const DEMO_TX: { role: string; content: string; meta?: Record<string, unknown>; gate?: boolean; clearGate?: boolean }[] = [
   { role: "system", content: "thinking…" },
-  { role: "assistant", content: "Here's what I understood: **run a scoped security assessment of the allowlisted web application** — enumerate, discover endpoints, identify vulnerabilities, and verify with evidence. I'll stay read-only unless you approve an active step." },
-  { role: "assistant", content: "Resolved skill: **agi.recon.http-surface** (HTTP surface mapping) — matching this objective." },
+  { role: "assistant", content: "Here is what I understood: **run a scoped security assessment of the allowlisted web application**. It enumerates, discovers endpoints, identifies vulnerabilities, and verifies with evidence. I will stay read-only unless you approve an active step." },
+  { role: "assistant", content: "Resolved skill: **agi.recon.http-surface** (HTTP surface mapping) for this objective." },
   { role: "tool", content: "nmap -sV -T3 --top-ports 100 lab.acme.example", meta: { tool: "nmap", action_class: "read" } },
   { role: "tool", content: "80/tcp open http nginx 1.24.0\n443/tcp open ssl/http nginx 1.24.0\n22/tcp filtered ssh", meta: { tool: "nmap", action_class: "read" } },
-  { role: "assistant", content: "Recon looks clean: web on 80/443 only, SSH filtered. I'll fingerprint the HTTP origin and walk common paths next." },
+  { role: "assistant", content: "Recon looks clean: web on 80/443 only, SSH filtered. I will fingerprint the HTTP origin and walk common paths next." },
   { role: "tool", content: "httpx -silent -status-code -title https://lab.acme.example", meta: { tool: "httpx", action_class: "read" } },
   { role: "tool", content: "https://lab.acme.example [200] \"Acme Lab Portal\"", meta: { tool: "httpx", action_class: "read" } },
   { role: "tool", content: "ffuf -u https://lab.acme.example/FUZZ -w common.txt -mc 200,302", meta: { tool: "ffuf", action_class: "read" } },
   { role: "tool", content: "/login 200\n/api/v1 200\n/admin 302 → /login\n/health 200", meta: { tool: "ffuf", action_class: "read" } },
-  { role: "assistant", content: "Surface mapped. Notes so far:\n\n- **Info** — public app title and tech stack are visible\n- **Low** — server version banner is exposed\n\nAuth sits at `/login`; `/admin` redirects there. I'll run a safe signature scan next — still read-only." },
+  { role: "assistant", content: "Surface mapped. Notes so far:\n\n- **Info**: public app title and tech stack are visible\n- **Low**: server version banner is exposed\n\nAuth sits at `/login`; `/admin` redirects there. I will run a safe signature scan next. It stays read-only." },
   { role: "tool", content: "nuclei -u https://lab.acme.example -severity info,low,medium,high", meta: { tool: "nuclei", action_class: "read" } },
   { role: "tool", content: "[info] outdated-jquery\n[low] server-version-disclose\n[medium] missing-security-headers", meta: { tool: "nuclei", action_class: "read" } },
-  { role: "assistant", content: "Nothing critical yet. I'd like **one** active check: a single login probe with lab-only default credentials. No spray, no lockout loop. Queuing it for your approval.", gate: true },
-  { role: "system", content: "Approved — running within scope.", clearGate: true },
+  { role: "assistant", content: "Nothing critical yet. I would like **one** active check: a single login probe with lab-only default credentials. No spray, no lockout loop. Queuing it for your approval.", gate: true },
+  { role: "system", content: "Approved. It runs within scope.", clearGate: true },
   { role: "tool", content: "POST /login → 302 Location: /admin · session cookie issued", meta: { tool: "http_probe", action_class: "state_changing" } },
-  { role: "assistant", content: "**Assessment complete**\n\n| Severity | Finding |\n|---|---|\n| High | Default credentials accepted on `/login` — session issued |\n| Medium | Missing security headers |\n| Low | Server version banner |\n| Info | Public app fingerprint |\n\n**Residual risk:** the authenticated admin surface is now proven. I will not pivot or leave the allowlist. Report tagged for your team." },
+  { role: "assistant", content: "**Assessment complete**\n\n| Severity | Finding |\n|---|---|\n| High | Default credentials accepted on `/login`, session issued |\n| Medium | Missing security headers |\n| Low | Server version banner |\n| Info | Public app fingerprint |\n\n**Residual risk:** the authenticated admin surface is now proven. I will not pivot or leave the allowlist. Report tagged for your team." },
 ];
 
 function demoStartSession(engagementId: number, instruction: string): AgiSession {
@@ -395,7 +395,7 @@ export async function recommendAgiIntent(text: string, currentMode: "agent" | "a
       confidence: agi && !agent ? 0.85 : 0.6,
       reason: agi && !agent
         ? "Your request sounds like live testing. The Autonomous Pentest Agent is scoped, approval-gated and better for that."
-        : "Your request sounds like analysis of existing data — the SecureGraph Agent is faster and cheaper for that.",
+        : "Your request sounds like analysis of existing data. The SecureGraph Agent is faster and cheaper for that.",
       can_switch: !!(agi && !agent) && demoAgreed,
       next_step: agi && !agent && !demoAgreed ? "agreement" : agi && !agent ? "switch" : "stay",
     };
@@ -556,7 +556,7 @@ export async function startAgiSession(
       throw new ApiError(
         (e as ApiError).status,
         "Session start was cut off at the gateway while the workspace was provisioning. " +
-        "The backend may still be starting it — wait a minute before retrying (an immediate retry can create a duplicate session).",
+        "The backend may still start it. Wait a minute before a retry. An immediate retry can create a duplicate session.",
       );
     }
     throw e;
@@ -600,15 +600,15 @@ export interface AgiCapabilityAttestation {
 }
 
 const DEMO_CAPABILITIES: AgiCapabilityRow[] = [
-  ["network.egress", "Talk to the internet / targets", "read", "In-scope HTTP/DNS/ports over the sandbox network"],
+  ["network.egress", "Talk to the internet or targets", "read", "In-scope HTTP, DNS and ports over the sandbox network"],
   ["tools.invoke", "Call security tools", "read", "Named scanners baked into the sandbox image"],
-  ["process.execute", "Execute subprocesses / shell", "read", "Container-only shell + background jobs"],
-  ["packages.download", "Download / install packages", "tool_install", "Container-only package install"],
+  ["process.execute", "Execute subprocesses or a shell", "read", "Container-only shell and background jobs"],
+  ["packages.download", "Download or install packages", "tool_install", "Container-only package install"],
   ["subtasks.spawn", "Spin up subtasks", "read", "Subagents and decomposable jobs"],
-  ["gui.computer", "Use a browser / computer GUI", "read", "Headless Chromium rendering + screenshots"],
-  ["files.write", "Write files / exploit scripts", "read", "Artifacts under /sandbox/out"],
-  ["proxy.intercept", "Intercept traffic (proxy)", "state_changing", "Burp / mitmproxy capture"],
-  ["credentials.use", "Use test credentials / auth", "state_changing", "Provisioned test principals"],
+  ["gui.computer", "Use a browser or a computer GUI", "read", "Headless Chromium rendering and screenshots"],
+  ["files.write", "Write files or exploit scripts", "read", "Artifacts under /sandbox/out"],
+  ["proxy.intercept", "Intercept traffic (proxy)", "state_changing", "Burp or mitmproxy capture"],
+  ["credentials.use", "Use test credentials or authentication", "state_changing", "Provisioned test principals"],
   ["engine.call", "Call product engines", "read", "Read-only engine ops"],
 ].map(([id, label, action_class, description], i) => ({
   id,
@@ -669,8 +669,8 @@ export async function agiChat(sessionId: number, message: string): Promise<AgiCh
       : /stop|halt|enough/i.test(message)
         ? "Acknowledged. I will idle on read-only observations and wait for your next instruction."
         : /login|password|credential|exploit/i.test(message)
-          ? "That would be state-changing. I've queued a single in-scope login probe — approve or reject it in the gate below."
-          : "Understood — continuing within the approved scope. I'll stream new observations here as they come in.";
+          ? "That would be state-changing. I have queued a single in-scope login probe. Approve or reject it in the gate below."
+          : "Understood. Continuing within the approved scope. I will stream new observations here as they come in.";
     demoTx.push({
       seq: demoTx.length,
       role: "assistant",
@@ -684,7 +684,7 @@ export async function agiChat(sessionId: number, message: string): Promise<AgiCh
         action_type: "state_changing",
         tool_name: "http_probe",
         proposed_command: "POST https://lab.acme.example/login -d 'username=admin&password=test'",
-        rationale: "Proposed after your request — in-scope lab target only.",
+        rationale: "Proposed after your request. In-scope lab target only.",
         status: "pending_approval",
         created_at: new Date().toISOString(),
       }];
@@ -821,7 +821,7 @@ export async function decideAgiAction(actionId: number, approve: boolean, notes 
       a.decided_at = new Date().toISOString();
       a.executed_at = approve ? new Date().toISOString() : null;
       demoActions = demoActions.filter((x) => x.id !== actionId);
-      demoTx.push({ seq: demoTx.length, role: "system", content: approve ? "Approved — running within scope." : "Rejected — step skipped.", created_at: new Date().toISOString() });
+      demoTx.push({ seq: demoTx.length, role: "system", content: approve ? "Approved. It runs within scope." : "Rejected. Step skipped.", created_at: new Date().toISOString() });
     }
     return a ?? { id: actionId, session_id: 0, action_type: "state_changing", proposed_command: "", rationale: "", status: "rejected", created_at: new Date().toISOString() };
   }
@@ -849,7 +849,7 @@ export function isAgiPolicyBlocked(err: unknown): { code: string; message: strin
   if (!(err instanceof ApiError)) return null;
   const detail = err.detail as Record<string, unknown> | null;
   const code = typeof detail?.code === "string" ? detail.code : "";
-  const message = typeof detail?.message === "string" ? detail.message : err.message;
+  const message = publicDetailCopy(detail?.message) || err.message;
   if (code.startsWith("forbidden_")) return { code, message };
   return null;
 }

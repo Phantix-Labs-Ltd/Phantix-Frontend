@@ -137,7 +137,7 @@ export async function classifyAsset(assetId: number): Promise<AssetClassificatio
         `flow:${flow}`,
       ],
       applied_tags: [],
-      evidence: ["Demo classification — live mode reads type, value and metadata."],
+      evidence: ["Demo classification. Live mode reads type, value and metadata."],
     };
   }
   return api.post<AssetClassification>(`/asset-tags/assets/${assetId}/classify`, {});

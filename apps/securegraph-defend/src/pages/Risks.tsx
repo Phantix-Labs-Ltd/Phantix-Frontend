@@ -79,7 +79,7 @@ export default function Risks() {
 
       if (treatmentId) {
         await api.post(`/risks/treatments/${treatmentId}/submit`, {});
-        toast("success", "Submitted for approval", "Awaiting the authorizer's decision.");
+        toast("success", "Submitted for approval", "This waits for the decision of the authorizer.");
       }
     } catch (err: any) {
       toast("error", "Failed", err.message ?? "Treatment proposal failed");
@@ -143,7 +143,7 @@ export default function Risks() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load the risk register. Check your connection and retry — your session stays signed in."
+        body="We could not load the risk register. Check your connection and try again. Your session stays signed in."
       />
     );
   }

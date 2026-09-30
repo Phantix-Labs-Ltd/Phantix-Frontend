@@ -29,19 +29,89 @@ export function isDemoMode(): boolean {
 }
 
 // ── Token stores (per-surface, never mixed) ──────────────────────────────────
+// Tokens are kept in localStorage, not sessionStorage: an operator who leaves
+// the page — closes the tab, or restarts the browser — and comes back keeps the
+// session until the backend expires it. When it *has* expired, the shell raises
+// the "session ended" card instead of silently bouncing to sign-in. Falls back
+// to sessionStorage where localStorage is unavailable (private mode), so a
+// session still works per-tab there.
+const tokenStore: Storage = (() => {
+  try {
+    const probe = "__sg_storage_probe__";
+    window.localStorage.setItem(probe, "1");
+    window.localStorage.removeItem(probe);
+    return window.localStorage;
+  } catch {
+    return window.sessionStorage;
+  }
+})();
+
+function readToken(key: string): string | null {
+  try { return tokenStore.getItem(key); } catch { return null; }
+}
+function writeToken(key: string, value: string | null): void {
+  try { value ? tokenStore.setItem(key, value) : tokenStore.removeItem(key); } catch { /* unavailable */ }
+}
+
+// One-time migration: these keys used to live in sessionStorage. Adopt any
+// existing session into the persistent store so the change does not sign every
+// already-signed-in operator out on their first load after deploy.
+for (const key of [
+  "platform_access_token",
+  "platform_org_user_token",
+  "app_session_token",
+  "app_device_token",
+  "staff_access_token",
+]) {
+  try {
+    if (!tokenStore.getItem(key)) {
+      const legacy = window.sessionStorage.getItem(key);
+      if (legacy) tokenStore.setItem(key, legacy);
+    }
+  } catch { /* unavailable */ }
+}
+
+/** Read a value from the shared session store (localStorage, else sessionStorage). */
+export function readStoredToken(key: string): string | null {
+  return readToken(key);
+}
+
+/** Write (or clear, with null) a value in the shared session store. */
+export function writeStoredToken(key: string, value: string | null): void {
+  writeToken(key, value);
+}
+
+// The dual-control operate token is a short-lived elevation, not the session:
+// it stays per-tab (sessionStorage) so closing the tab ends the elevation even
+// though the signed-in session persists.
+function readSessionToken(key: string): string | null {
+  try { return window.sessionStorage.getItem(key); } catch { return null; }
+}
+function writeSessionToken(key: string, value: string | null): void {
+  try { value ? window.sessionStorage.setItem(key, value) : window.sessionStorage.removeItem(key); } catch { /* unavailable */ }
+}
+
+/** Read/write a per-tab (non-persisted) token, used for the operate elevation. */
+export function readSessionStoredToken(key: string): string | null {
+  return readSessionToken(key);
+}
+export function writeSessionStoredToken(key: string, value: string | null): void {
+  writeSessionToken(key, value);
+}
+
 export const tokens = {
-  get platform() { return sessionStorage.getItem("platform_access_token"); },
-  set platform(v: string | null) { v ? sessionStorage.setItem("platform_access_token", v) : sessionStorage.removeItem("platform_access_token"); },
-  get orgUser() { return sessionStorage.getItem("platform_org_user_token"); },
-  set orgUser(v: string | null) { v ? sessionStorage.setItem("platform_org_user_token", v) : sessionStorage.removeItem("platform_org_user_token"); },
-  get dualControl() { return sessionStorage.getItem("platform_dual_control"); },
-  set dualControl(v: string | null) { v ? sessionStorage.setItem("platform_dual_control", v) : sessionStorage.removeItem("platform_dual_control"); },
-  get appSession() { return sessionStorage.getItem("app_session_token"); },
-  set appSession(v: string | null) { v ? sessionStorage.setItem("app_session_token", v) : sessionStorage.removeItem("app_session_token"); },
-  get device() { return sessionStorage.getItem("app_device_token"); },
-  set device(v: string | null) { v ? sessionStorage.setItem("app_device_token", v) : sessionStorage.removeItem("app_device_token"); },
-  get staff() { return sessionStorage.getItem("staff_access_token"); },
-  set staff(v: string | null) { v ? sessionStorage.setItem("staff_access_token", v) : sessionStorage.removeItem("staff_access_token"); },
+  get platform() { return readToken("platform_access_token"); },
+  set platform(v: string | null) { writeToken("platform_access_token", v); },
+  get orgUser() { return readToken("platform_org_user_token"); },
+  set orgUser(v: string | null) { writeToken("platform_org_user_token", v); },
+  get dualControl() { return readSessionToken("platform_dual_control"); },
+  set dualControl(v: string | null) { writeSessionToken("platform_dual_control", v); },
+  get appSession() { return readToken("app_session_token"); },
+  set appSession(v: string | null) { writeToken("app_session_token", v); },
+  get device() { return readToken("app_device_token"); },
+  set device(v: string | null) { writeToken("app_device_token", v); },
+  get staff() { return readToken("staff_access_token"); },
+  set staff(v: string | null) { writeToken("staff_access_token", v); },
 };
 
 export function deviceId(): string {
@@ -67,6 +137,152 @@ function detailMessage(detail: unknown): string {
   return "Request failed";
 }
 
+// ── Customer-facing error copy (normalized) ─────────────────────────────────
+// The backend writes `detail` for whoever reads the logs: it can name routes,
+// headers, env vars, internal codes and doc paths. Some of it, though, is
+// exactly what the customer needs — "Domain/host 'x' is not HTTP(S)-reachable —
+// asset not added. Ensure DNS resolves and the host responds on 80/443." This
+// turns the raw detail into one safe sentence: keep the human explanation, drop
+// anything that reads like an internal diagnostic, and fall back to the status
+// copy when nothing safe survives. The raw words stay on `serverMessage`.
+
+/**
+ * Statuses whose detail describes the caller's own input or state, so it is
+ * worth showing once normalized. Authentication (401), permissions (403),
+ * rate limits (429), server faults (5xx) and network errors (0) keep the
+ * app-authored copy: that detail is the likeliest to name internals, and the
+ * cause is rarely the customer's to fix.
+ */
+const ACTIONABLE_DETAIL_STATUSES = new Set([400, 409, 412, 413, 415, 422, 423, 424, 428]);
+
+/**
+ * A candidate carrying any of these is an internal diagnostic, not customer
+ * copy: crash/stack text, routes and headers, SCREAMING_SNAKE codes, SQL,
+ * data-layer and broker internals, loopback/private hosts, and repo or spec
+ * references. Matching one sends the request back to the status copy.
+ */
+const INTERNAL_DIAGNOSTIC_PATTERNS: RegExp[] = [
+  // Crash / stack text
+  /\btraceback\b/i,
+  /\bfile\s+"[^"]+"/i,
+  /\bline\s+\d+\b/i,
+  /\b\w+(?:Error|Exception)\b/,
+  /\bexception\b/i,
+  /\bstack\s?trace\b/i,
+  // Routes, headers and machine codes
+  /(?:\/api\/v\d|\/(?:internal|admin|_debug)\/)/i,
+  /\b(?:GET|POST|PUT|PATCH|DELETE)\s+[\/\"]/,
+  /\bX(?:-[A-Z][A-Za-z0-9]+){2,}\b/,
+  /\bWWW-Authenticate\b/i,
+  /\b[A-Z][A-Z0-9]{2,}(?:_[A-Z0-9]+)+\b/,
+  // Data-layer internals
+  /\bselect\b[\s\S]{0,80}\bfrom\b/i,
+  /\binsert\s+into\b/i,
+  /\bupdate\b[\s\S]{0,80}\bset\b/i,
+  /\bdelete\s+from\b/i,
+  /\b(?:psycopg|sqlalchemy|asyncpg|prisma|sqlite|alembic)\w*\b/i,
+  /\b(?:relation|column|table|schema)\b[^.]{0,60}\bdoes not exist\b/i,
+  /\bduplicate key value violates\b/i,
+  /\bnull value in column\b/i,
+  /\bmigration[s]?\b/i,
+  /\b(?:redis|celery|rabbitmq|kafka)\b/i,
+  // Hosts
+  /\b(?:localhost|127\.0\.0\.1|0\.0\.0\.0)\b/i,
+  /\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}\b/,
+  // Repo / spec / support identifiers
+  /\b(?:docs?|design|architecture|specs?)\/\S+/i,
+  /§\s*\d/,
+  /\.(?:py|ts|tsx|js|jsx|mjs|json|ya?ml|toml|ini|sql|sh|md)\b/i,
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i,
+  /\bcorrelation[- _]?id\b/i,
+  /\bservice[- _]?key\b/i,
+];
+
+/** "asset_id" → "asset id" — a field name a person can read. */
+function humanizeField(field: string): string {
+  return field.replace(/[_-]+/g, " ").trim();
+}
+
+/** The one human sentence inside a FastAPI `detail`, or null when there is none. */
+function detailCandidate(detail: unknown): string | null {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    // Validation arrays: [{ loc: ["body", "value"], msg: "..." }] — keep the
+    // message and name the field, so "invalid" becomes "value: invalid".
+    const parts: string[] = [];
+    for (const item of detail) {
+      if (!item || typeof item !== "object") continue;
+      const { msg, loc } = item as { msg?: unknown; loc?: unknown };
+      if (typeof msg !== "string" || !msg.trim()) continue;
+      const field = Array.isArray(loc)
+        ? [...loc].reverse().find(
+            (p) => typeof p === "string" && !["body", "query", "path", "header", "cookie"].includes(p),
+          )
+        : undefined;
+      parts.push(field ? `Invalid ${humanizeField(String(field))}: ${msg.trim()}` : msg.trim());
+    }
+    return parts.length ? parts.join("; ") : null;
+  }
+  if (detail && typeof detail === "object") {
+    const d = detail as Record<string, unknown>;
+    // Prose first; `error`/`code` are usually bare machine identifiers.
+    for (const key of ["message", "detail", "reason", "hint"]) {
+      if (typeof d[key] === "string" && (d[key] as string).trim()) return d[key] as string;
+    }
+    if (typeof d.error === "string" && /\s/.test(d.error) && d.error.trim().length > 12) {
+      return d.error;
+    }
+  }
+  return null;
+}
+
+/** Clean one candidate into presentable copy, or null when it is internal. */
+function sanitizeDetailCopy(raw: string): string | null {
+  let text = raw.replace(/\s+/g, " ").trim();
+  // A leading machine code — "validation_error: ..." — is not the sentence.
+  const lead = text.match(/^([A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*)\s*:\s+(\S.*)$/);
+  if (lead) {
+    const machineish =
+      /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(lead[1]) || /^(?:error|warning|note)$/i.test(lead[1]);
+    if (machineish) text = lead[2];
+  }
+  // Drop a correlation/request suffix the backend may append.
+  text = text.replace(/\s*[([]?(?:correlation|request)[-_ ]?id[:\s][^)\]]*[)\]]?\.?$/i, "").trim();
+  if (!text) return null;
+  // A bare identifier is a code, not a sentence.
+  if (!/\s/.test(text) && /^[a-z0-9_.:-]+$/i.test(text)) return null;
+  if (INTERNAL_DIAGNOSTIC_PATTERNS.some((re) => re.test(text))) return null;
+  // Diagnostics can be long; keep the first sentence or two.
+  if (text.length > 300) {
+    const cut = text.slice(0, 300);
+    const stop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("; "));
+    text = stop > 80 ? cut.slice(0, stop + 1) : `${cut.replace(/\s+\S*$/, "")}…`;
+  }
+  text = text.charAt(0).toUpperCase() + text.slice(1);
+  if (!/[.!?…]$/.test(text)) text += ".";
+  return text;
+}
+
+/**
+ * The sentence a failed request may show the customer.
+ *
+ * Uses the backend's own explanation when the status says the caller's input or
+ * state is at fault and the text carries no internal detail; otherwise the
+ * app-authored status copy. `serverMessage` keeps the raw text for triage.
+ */
+export function publicErrorCopy(status: number, detail: unknown): string {
+  if (!ACTIONABLE_DETAIL_STATUSES.has(status)) return errorCopyFor(status);
+  const candidate = detailCandidate(detail);
+  if (!candidate) return errorCopyFor(status);
+  return sanitizeDetailCopy(candidate) ?? errorCopyFor(status);
+}
+
+/** Normalize a raw backend detail for display (callers that bypass `ApiError`). */
+export function publicDetailCopy(detail: unknown): string | null {
+  const candidate = detailCandidate(detail);
+  return candidate ? sanitizeDetailCopy(candidate) : null;
+}
+
 /**
  * What a failed request is allowed to say to the operator.
  *
@@ -75,15 +291,15 @@ function detailMessage(detail: unknown): string {
  * That text is logged (see `logRequestFailure`) and the UI gets this instead.
  */
 export function errorCopyFor(status: number): string {
-  if (status === 0) return "We couldn't reach the server. Check your connection and try again.";
+  if (status === 0) return "We could not reach the server. Check your connection and try again.";
   if (status === 401) return "Your session has expired. Sign in again to continue.";
   if (status === 402) return "That needs an upgrade on your plan.";
-  if (status === 403) return "You don't have permission to do that.";
+  if (status === 403) return "You do not have permission to do that.";
   if (status === 404) return "That item no longer exists.";
   if (status === 408) return "The request timed out. Try again.";
   if (status === 409) return "That conflicts with the current state. Refresh and try again.";
   if (status === 429) return "Too many attempts. Wait a moment and try again.";
-  if (status >= 500) return "The server couldn't complete that request. Try again shortly.";
+  if (status >= 500) return "The server could not complete that request. Try again shortly.";
   if (status >= 400) return "That request was rejected. Check the details and try again.";
   return "Something went wrong. Try again.";
 }
@@ -110,10 +326,11 @@ function logRequestFailure(
  * that need a domain-specific line ("Repositories unavailable.") rather than the
  * status-only default on ``ApiError.message``.
  *
- * The raw server message is never returned: a failed request is an ``ApiError``
- * whose ``message`` is already app-authored (see ``errorCopyFor``), so that is
- * shown; anything else falls back to the caller's copy. The backend's own words
- * stay on ``serverMessage`` / the console (see ``logRequestFailure``).
+ * A failed request is an ``ApiError`` whose ``message`` is already normalized
+ * for display (see ``publicErrorCopy``): the backend's explanation when it is
+ * safe and customer-actionable, otherwise the status copy. Anything else falls
+ * back to the caller's copy. The raw backend words stay on ``serverMessage`` /
+ * the console (see ``logRequestFailure``).
  */
 export function publicErrorMessage(
   err: unknown,
@@ -131,7 +348,9 @@ export class ApiError extends Error {
   correlationId?: string;
   constructor(status: number, detail: unknown, correlationId?: string) {
     const serverMessage = detailMessage(detail);
-    super(errorCopyFor(status));
+    // Normalized for display: the backend's own explanation when it is safe and
+    // actionable, otherwise the status copy. Raw text stays on `serverMessage`.
+    super(publicErrorCopy(status, detail));
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
@@ -240,6 +459,16 @@ export type ApplicationDeclaration = "core" | "attack" | "defend" | "code";
 
 export function setActiveApplication(app: ApplicationDeclaration): void {
   activeApplication = app;
+}
+
+/**
+ * Whether a shell is mounted that can hold the page under its "session expired"
+ * card. Set by `ApplicationShell`; with no shell (a public page) a dropped
+ * session still has to fall back to the sign-in redirect.
+ */
+let sessionCardMounted = false;
+export function setSessionCardMounted(mounted: boolean): void {
+  sessionCardMounted = mounted;
 }
 
 export function getActiveApplication(): ApplicationDeclaration {
@@ -410,12 +639,12 @@ async function request<T>(
     // to lock so the next action prompts cleanly (instead of the FE guessing).
     if ((res.status === 401 || res.status === 403) && sentDualControl && dcSessionIssue) {
       tokens.dualControl = null;
-      window.dispatchEvent(new CustomEvent("phantix:operate-expired", { detail: msg || "Operate session ended." }));
+      window.dispatchEvent(new CustomEvent("phantix:operate-expired", { detail: publicDetailCopy(msg) ?? "Operate session ended." }));
     } else if ((res.status === 401 || res.status === 403) && dualControlScoped && dcSessionIssue) {
       // Dual-control header missing or expired (not a broken main session).
       // Open the unlock overlay so the user can operate and retry instead of
       // being signed out; the inbox shows its own error state meanwhile.
-      window.dispatchEvent(new CustomEvent("phantix:operate-required", { detail: msg || undefined }));
+      window.dispatchEvent(new CustomEvent("phantix:operate-required", { detail: publicDetailCopy(msg) ?? undefined }));
     }
     const superseded = detailObj?.error === "session_superseded" || /superseded by renewal/i.test(msg);
     // Never let a dual-control-scoped 401 tear down the main session on a
@@ -431,7 +660,11 @@ async function request<T>(
         else { tokens.platform = null; tokens.orgUser = null; }
       }
       if (realm === "application" && hadBearer && relogin && !dcSessionIssue && !superseded) {
-        window.location.assign("/login");
+        // A mounted shell holds the current page under its "session expired"
+        // card, so the operator keeps what they were doing and chooses to sign
+        // in again. With no shell (a public page), fall back to the redirect.
+        if (sessionCardMounted) window.dispatchEvent(new CustomEvent("phantix:session-expired"));
+        else window.location.assign("/login");
       }
     }
     // AI credits exhausted gets its own message. The person at the keyboard is
@@ -455,10 +688,10 @@ async function request<T>(
       );
     if (creditExhausted) {
       window.dispatchEvent(
-        new CustomEvent("phantix:credits-exhausted", { detail: detailMsg || undefined }),
+        new CustomEvent("phantix:credits-exhausted", { detail: publicDetailCopy(detailMsg) ?? undefined }),
       );
     } else if (res.status === 402) {
-      const upgradeMsg = typeof detail === "string" ? detail : "Upgrade required";
+      const upgradeMsg = publicDetailCopy(detail) ?? "Upgrade required";
       window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: upgradeMsg }));
     }
     // Login throttling (staging-rollout §8): failed attempts are throttled per

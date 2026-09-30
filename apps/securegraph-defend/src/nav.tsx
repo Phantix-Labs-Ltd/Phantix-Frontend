@@ -58,7 +58,7 @@ export const NAV: NavSection[] = [
     items: [
       { to: "/soc", label: "SOC dashboard", icon: <Activity size={17} /> },
       { to: "/soc/war-room", label: "War room", icon: <Swords size={17} /> },
-      { to: "/soc/playbooks", label: "Playbooks & MITRE", icon: <ScrollText size={17} /> },
+      { to: "/soc/playbooks", label: "Playbooks and MITRE", icon: <ScrollText size={17} /> },
       { to: "/soc/advisor", label: "Advisor", icon: <Shield size={17} /> },
       { to: "/soc/logs", label: "Log pipeline", icon: <Logs size={17} /> },
       { to: "/soc/agents", label: "Agents", icon: <Activity size={17} /> },

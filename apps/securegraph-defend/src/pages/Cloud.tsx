@@ -105,7 +105,7 @@ export default function Cloud() {
       const res = await createCloudConnector(body);
       const secret = (res as any).webhookSecret || (res as any).webhook?.secret || `whsec_${crypto.randomUUID().replace(/-/g, "").slice(0, 32)}`;
       setCreatedResult({ connector: res, secret, url: cloudIngestUrl(res) });
-      toast("success", "Connector created", "Copy the webhook secret now — it will not be shown again.");
+      toast("success", "Connector created", "Copy the webhook secret now. It will not be shown again.");
       connectors.reload();
     } catch (e) {
       toast("error", "Create failed", e instanceof Error ? e.message : "");
@@ -119,7 +119,7 @@ export default function Cloud() {
     try {
       const res = await rotateCloudSecret(c.id);
       setSecretMap((m) => ({ ...m, [c.id]: res.webhookSecret ?? "rotated" }));
-      toast("success", "Secret rotated", "Copy it now — the previous one is revoked.");
+      toast("success", "Secret rotated", "Copy it now. The previous one is revoked.");
       connectors.reload();
     } catch (e) {
       toast("error", "Rotate failed", e instanceof Error ? e.message : "");
@@ -172,7 +172,7 @@ export default function Cloud() {
   };
 
   const copy = (text: string, what: string) => {
-    navigator.clipboard?.writeText(text).then(() => toast("success", `${what} copied`)).catch(() => toast("info", `${what} — select to copy`, text));
+    navigator.clipboard?.writeText(text).then(() => toast("success", `${what} copied`)).catch(() => toast("info", `${what}. Select it to copy`, text));
   };
 
   const connectedCount = connectors.data.filter((c) => c.is_active ?? c.active ?? true).length;
@@ -217,7 +217,7 @@ export default function Cloud() {
     return (
       <ErrorState
         onRetry={providers.reload}
-        body="We could not load cloud security connectors. Check your connection and retry — your session stays signed in."
+        body="We could not load cloud security connectors. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -256,8 +256,8 @@ export default function Cloud() {
         <StatCard label="Connectors" value={<span className="text-phantix-300 tabular-nums">{connectedCount}/{connectors.data.length}</span>} icon={<Plug size={18} />} accent="blue" />
         <StatCard label="Matched IOCs" value={<span className="text-gold-400 tabular-nums">{intel.data.matched}</span>} icon={<Radar size={18} />} />
         <StatCard label="Unmatched IOCs" value={<span className="text-white tabular-nums">{intel.data.unmatched}</span>} icon={<Activity size={18} />} />
-        <StatCard label="Events (24h)" value={<span className="text-white tabular-nums">{/* placeholder */}—</span>} icon={<Activity size={18} />} />
-        <StatCard label="Open detections" value={<span className="text-severity-critical tabular-nums">—</span>} icon={<ShieldAlert size={18} />} accent="red" />
+        <StatCard label="Events (24h)" value={<span className="text-white tabular-nums">Not set</span>} icon={<Activity size={18} />} />
+        <StatCard label="Open detections" value={<span className="text-severity-critical tabular-nums">Not set</span>} icon={<ShieldAlert size={18} />} accent="red" />
       </div>
 
       <CloudPosturePanel posture={posture.data} loading={posture.loading} error={posture.error} onRetry={posture.reload} />
@@ -275,7 +275,7 @@ export default function Cloud() {
         <div className="space-y-4">
           {connectors.data.length === 0 ? (
             <Card>
-              <EmptyState icon={<CloudIcon size={24} />} title="No connectors" body="Pick a provider to connect a webhook / log drain." />
+              <EmptyState icon={<CloudIcon size={24} />} title="No connectors" body="Pick a provider to connect a webhook or log drain." />
             </Card>
           ) : (
             <Card className="!p-0 overflow-hidden">
@@ -312,7 +312,7 @@ export default function Cloud() {
                               {cloudIngestUrl(c) ? (
                                 <p className="font-mono text-[12px] text-phantix-300 truncate">{cloudIngestUrl(c)}</p>
                               ) : (
-                                <span className="text-xs text-slate-500">—</span>
+                                <span className="text-xs text-slate-500">Not set</span>
                               )}
                             </td>
                             <td className="td">
@@ -329,7 +329,7 @@ export default function Cloud() {
                             <tr className="border-b border-phantix-800/40 bg-gold-400/[0.04]">
                               <td className="td" colSpan={5}>
                                 <div className="rounded-lg border border-gold-400/30 bg-gold-400/8 p-2.5">
-                                  <p className="text-[12px] font-semibold text-gold-300 mb-0.5">Webhook secret — copy now</p>
+                                  <p className="text-[12px] font-semibold text-gold-300 mb-0.5">Webhook secret. Copy it now.</p>
                                   <div className="flex items-center gap-2">
                                     <code className="flex-1 font-mono text-[12px] text-slate-200 break-all">{secretMap[c.id]}</code>
                                     <button className="btn-ghost p-1" onClick={() => copy(secretMap[c.id], "Webhook secret")}><Copy size={12} /></button>
@@ -368,7 +368,7 @@ export default function Cloud() {
               <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-400" />
               <div>
                 <p className="text-sm font-semibold text-emerald-300">Connector created</p>
-                <p className="mt-0.5 text-xs text-slate-400">Copy the secret now — it will not be shown again.</p>
+                <p className="mt-0.5 text-xs text-slate-400">Copy the secret now. It will not be shown again.</p>
               </div>
             </div>
             <div>
@@ -379,7 +379,7 @@ export default function Cloud() {
               </div>
             </div>
             <div>
-              <label className="label">Ingest URL — enter into the provider (log drain / webhook)</label>
+              <label className="label">Ingest URL. Enter it in the provider for a log drain or webhook.</label>
               <div className="flex items-center gap-2">
                 <code className="flex-1 rounded-lg bg-phantix-950/70 border border-phantix-700/40 px-3 py-2 font-mono text-[13px] text-phantix-300 break-all">{createdResult.url}</code>
                 <button className="btn-secondary !px-3" onClick={() => copy(createdResult.url, "Ingest URL")}><Copy size={14} /></button>
@@ -393,13 +393,13 @@ export default function Cloud() {
             {!selectedProvider ? (
               <>
                 <p className="text-xs text-slate-400">
-                  Choose a provider to receive telemetry. {providers.data.length} providers available — filter by category or search.
+                  Choose a provider to receive telemetry. {providers.data.length} providers available. Filter by category or search.
                 </p>
                 <div className="relative">
                   <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
                     className="input pl-8"
-                    placeholder="Search providers — Contabo, Hetzner, HostAfrica…"
+                    placeholder="Search providers: Contabo, Hetzner, HostAfrica…"
                     value={providerQuery}
                     onChange={(e) => setProviderQuery(e.target.value)}
                     autoFocus
@@ -475,7 +475,7 @@ export default function Cloud() {
                 <div><label className="label">Label</label><input className="input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`${selectedProvider.name} connector`} /></div>
                 {accountCredentialKeys.length > 0 && (
                   <div className="space-y-2 rounded-xl border border-phantix-700/40 bg-phantix-950/40 p-3">
-                    <p className="flex items-center gap-2 text-xs font-medium text-slate-200"><KeyRound size={13} className="text-gold-400" /> Account credentials <span className="font-normal text-slate-500">— optional, stored encrypted</span></p>
+                    <p className="flex items-center gap-2 text-xs font-medium text-slate-200"><KeyRound size={13} className="text-gold-400" /> Account credentials. These are optional and stored encrypted.</p>
                     <p className="text-[13px] leading-5 text-slate-500">
                       Add a read-only credential to pull the account&apos;s audit/monitoring events. Leave blank to use the webhook only.
                     </p>

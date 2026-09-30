@@ -68,7 +68,7 @@ export function verificationBadge(v: VerificationInfo | null | undefined) {
     };
   }
   if (verdict === "exempt") {
-    return { cls: "border-phantix-600/40 bg-phantix-800/50 text-slate-400", icon: <ShieldCheck size={11} />, label: "Info / exempt" };
+    return { cls: "border-phantix-600/40 bg-phantix-800/50 text-slate-400", icon: <ShieldCheck size={11} />, label: "Info or exempt" };
   }
   return { cls: "border-phantix-600/40 bg-phantix-800/50 text-slate-400", icon: <Check size={11} />, label: "Candidate" };
 }

@@ -69,11 +69,11 @@ export const priorityBandMeta: Record<string, { label: string; className: string
 };
 
 export function timeAgo(iso: string | null): string {
-  if (!iso) return "---";
+  if (!iso) return "Not set";
   // parseTimestamp, not `new Date(iso)`: the API's bare UTC strings would
   // otherwise be read as local time and every fresh row start at "1h ago".
   const then = parseTimestamp(iso).getTime();
-  if (Number.isNaN(then)) return "---";
+  if (Number.isNaN(then)) return "Not set";
   const diff = Date.now() - then;
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "just now";
@@ -86,7 +86,7 @@ export function timeAgo(iso: string | null): string {
 }
 
 export function formatDateTime(iso: string | null): string {
-  if (!iso) return "---";
+  if (!iso) return "Not set";
   return parseTimestamp(iso).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -96,7 +96,7 @@ export function formatDateTime(iso: string | null): string {
 }
 
 export function formatBytes(bytes: number): string {
-  if (!bytes) return "---";
+  if (!bytes) return "Not set";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
@@ -365,6 +365,9 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
   retest_status?: string | null;
   description?: string | null;
   verification_status: TrackerVerification;
+  /** Raw-store row id (e.g. a scan_results id) the remediation endpoint keys on. */
+  source_finding_id?: number | null;
+  source_store?: string | null;
 } {
   const statusRaw = String(raw?.status ?? "open").toLowerCase().replace(/-/g, "_");
   // Map legacy / verification labels onto the living-board set only.
@@ -399,14 +402,14 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
     verification_status,
     owner: owner != null ? String(owner) : null,
     assigned_owner: owner != null ? String(owner) : null,
-    campaign_name: String(raw?.campaign_name ?? raw?.campaign ?? fallbackCampaign ?? "—"),
+    campaign_name: String(raw?.campaign_name ?? raw?.campaign ?? fallbackCampaign ?? "Not set"),
     asset_value: String(
       raw?.asset_value ??
         assetObj?.value ??
         assetObj?.name ??
         raw?.target ??
         raw?.asset ??
-        "—",
+        "Not set",
     ),
     updated_at: String(raw?.updated_at ?? raw?.last_detected_at ?? raw?.created_at ?? new Date().toISOString()),
     surface: raw?.surface != null ? String(raw.surface) : undefined,
@@ -417,6 +420,9 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
     detection_count: raw?.detection_count != null ? Number(raw.detection_count) : undefined,
     retest_status: raw?.retest_status ?? null,
     description: raw?.description ?? null,
+    source_finding_id:
+      raw?.source_finding_id != null ? Number(raw.source_finding_id) : null,
+    source_store: raw?.source_store != null ? String(raw.source_store) : null,
   };
 }
 
@@ -453,8 +459,8 @@ export const categoryLabels: Record<string, string> = {
 
 export const blastRadiusLabels: Record<string, string> = {
   local: "Local component",
-  host: "Host / endpoint",
-  service: "Application / service",
+  host: "Host or endpoint",
+  service: "Application or service",
   organization: "Organization",
   internet_facing: "Internet-facing",
 };

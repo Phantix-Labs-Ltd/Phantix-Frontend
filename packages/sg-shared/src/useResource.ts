@@ -16,8 +16,15 @@ export type ResourceState<T> = {
 const _swrCache = new Map<string, { data: unknown; ts: number }>();
 const CACHE_TTL_MS = 60_000; // 1 minute
 
-/** Load live API data, or demo-data when isDemoMode(). */
-export function useResource<T>(loader: () => Promise<T>, initial: T, cacheKey?: string): ResourceState<T> {
+/**
+ * Load live API data, or demo-data when isDemoMode().
+ *
+ * ``pollMs`` turns the resource into a live one: it re-fetches on an interval so
+ * a page showing backend-owned state (the tracker, the dashboard) reflects work
+ * done elsewhere without a manual refresh. It is quiet — a poll never flips
+ * ``loading`` and never clears data, so the page does not flicker every tick.
+ */
+export function useResource<T>(loader: () => Promise<T>, initial: T, cacheKey?: string, pollMs?: number): ResourceState<T> {
   const [data, setData] = useState<T>(() => {
     if (cacheKey && _swrCache.has(cacheKey)) {
       return _swrCache.get(cacheKey)!.data as T;
@@ -42,22 +49,34 @@ export function useResource<T>(loader: () => Promise<T>, initial: T, cacheKey?: 
     if (!hadCached) setLoading(true);
     setError(null);
 
-    loader()
-      .then((value) => {
-        if (!mountedRef.current) return;
-        setData(value);
-        if (cacheKey) _swrCache.set(cacheKey, { data: value, ts: Date.now() });
-      })
-      .catch((err: unknown) => {
-        if (!mountedRef.current) return;
-        if (!hadCached) setError(err instanceof Error ? err.message : "Failed to load");
-      })
-      .finally(() => {
-        if (!mountedRef.current) return;
-        setLoading(false);
-      });
+    let cancelled = false;
+    const run = (quiet: boolean) =>
+      loader()
+        .then((value) => {
+          if (!mountedRef.current || cancelled) return;
+          setData(value);
+          if (cacheKey) _swrCache.set(cacheKey, { data: value, ts: Date.now() });
+        })
+        .catch((err: unknown) => {
+          if (!mountedRef.current || cancelled) return;
+          // A failed background poll keeps the last good data on screen.
+          if (!hadCached && !quiet) setError(err instanceof Error ? err.message : "Failed to load");
+        })
+        .finally(() => {
+          if (!mountedRef.current || cancelled) return;
+          if (!quiet) setLoading(false);
+        });
+
+    void run(false);
+    // Live resources refresh on an interval so work done in another app lands
+    // here without a manual reload. 10s matches the platform's live-refresh bar.
+    const timer = pollMs && pollMs > 0 ? window.setInterval(() => void run(true), pollMs) : undefined;
+    return () => {
+      cancelled = true;
+      if (timer) window.clearInterval(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, demo]);
+  }, [tick, demo, pollMs]);
 
   return { data, loading, error, reload, demo, setData };
 }

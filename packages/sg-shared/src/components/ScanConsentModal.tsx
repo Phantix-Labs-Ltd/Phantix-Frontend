@@ -68,7 +68,7 @@ export default function ScanConsentModal({
         <div className="flex items-start gap-2.5 rounded-md border border-severity-medium/30 bg-severity-medium/10 px-3.5 py-3">
           <AlertTriangle size={15} className="mt-0.5 shrink-0 text-severity-medium" />
           <p className="text-[13px] leading-5 text-slate-300">
-            This scan targets assets that are <strong>not automatically verified</strong> — you
+            This scan targets assets that are <strong>not automatically verified</strong>. You
             confirmed ownership rather than proving it. Accept the documents below before testing.
             Your ownership attestation still stands; this adds the acceptable-use and
             rules-of-engagement terms for active testing.
@@ -139,7 +139,7 @@ export default function ScanConsentModal({
             disabled={busy || !allAcked}
           >
             {busy ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-            Accept &amp; run scan
+            Accept and run scan
           </button>
         </div>
       </div>

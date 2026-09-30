@@ -262,7 +262,7 @@ function ReturningLogin({
     const isInit = res.is_initiator === true || res.dual_control?.is_initiator === true;
     const isAuth = res.is_authorizer === true || res.dual_control?.is_authorizer === true;
     completeAppLogin(emailAddr, name, isInit, isAuth);
-    toast("success", rotated ? "Device confirmed" : "Signed in", rotated ? "Welcome" + (name ? " " + name : "") + " — this browser is now your primary device." : "Welcome" + (name ? " " + name : " back"));
+    toast("success", rotated ? "Device confirmed" : "Signed in", rotated ? "Welcome" + (name ? " " + name : "") + " This browser is now your primary device." : "Welcome" + (name ? " " + name : " back"));
     navigate(chooseAppHref());
   };
 
@@ -432,7 +432,7 @@ function ReturningLogin({
                 </div>
                 <OtpInput value={code} onChange={setCode} onEnter={() => retryIn === 0 && code.length === 6 && void verify()} />
                 <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0 || code.length !== 6} onClick={() => void verify()}>
-                  {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Verifying...</> : <>Verify & sign in</>}
+                  {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Verifying...</> : <>Verify and sign in</>}
                 </button>
                 <button type="button" onClick={() => void resendCode()} disabled={busy || retryIn > 0} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">Resend code</button>
                 <button type="button" onClick={() => { setStage("email"); setError(null); }} disabled={busy} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">Use a different account</button>
@@ -446,7 +446,7 @@ function ReturningLogin({
                   <p className="mt-2 text-sm font-medium text-slate-200">Confirm this new device</p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
                     A confirmation link was sent to {maskedDest || "your organization address"}. Open it to make
-                    this browser your primary device — no additional code needed.
+                    this browser your primary device. No additional code is necessary.
                   </p>
                 </div>
                 <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
@@ -788,7 +788,7 @@ function AppLoginFlow({
     return (
       <LoginChrome>
         <motion.div initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[420px] text-center">
-          <LoginBrand subtitle="Application sign-in" note="Demo mode --- explore features instantly" />
+          <LoginBrand subtitle="Application sign-in" note="Demo mode. Explore features instantly" />
           <button
             onClick={() => { enterDemo(); navigate("/choose-app"); }}
             className="mt-2 inline-flex items-center gap-2 rounded-md border border-gold-400/40 bg-phantix-800 px-6 py-3 font-semibold text-gold-300 hover:bg-phantix-850"
@@ -860,7 +860,7 @@ function AppLoginFlow({
                   </div>
                 </div>
                 <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0 || !password || !confirmPassword}>
-                  {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Saving...</> : <>Set password & continue <ArrowRight size={15} /></>}
+                  {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Saving...</> : <>Set password and continue <ArrowRight size={15} /></>}
                 </button>
               </motion.form>
             )}
@@ -891,7 +891,7 @@ function AppLoginFlow({
                       <p className="mt-2 text-sm font-medium text-slate-200">Confirm this new device</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">
                         A confirmation link was sent to {maskedDest || "your organization address"}. Open it to make
-                        this browser your primary device — no additional code needed.
+                        this browser your primary device. No additional code is necessary.
                       </p>
                       {(orgName || userName) && (
                         <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[12px] text-slate-600">
@@ -930,7 +930,7 @@ function AppLoginFlow({
                     </div>
                     <OtpInput value={code} onChange={setCode} onEnter={() => retryIn === 0 && code.length === 6 && void verifyMfa()} />
                     <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0 || code.length !== 6} onClick={() => void verifyMfa()}>
-                      {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Verifying...</> : "Verify & sign in"}
+                      {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Verifying...</> : "Verify and sign in"}
                     </button>
                     <button type="button" onClick={() => void resendInviteOtp()} disabled={busy || retryIn > 0} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">
                       Resend code
@@ -1035,15 +1035,15 @@ function PasteLinkBox({ onCancel }: { onCancel?: () => void }) {
     setError("");
     const trimmed = link.trim();
     if (!trimmed) { setError("Paste your login link from the platform"); return; }
-    if (trimmed.length > MAX_LINK_LENGTH) { setError(`Link is too long --- max ${MAX_LINK_LENGTH} characters`); return; }
+    if (trimmed.length > MAX_LINK_LENGTH) { setError(`Link is too long. The maximum is ${MAX_LINK_LENGTH} characters.`); return; }
     try {
       const url = new URL(trimmed);
       if (!url.hostname.includes("phantix") && !url.hostname.includes("localhost")) {
-        setError("This doesn't look like a SecureGraph login link. Expected domain: app.phantixlabs.com");
+        setError("This does not look like a SecureGraph login link. Expected domain: app.phantixlabs.com");
         return;
       }
       if (!url.pathname.startsWith("/login")) {
-        setError("This URL doesn't point to the login page. Expected path: /login");
+        setError("This URL does not point to the login page. Expected path: /login");
         return;
       }
       const params = url.searchParams;

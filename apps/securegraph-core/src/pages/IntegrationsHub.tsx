@@ -100,7 +100,7 @@ export default function IntegrationsHub() {
                 <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   className="input !pl-9"
-                  placeholder={`Search ${catalog.total} integrations — Slack, Wazuh, AWS, GitLab…`}
+                  placeholder={`Search ${catalog.total} integrations: Slack, Wazuh, AWS, GitLab…`}
                   value={qDraft}
                   onChange={(e) => setQDraft(e.target.value)}
                 />
@@ -241,7 +241,7 @@ export default function IntegrationsHub() {
                       <td className="td font-medium text-slate-200">{inst.label}</td>
                       <td className="td text-slate-400">{humanize(inst.auth_mode)}</td>
                       <td className="td text-slate-500">
-                        {inst.last_test_at ? <>{inst.last_test_ok ? "OK" : "Failed"} &middot; {timeAgo(inst.last_test_at)}</> : "—"}
+                        {inst.last_test_at ? <>{inst.last_test_ok ? "OK" : "Failed"} &middot; {timeAgo(inst.last_test_at)}</> : "Not set"}
                       </td>
                       <td className="td">
                         <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300 capitalize">{humanize(inst.status)}</span>
@@ -321,7 +321,7 @@ export default function IntegrationsHub() {
                       <td className="td font-medium text-slate-200">{inst.label}</td>
                       <td className="td text-slate-400">{humanize(inst.auth_mode)}</td>
                       <td className="td text-slate-500">
-                        {inst.last_test_at ? <>{inst.last_test_ok ? "OK" : "Failed"} &middot; {timeAgo(inst.last_test_at)}</> : "—"}
+                        {inst.last_test_at ? <>{inst.last_test_ok ? "OK" : "Failed"} &middot; {timeAgo(inst.last_test_at)}</> : "Not set"}
                       </td>
                       <td className="td">
                         <span className="chip border-gold-400/30 bg-gold-400/10 text-gold-300">Pending auth</span>
@@ -370,7 +370,7 @@ function InstallModal({ connectorId, catalog, onClose, onInstalled }: { connecto
     }
     const res = await installHubIntegration(body);
     if (isPendingApproval(res)) {
-      toast("info", "Sent for approval", `${connector.name} install is parked for an authorizer — approve it from Authorizations to finish.`);
+      toast("info", "Sent for approval", `${connector.name} install is parked for an authorizer. Approve it from Authorizations to finish.`);
     } else {
       toast("success", "Installed", `${connector.name} installed successfully.`);
     }
@@ -385,7 +385,7 @@ function InstallModal({ connectorId, catalog, onClose, onInstalled }: { connecto
         {connector.auth_modes.includes("copy_webhook") && (
           <textarea
             className="input !min-h-[80px]"
-            placeholder="Webhook URL (for Teams / custom webhook)"
+            placeholder="Webhook URL for Teams or a custom webhook"
             value={secrets}
             onChange={(e) => setSecrets(e.target.value)}
           />

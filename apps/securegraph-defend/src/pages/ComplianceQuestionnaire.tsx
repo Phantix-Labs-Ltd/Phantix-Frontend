@@ -107,7 +107,7 @@ export default function ComplianceQuestionnaire() {
 
   const beginSession = async () => {
     if (role.trim().length < 2) {
-      toast("warning", "State your role", "The server records the role you answer as — at least 2 characters.");
+      toast("warning", "State your role", "The server records the role that you answer as. Use at least 2 characters.");
       return;
     }
     setStartingSession(true);
@@ -121,7 +121,7 @@ export default function ComplianceQuestionnaire() {
         "error",
         "Could not start the session",
         e instanceof ApiError && e.status === 403
-          ? "Answering needs a named user session — sign in as an organization user to continue."
+          ? "To answer, you need a named user session. Sign in as an organization user to continue."
           : e instanceof Error ? e.message : undefined,
       );
     } finally {
@@ -286,7 +286,7 @@ export default function ComplianceQuestionnaire() {
         <div className="space-y-4">
           <p className="text-sm leading-6 text-slate-400">
             Answers are recorded against your name and the role you state here. Pick the role you
-            actually hold for these controls — it is part of the audit record.
+            actually hold for these controls. It is part of the audit record.
           </p>
           <div>
             <label className="label" htmlFor="grc-role">Role</label>
@@ -406,7 +406,7 @@ function QuestionRow({
         <div className="flex shrink-0 items-center gap-1.5">
           {saving && <Loader2 size={13} className="animate-spin text-slate-500" />}
           {isFreeText ? (
-            <span className="text-[13px] text-slate-500">Free-text — answer in the audit view</span>
+            <span className="text-[13px] text-slate-500">Free text. Answer in the audit view.</span>
           ) : (
             ANSWER_CHOICES.map((choice) => (
               <button

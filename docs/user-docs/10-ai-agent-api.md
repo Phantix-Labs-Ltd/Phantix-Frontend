@@ -9,7 +9,7 @@
 | You get | You do not get as a public API SKU |
 |---------|-------------------------------------|
 | Programmatic domain agents | Unrestricted access to all Platform APIs as a sold product |
-| Invoke / poll / skills / approvals | Free anonymous agent usage |
+| Invoke and poll and skills and approvals | Free anonymous agent usage |
 | Integration with your automation | Staff admin APIs |
 
 Platform Free/Premium still use the full product **inside the app**.
@@ -24,7 +24,7 @@ Platform Free/Premium still use the full product **inside the app**.
 | `grc` | Compliance gap narrative |
 | `vapt` | Verified finding write-ups |
 | `ti` | Threat intel correlation assist |
-| `asset` | Exposure / inventory narrative |
+| `asset` | Exposure and inventory narrative |
 | `cross` | Multi-domain Chief routing |
 
 Agents are **on-demand** (not always-on bots).
@@ -58,7 +58,7 @@ Without entitlement: **HTTP 402** `ai_agent_plan_required`.
 ## Principles for integrators
 
 1. Poll async runs
-2. Display engine evidence IDs — don’t invent findings
+2. Display engine evidence IDs. Don’t invent findings
 3. Respect human approval gates
 4. Agents use your org’s connected security data and engines
 

@@ -14,7 +14,7 @@ export interface PricingTier {
   tagline: string;
   /** Big number above the price (e.g. "5,000"). */
   heroMetric: string;
-  /** Unit under the hero number (e.g. "AI credits / month (+ 5,000 allotment)"). */
+  /** Unit under the hero number (e.g. "AI credits per month, plus a 5,000 allotment"). */
   heroUnit: string;
   monthly_ngn: number | null;
   first_month_ngn?: number | null;
@@ -53,42 +53,42 @@ interface BillingPricingResponse {
 }
 
 const freeFeatures = [
-  "All four applications — Core, Attack, Defend and Code — at no cost",
+  "All four applications (Core, Attack, Defend and Code) at no cost",
   "The full exposure loop: inventory, DNS/network/VAPT scanning, risk, alerts and reports",
-  "1 threat-modelling project from your product context",
-  "PR / branch review, AutoFix and channel alerts — metered by AI credits",
-  "Every report type and format — free on every plan",
+  "1 threat-modeling project from your product context",
+  "Pull request and branch review, AutoFix and channel alerts, metered by AI credits",
+  "Every report type and format, free on every plan",
   "500 one-time AI credits, then free open-source models (admin opt-in)",
-  "Dual control, MFA, immutable audit, evidence redaction — free on every plan",
+  "Dual control, MFA, immutable audit and evidence redaction, free on every plan",
   "Community support",
 ];
 
 const starterFeatures = [
   "Everything in Free",
-  "Every section unlocked — cloud posture, compliance, SOC, threat intel, mobile and the pentest agent",
+  "Every section unlocked: cloud posture, compliance, SOC, threat intel, mobile and the pentest agent",
   "Capped assessments, projects and model refreshes (raise the cap on Growth)",
-  "10 PR / MR security reviews / mo · 3 on-demand assessments / mo",
-  "5,000 AI credits / mo + 5,000 onboarding allotment",
+  "10 pull request security reviews per month · 3 on-demand assessments per month",
+  "5,000 AI credits per month, plus a 5,000 onboarding allotment",
   "AI AutoFix (credit-metered) · email support",
 ];
 
 const growthFeatures = [
   "Everything in Starter",
-  "Continuous PR / MR review and continuous / recurring pentest",
-  "5 projects · 20 on-demand assessments / mo · 10 model refreshes / mo",
-  "Multi-cloud + Kubernetes posture · blocking policies & path rules",
+  "Continuous pull request review and continuous recurring pentest",
+  "5 projects · 20 on-demand assessments per month · 10 model refreshes per month",
+  "Multi-cloud + Kubernetes posture · blocking policies and path rules",
   "Compliance workbench depth · SOC console depth",
-  "20,000 AI credits / mo + 20,000 onboarding allotment",
+  "20,000 AI credits per month, plus a 20,000 onboarding allotment",
   "Guided onboarding",
 ];
 
 const enterpriseFeatures = [
   "Everything in Growth, at custom volume",
-  "Unlimited / negotiated projects & assessments",
-  "Org-wide governance & audit views",
-  "Multi-company groups, custom branding & report retention",
+  "Unlimited negotiated projects and assessments",
+  "Organization-wide governance and audit views",
+  "Multi-company groups, custom branding and report retention",
   "Priority support · dedicated success (deal-dependent)",
-  "Partner / white-label reports + custom SLA (deal-dependent)",
+  "Partner and white-label reports, plus a custom SLA (deal-dependent)",
 ];
 
 const engagementOffers: EngagementOffer[] = [
@@ -101,9 +101,9 @@ const engagementOffers: EngagementOffer[] = [
     interestTag: "[interest:full_vapt_engagement]",
   },
   {
-    title: "Dynamic mobile / AVD testing",
+    title: "Dynamic mobile and AVD testing",
     detail:
-      "Deep runtime analysis of Android apps and virtual devices — beyond static APK checks.",
+      "Deep runtime analysis of Android apps and virtual devices. This goes beyond static APK checks.",
     tag: "Project",
     source: "pricing-most-requested-dynamic-mobile",
     interestTag: "[interest:dynamic_mobile_testing]",
@@ -119,7 +119,7 @@ const engagementOffers: EngagementOffer[] = [
   {
     title: "White-label deliverables",
     detail:
-      "MSSP / partner branded reports — your logo on the board-ready package.",
+      "MSSP or partner branded reports: your logo on the board-ready package.",
     tag: "Partners",
     source: "pricing-most-requested-white-label",
     interestTag: "[interest:white_label_reports]",
@@ -161,14 +161,14 @@ const tierDefaults: Record<string, Partial<PricingTier>> = {
   },
   starter: {
     heroMetric: "5,000",
-    heroUnit: "AI credits / month (+ 5,000 allotment)",
+    heroUnit: "AI credits per month, plus a 5,000 allotment",
     tagline: "Full engine, starter coverage",
     features: starterFeatures,
     cta: "Get started",
   },
   growth: {
     heroMetric: "20,000",
-    heroUnit: "AI credits / month (+ 20,000 allotment)",
+    heroUnit: "AI credits per month, plus a 20,000 allotment",
     tagline: "Continuous security for teams shipping every week",
     features: growthFeatures,
     highlighted: true,
@@ -177,7 +177,7 @@ const tierDefaults: Record<string, Partial<PricingTier>> = {
   },
   enterprise: {
     heroMetric: "Custom",
-    heroUnit: "AI credits & volume",
+    heroUnit: "AI credits and volume",
     tagline: "For platforms and regulated orgs at serious scale",
     features: enterpriseFeatures,
     cta: "Talk to sales",
@@ -202,7 +202,7 @@ export function buildPricingTiers(raw: BillingPricingResponse | null): PricingTi
           id: p.id,
           name: p.name ?? p.id,
           tagline: p.tagline ?? d.tagline ?? "",
-          heroMetric: p.heroMetric ?? d.heroMetric ?? "—",
+          heroMetric: p.heroMetric ?? d.heroMetric ?? "Not set",
           heroUnit: p.heroUnit ?? d.heroUnit ?? "",
           monthly_ngn: p.monthly_ngn,
           first_month_ngn: p.first_month_ngn ?? null,
@@ -251,7 +251,7 @@ export function buildPricingTiers(raw: BillingPricingResponse | null): PricingTi
       name: "Starter",
       tagline: "Full engine, starter coverage",
       heroMetric: "5,000",
-      heroUnit: "AI credits / month (+ 5,000 allotment)",
+      heroUnit: "AI credits per month, plus a 5,000 allotment",
       monthly_ngn: starterMonthly,
       first_month_ngn: starterFirstMonth,
       yearly_price_ngn: starterYearly,
@@ -264,7 +264,7 @@ export function buildPricingTiers(raw: BillingPricingResponse | null): PricingTi
       name: "Growth",
       tagline: "Continuous security for teams shipping every week",
       heroMetric: "20,000",
-      heroUnit: "AI credits / month (+ 20,000 allotment)",
+      heroUnit: "AI credits per month, plus a 20,000 allotment",
       monthly_ngn: growthMonthly,
       yearly_price_ngn: growthMonthly * 10,
       yearly_note: yearsNote(growthMonthly),
@@ -278,7 +278,7 @@ export function buildPricingTiers(raw: BillingPricingResponse | null): PricingTi
       name: "Enterprise",
       tagline: "For platforms and regulated orgs at serious scale",
       heroMetric: "Custom",
-      heroUnit: "AI credits & volume",
+      heroUnit: "AI credits and volume",
       monthly_ngn: null,
       cta: "Talk to sales",
       features: enterpriseFeatures,
@@ -289,7 +289,7 @@ export function buildPricingTiers(raw: BillingPricingResponse | null): PricingTi
 export { engagementOffers, yearlySavePercent };
 
 export const pricingFootnote =
-  "Prices in Nigerian Naira (NGN), per company per month — updated live from SecureGraph billing; annual = 10× monthly. AI work is metered as credits (allowance → allotment → top-ups). Viewing, assigning and exporting results is never billed. Enterprise is a custom quote.";
+  "Prices in Nigerian Naira (NGN), per company per month. Prices update live from SecureGraph billing; annual = 10× monthly. AI work is metered as credits (allowance → allotment → top-ups). Viewing, assigning and exporting results is never billed. Enterprise is a custom quote.";
 
 const CACHE_TTL_MS = 2 * 60_000;
 let _cache: { tiers: PricingTier[]; ts: number } | null = null;

@@ -26,18 +26,18 @@ import {
 const THREAD_POLL_MS = 10_000;
 
 const QUICK_LINKS: { label: string; to: string; hint: string }[] = [
-  { label: "Documentation & Help Centre", to: "/docs", hint: "Setup, day-to-day use and integrations" },
-  { label: "Support how-to", to: "/docs/howto-app-15", hint: "Raising and working a ticket" },
+  { label: "Documentation and Help Centre", to: "/docs", hint: "Setup, day-to-day use and integrations" },
+  { label: "Support how-to", to: "/docs/howto-app-15", hint: "How to raise and manage a ticket" },
   { label: "Frequently asked questions", to: "/docs/faq", hint: "Answers for common questions" },
-  { label: "Privacy & security", to: "/docs/privacy-trust", hint: "How your data is held" },
+  { label: "Privacy and security", to: "/docs/privacy-trust", hint: "How your data is held" },
 ];
 
 // Plan upgrades and billing are a company-admin action on the Platform —
 // operators sign in here with a login link, not a company password, so this
 // is a note, not a link they could actually complete.
 const BILLING_NOTE = {
-  label: "Plans, billing & credits",
-  hint: "Ask your organization admin — upgrades and renewals are managed on the Platform",
+  label: "Plans, billing and credits",
+  hint: "Ask your organization admin. Upgrades and renewals are managed on the Platform.",
 };
 
 export default function Support() {
@@ -130,7 +130,7 @@ export default function Support() {
         submitter_name: session?.userName || undefined,
         submitter_email: session?.userEmail || undefined,
       });
-      toast("success", "Ticket submitted", `${created.reference ?? "Your ticket"} is with the support desk — ${RESPONSE_TARGETS[priority]}.`);
+      toast("success", "Ticket submitted", `${created.reference ?? "Your ticket"} is with the support desk. ${RESPONSE_TARGETS[priority]}.`);
       setCreateOpen(false);
       setSubject("");
       setBody("");
@@ -288,7 +288,7 @@ export default function Support() {
               <Mail size={16} className="mt-0.5 shrink-0 text-slate-400" />
               <span className="min-w-0">
                 <span className="block text-xs font-semibold text-slate-200">Email support</span>
-                <span className="block text-[13px] leading-5 text-slate-500">support@phantixlabs.com — include your org and any job/campaign IDs.</span>
+                <span className="block text-[13px] leading-5 text-slate-500">support@phantixlabs.com. Include your organization and any job or campaign IDs.</span>
               </span>
             </a>
             <div className="flex items-start gap-3 rounded-lg border border-severity-critical/25 bg-severity-critical/[0.06] px-3.5 py-3">
@@ -296,7 +296,7 @@ export default function Support() {
               <span className="min-w-0">
                 <span className="block text-xs font-semibold text-severity-critical">Live security incident</span>
                 <span className="block text-[13px] leading-5 text-red-200/85">
-                  Raise a ticket with <strong>Critical</strong> priority and category “Security incident” — it is triaged first.
+                  Raise a ticket with <strong>Critical</strong> priority and category “Security incident”. The team triages it first.
                 </span>
               </span>
             </div>
@@ -366,7 +366,7 @@ export default function Support() {
           <EmptyState
             icon={<LifeBuoy size={22} />}
             title="No tickets yet"
-            body="Raise one above — or use the Support switch in the assistant at the bottom-right of any page."
+            body="Raise one above, or use the Support switch in the assistant at the bottom right of any page."
           />
         ) : (
           <table className="w-full">
@@ -400,7 +400,7 @@ export default function Support() {
                     </span>
                   </td>
                   <td className="td text-right font-mono text-[13px] text-slate-400">{t.message_count ?? t.messages?.length ?? 0}</td>
-                  <td className="td text-slate-400 capitalize">{t.category ? t.category.replace(/_/g, " ") : "—"}</td>
+                  <td className="td text-slate-400 capitalize">{t.category ? t.category.replace(/_/g, " ") : "Not set"}</td>
                   <td className="td">
                     <span className="chip border-phantix-600/50 bg-phantix-800/60 capitalize text-slate-400">{t.priority}</span>
                   </td>
@@ -434,7 +434,7 @@ export default function Support() {
             <div>
               <label className="label" htmlFor="sup-priority">Priority</label>
               <select id="sup-priority" className="input mt-1" value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
-                {TICKET_PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label} — {p.hint}</option>)}
+                {TICKET_PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}: {p.hint}</option>)}
               </select>
               <p className="mt-1 text-[13px] text-slate-500">First response {RESPONSE_TARGETS[priority]}.</p>
             </div>
@@ -446,7 +446,7 @@ export default function Support() {
               className="input mt-1 min-h-[130px] resize-y"
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="What happened, what you expected, and any job / campaign / model IDs…"
+              placeholder="What happened, what you expected, and any job, campaign or model IDs…"
             />
           </div>
           <div className="flex justify-end gap-2">

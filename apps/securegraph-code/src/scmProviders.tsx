@@ -65,7 +65,7 @@ export const SCM_PROVIDER_SETUP: Record<string, ScmProviderSetup> = {
     id: "github",
     name: "GitHub",
     kind: "app",
-    tagline: "GitHub App — installation-based, no long-lived token",
+    tagline: "GitHub App: installation-based, with no long-lived token",
     blurb:
       "Install the SecureGraph GitHub App on the account or organization that owns the repositories. Reviews run on watched branches and open draft pull requests.",
     docsUrl: "https://docs.github.com/en/apps",
@@ -95,7 +95,7 @@ export const SCM_PROVIDER_SETUP: Record<string, ScmProviderSetup> = {
     webhookSecretEnv: "GITLAB_WEBHOOK_SECRET",
     setup: [
       "Create a GitLab personal (or project) access token with the api scope.",
-      "Connect below — paste the token, or use OAuth2 to authorize SecureGraph.",
+      "Connect below. Paste the token, or use OAuth2 to authorize SecureGraph.",
       "Add a project webhook to {API_BASE}/gitlab/webhook and set Secret token to GITLAB_WEBHOOK_SECRET.",
       "Enable the Merge request events trigger on that webhook.",
     ],
@@ -117,7 +117,7 @@ export const SCM_PROVIDER_SETUP: Record<string, ScmProviderSetup> = {
     webhookSecretEnv: "GITEA_WEBHOOK_SECRET",
     setup: [
       "Create a Gitea access token (Settings → Applications) with repository scopes.",
-      "Connect below — paste the token, or use OAuth2 to authorize SecureGraph.",
+      "Connect below. Paste the token, or use OAuth2 to authorize SecureGraph.",
       "Add a repository webhook to {API_BASE}/gitea/webhook with a Secret matching GITEA_WEBHOOK_SECRET.",
       "Enable the Pull request event on that webhook.",
     ],

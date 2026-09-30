@@ -2,7 +2,7 @@
 
 ---
 
-## Path A — Self-serve (most teams)
+## Path A. Self-serve (most teams)
 
 1. **Get started free** on the Platform
 2. Complete organization setup and verification steps
@@ -14,7 +14,7 @@
 
 ---
 
-## Path B — Design partner / pilot
+## Path B. Design partner and pilot
 
 1. Contact Phantix for a pilot coupon or guided onboarding
 2. Staff may provision Premium-class tools for a limited window
@@ -23,7 +23,7 @@
 
 ---
 
-## Path C — Full engagement
+## Path C. Full engagement
 
 1. Scope discussion (external web, API, mobile, cloud)
 2. Authorization letters and dual-control owners
@@ -49,8 +49,8 @@
 | Button | Goes to |
 |--------|---------|
 | **Get started free** | Platform registration |
-| **Sign in** | Platform (operators / org users) |
-| **Talk to us** | Sales / founders contact |
+| **Sign in** | Platform (operators and org users) |
+| **Talk to us** | Sales and founders contact |
 | **Developer overview** | [10-for-developers.md](./10-for-developers.md) |
 
 ---

@@ -68,11 +68,11 @@ const AUTOFIX_LABEL: Record<string, string> = {
 
 /** Reasons `/blob` can decline, in words a developer can act on. */
 const BLOB_REASON: Record<string, string> = {
-  repository_unknown: "The finding's repository is no longer connected.",
+  repository_unknown: "The repository for the finding is no longer connected.",
   path_unknown: "This finding has no file path recorded.",
   sha_unknown: "No reviewed commit is recorded for this finding.",
   github_not_connected: "The GitHub App is not connected, so the file cannot be read.",
-  file_not_found_at_sha: "The file is gone at the reviewed commit — it was moved, renamed or the branch was deleted.",
+  file_not_found_at_sha: "The file is gone at the reviewed commit. It was moved or renamed, or the branch was deleted.",
   not_a_file: "That path is not a file at the reviewed commit.",
   file_too_large: "The file is too large to render here.",
   binary_or_undecodable: "The file is binary, so there is no block to show.",
@@ -171,7 +171,7 @@ function BlobView({ blob }: { blob: CodeBlob }) {
 
       {!blob.anchored && (
         <p className="border-t border-phantix-700/50 px-3 py-2 text-[13px] text-slate-500">
-          This detector reports the file, not a line — the head of the file is shown.
+          This detector . The head of the file is shown.
         </p>
       )}
     </div>
@@ -302,7 +302,7 @@ function FindingDetail({
   if (!finding) {
     return (
       <Card>
-        <EmptyState icon={<AlertTriangle size={22} />} title="Finding unavailable" body="It may have been resolved by a newer review run." />
+        <EmptyState icon={<AlertTriangle size={22} />} title="Finding unavailable" body="A newer review run may have resolved it." />
       </Card>
     );
   }
@@ -401,7 +401,7 @@ function FindingDetail({
             )}
             {finding.guidance_specific === false && (
               <span className="text-[13px] text-slate-500">
-                General guidance for this layer — no rule-specific text is registered yet.
+                . No rule-specific text is registered yet.
               </span>
             )}
           </div>
@@ -452,7 +452,7 @@ function FindingDetail({
         {af.detail && <p className="mt-2 text-xs leading-5 text-slate-400">{af.detail}</p>}
         <p className="mt-2 text-[13px] leading-4 text-slate-500">
           Dual-controlled: the request is parked for an authorizer before it runs. AutoFix never forks and never
-          merges — the PR opens as a draft.
+          merges. The pull request opens as a draft.
         </p>
       </Card>
     </motion.div>

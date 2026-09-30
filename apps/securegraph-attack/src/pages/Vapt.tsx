@@ -7,7 +7,7 @@ import SecurityDbBanner from "@sg/components/SecurityDbBanner";
 import VaptPlanReview from "@sg/components/VaptPlanReview";
 import DocLink from "@sg/components/DocLink";
 import { loadVaptBundle } from "@sg/data";
-import { api, isDemoMode, isPendingApproval } from "@sg/api";
+import { api, isDemoMode, isPendingApproval, publicDetailCopy } from "@sg/api";
 import { useResource } from "@sg/useResource";
 import { useOperations } from "@sg/operations";
 import { timeAgo, titleCase, cx, humanize, isReportable, impactLevelRank, formatDateTime } from "@sg/utils";
@@ -249,7 +249,7 @@ export default function Vapt() {
     try {
       const res = await api.post<Record<string, unknown>>(`/vapt/campaigns/${id}/${action}`, extra || {});
       if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", `Campaign #${id} ${action} is parked for an authorizer — approve it from Authorizations for it to run.`);
+        toast("info", "Sent for approval", `Campaign #${id} ${action} is parked for an authorizer. Approve it from Authorizations so that it can run.`);
       } else {
         toast("success", `${action}`, `Campaign #${id} ${action} requested`);
       }
@@ -264,7 +264,7 @@ export default function Vapt() {
   };
 
   const handleApprove = async (approvalId: number, approve: boolean) => {
-    if (!(await requireDualControl("Approval requires the assigned controller's dual-control session."))) return;
+    if (!(await requireDualControl("Approval needs the dual-control session of the assigned controller."))) return;
     try {
       if (isDemoMode()) {
         // Demo dual control is auto-provisioned: flip the local approval so the
@@ -361,11 +361,13 @@ export default function Vapt() {
         typeof detail === "object" &&
         (detail as Record<string, unknown>).campaign_id != null;
       if (draftCreated) {
-        toast("warning", "Draft created", (detail as { message?: string })?.message || "Review the plan and start when ready.");
+        toast("warning", "Draft created", publicDetailCopy((detail as { message?: string })?.message) || "Review the plan and start when ready.");
         setPendingPlan(null);
         reload();
       } else if (e?.status === 400) {
-        const msg = typeof detail === "string" ? detail : (detail as { message?: string })?.message || e.message || "";
+        // e.message is already normalized (api.ts publicErrorCopy) — prefer it,
+        // and fall back to the sanitized detail for the draft-created shape.
+        const msg = e.message || publicDetailCopy(detail) || "";
         toast("error", "Could not create campaign", msg);
         // Keep the review open so the operator can retry once the refusal is
         // resolved (quota rollover, billing) without regenerating the plan.
@@ -451,7 +453,7 @@ export default function Vapt() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load VAPT campaigns. Check your connection and retry — your session stays signed in."
+        body="We could not load the VAPT campaigns. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -538,7 +540,7 @@ export default function Vapt() {
                 {activeCampaigns[0].status === "pending_approval"
                   ? "is awaiting approval"
                   : `is ${activeCampaigns[0].status}`}
-                {activeCampaigns.length > 1 ? ` (+${activeCampaigns.length - 1} more)` : ""} — no new
+                {activeCampaigns.length > 1 ? ` (+${activeCampaigns.length - 1} more)` : ""}. No new
                 campaign can start until it is resumed, paused or cancelled.
               </span>
               <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => setSelected(activeCampaigns[0])}>
@@ -771,8 +773,8 @@ export default function Vapt() {
                               <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                               <p className="leading-5">
                                 {awaitingAck.length} technique{awaitingAck.length > 1 ? "s" : ""} need PoC acknowledgment
-                                {awaitingAck.length === 1 && awaitingAck[0]?.tool ? ` (${awaitingAck[0].tool})` : ""} —
-                                re-run with <strong>Extended PoC</strong> to allow controlled proofs.
+                                {awaitingAck.length === 1 && awaitingAck[0]?.tool ? ` (${awaitingAck[0].tool})` : ""}.
+                                Re-run with <strong>Extended PoC</strong> to allow controlled proofs.
                               </p>
                             </div>
                           )}
@@ -837,7 +839,7 @@ export default function Vapt() {
                                   {typeof summary.results_written === "number" && <span className="text-slate-400"> · {summary.results_written} written</span>}
                                   {skipped > 0 && (
                                     <span className="text-slate-500">
-                                      {' '}· {skipped} skipped (already scanned / domain IP)
+                                      {' '}· {skipped} skipped (already scanned or domain IP)
                                       {skipReasons.length > 0 && (
                                         <span className="block text-[12px] text-slate-600">
                                           {skipReasons.slice(0, 3).map((r) => <span key={r} className="block">{r}</span>)}
@@ -989,7 +991,7 @@ export default function Vapt() {
                         <p className="font-medium text-slate-100">{f.title}</p>
                         {isReportable(f) ? <span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">reportable</span> : <span className="chip text-[12px] border-slate-500/30 bg-slate-500/10 text-slate-500">held</span>}
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500">campaign #{f.campaign_id} · <span className="font-mono">{f.asset_value || "—"}</span>{f.cve && <> · <span className="font-mono text-gold-400">{f.cve}</span></>}{f.cvss != null && <> · CVSS {f.cvss.toFixed(1)}</>}{f.correlation_rule && <> · <span className="font-mono">{f.correlation_rule}</span></>}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">campaign #{f.campaign_id} · <span className="font-mono">{f.asset_value || "Not set"}</span>{f.cve && <> · <span className="font-mono text-gold-400">{f.cve}</span></>}{f.cvss != null && <> · CVSS {f.cvss.toFixed(1)}</>}{f.correlation_rule && <> · <span className="font-mono">{f.correlation_rule}</span></>}</p>
                     </div>
                     {f.impact_level ? <ImpactBadge level={f.impact_level} score={f.impact_score} /> : <SeverityBadge severity={f.severity} />}
                     <VerificationBadge status={f.verification_status} />
@@ -1212,21 +1214,21 @@ export default function Vapt() {
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-300">
                 <input type="checkbox" className="h-3.5 w-3.5 accent-gold-400" checked={createForm.runGraphql} onChange={(e) => setCreateForm((f) => ({ ...f, runGraphql: e.target.checked }))} />
-                Test GraphQL (introspection, batching, depth, CSRF, injection, role oracle)
+                Test GraphQL: introspection, batching, depth, CSRF, injection and role oracle
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-300">
                 <input type="checkbox" className="h-3.5 w-3.5 accent-gold-400" checked={createForm.runWebhook} onChange={(e) => setCreateForm((f) => ({ ...f, runWebhook: e.target.checked }))} />
-                Test webhook receivers (signature verification, replay, SSRF)
+                Test webhook receivers: signature verification, replay and SSRF
               </label>
               <details className="text-[13px]">
-                <summary className="cursor-pointer text-slate-400 hover:text-slate-200">Credentials panel (optional)</summary>
+                <summary className="cursor-pointer text-slate-400 hover:text-slate-200">Credentials panel, optional</summary>
                 <div className="mt-2 space-y-3">
                   <div>
-                    <p className="text-[12px] text-slate-500 mb-1">Primary session --- priv-esc + JWT + BOLA bearer</p>
+                    <p className="text-[12px] text-slate-500 mb-1">Primary session for privilege escalation, JWT and BOLA bearer</p>
                     <div className="grid grid-cols-3 gap-2">
                       <input className="input !py-1.5 text-xs" placeholder="username" value={creds.username} onChange={(e) => setCreds((c) => ({ ...c, username: e.target.value }))} />
                       <input className="input !py-1.5 text-xs" type="password" placeholder="password" value={creds.password} onChange={(e) => setCreds((c) => ({ ...c, password: e.target.value }))} />
-                      <input className="input !py-1.5 text-xs" placeholder="token / bearer / jwt" value={creds.token} onChange={(e) => setCreds((c) => ({ ...c, token: e.target.value }))} />
+                      <input className="input !py-1.5 text-xs" placeholder="token, bearer or JWT" value={creds.token} onChange={(e) => setCreds((c) => ({ ...c, token: e.target.value }))} />
                     </div>
                   </div>
                   <div>
@@ -1234,7 +1236,7 @@ export default function Vapt() {
                     <div className="grid grid-cols-3 gap-2">
                       <input className="input !py-1.5 text-xs" placeholder="username" value={altCreds.username} onChange={(e) => setAltCreds((c) => ({ ...c, username: e.target.value }))} />
                       <input className="input !py-1.5 text-xs" type="password" placeholder="password" value={altCreds.password} onChange={(e) => setAltCreds((c) => ({ ...c, password: e.target.value }))} />
-                      <input className="input !py-1.5 text-xs" placeholder="token / bearer / jwt" value={altCreds.token} onChange={(e) => setAltCreds((c) => ({ ...c, token: e.target.value }))} />
+                      <input className="input !py-1.5 text-xs" placeholder="token, bearer or JWT" value={altCreds.token} onChange={(e) => setAltCreds((c) => ({ ...c, token: e.target.value }))} />
                     </div>
                   </div>
                   <p className="text-[12px] text-slate-600">Secrets are never shown back --- findings only record that credentials were provided.</p>

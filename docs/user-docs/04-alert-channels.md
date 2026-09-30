@@ -1,4 +1,4 @@
-# Alert channels (WhatsApp & Telegram)
+# Alert channels (WhatsApp and Telegram)
 
 Security alerts can also go to messaging apps. Configure under **Alerts → Settings**.
 
@@ -10,8 +10,8 @@ API: `GET/PUT /api/v1/alerts/settings` · test via `POST /api/v1/alerts/test`.
 
 | Event type (examples) | Toggle in settings |
 |----------------------|--------------------|
-| Scan completed / failed | `notify.scan_*` |
-| Risk created / critical | `notify.risk_*` |
+| Scan completed and failed | `notify.scan_*` |
+| Risk created and critical | `notify.risk_*` |
 | Treatment events | `notify.treatment_events` |
 
 Channels: **Email (client SMTP)** · **WhatsApp** · **Telegram**.
@@ -20,7 +20,7 @@ Channels: **Email (client SMTP)** · **WhatsApp** · **Telegram**.
 
 ## Telegram
 
-### Option A — Your bot (recommended for client branding)
+### Option A. Your bot (recommended for client branding)
 
 1. In Telegram, open **@BotFather**.
 2. `/newbot` → choose name and username.
@@ -40,7 +40,7 @@ Channels: **Email (client SMTP)** · **WhatsApp** · **Telegram**.
 
 7. Send a **test alert**.
 
-### Option B — Platform bot
+### Option B. Platform bot
 
 If Phantix has configured a platform Telegram bot, you may only need chat ids. Check `capabilities.telegram` on `GET /alerts/settings`.
 
@@ -60,7 +60,7 @@ If Phantix has configured a platform Telegram bot, you may only need chat ids. C
 ## Tips
 
 - Start with **email** reliability, then add chat channels.
-- Use a dedicated security channel/group — not a noisy company chat.
+- Use a dedicated security channel/group, not a noisy company chat.
 - Dual-control users should still approve high-risk actions in the app; chat is for **notification**, not authorization.
 
 **Next:** [GitHub connection →](./05-github-connection.md)

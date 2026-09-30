@@ -1,4 +1,4 @@
-# Privacy & security (customer view)
+# Privacy and security (customer view)
 
 ---
 
@@ -6,7 +6,7 @@
 
 Assets, findings, scans, risks, and evidence are stored in the **security database you connect** (or, soon, a Phantix-hosted DB dedicated to you).
 
-Phantix platform stores tenancy, billing, and encrypted connection metadata — not a shared multi-tenant lake of everyone’s vulnerabilities.
+Phantix platform stores tenancy, billing, and encrypted connection metadata, not a shared multi-tenant lake of everyone’s vulnerabilities.
 
 ---
 
@@ -16,12 +16,12 @@ Phantix platform stores tenancy, billing, and encrypted connection metadata — 
 |----------|---------|
 | GitHub App | Short-lived installation tokens; read-only scopes |
 | Ephemeral analysis | Clone → scan → **destroy** workspace |
-| AI | Findings and summaries — not permanent source retention |
+| AI | Findings and summaries, not permanent source retention |
 | Client SMTP passwords | Stored encrypted for alert delivery; use app passwords |
 
 ---
 
-## Verification & impact
+## Verification and impact
 
 Executive reports prioritize **verified** findings and attach **impact analysis** so boards are not flooded with raw scanner noise.
 
@@ -29,8 +29,8 @@ Executive reports prioritize **verified** findings and attach **impact analysis*
 
 ## AI and data protection
 
-- Prefer controlled / local model paths for sensitive context
-- External AI only under minimization / approval policies
+- Prefer controlled and local model paths for sensitive context
+- External AI only under minimization and approval policies
 - Skills shared as patterns are **anonymized**
 - Aligns with privacy expectations including **NDPA** for Nigerian organizations
 

@@ -82,7 +82,7 @@ export default function FeedbackReporter({ application }: { application?: string
         message: message.trim(),
         context,
       });
-      toast("success", "Report sent", "Thanks — it goes straight to the team that owns this service.");
+      toast("success", "Report sent", "Thank you. It goes straight to the team that owns this service.");
       setMessage("");
       setExtraContext({});
       setOpen(false);
@@ -97,7 +97,7 @@ export default function FeedbackReporter({ application }: { application?: string
     <Modal open={open} onClose={close} title="Report a problem">
       <div className="space-y-4">
         <p className="text-[13px] leading-5 text-slate-400">
-          Tell us what happened — a bug, a failure or something that is missing. It is filed against
+          Tell us what happened: a bug, a failure or something that is missing. It is filed against
           the <span className="font-mono text-slate-200">{resolvedService}</span> service and triaged
           by the platform team.
         </p>
@@ -174,7 +174,7 @@ export default function FeedbackReporter({ application }: { application?: string
 
         {demoActive && (
           <p className="rounded-lg border border-gold-400/30 bg-gold-400/5 px-3 py-2 text-[12px] text-gold-200">
-            <Sparkles size={11} className="mr-1 inline" /> Feedback is disabled in the demo tenant —
+            <Sparkles size={11} className="mr-1 inline" /> Feedback is disabled in the demo tenant.
             sign in to a real organization to send it.
           </p>
         )}

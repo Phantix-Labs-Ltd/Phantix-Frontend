@@ -37,7 +37,7 @@ function stageLabel(stage: string): string {
 
 function contextErrorMessage(e: unknown, fallback = "Unexpected error."): string {
   if (e instanceof ApiError && e.status === 409) {
-    return "Your security storage is not activated yet. Product information is stored there — connect it on the Platform under Connections.";
+    return "Your security storage is not activated yet. Product information is stored there. Connect it on the Platform under Connections.";
   }
   return e instanceof Error ? e.message : fallback;
 }
@@ -75,7 +75,7 @@ export function CreateProductModal({
     <Modal open onClose={onClose} title="New product">
       <div className="space-y-4">
         <div>
-          <label className="label" htmlFor="tm-prod-name">Product / project name</label>
+          <label className="label" htmlFor="tm-prod-name">Product or project name</label>
           <input
             id="tm-prod-name"
             value={name}
@@ -181,13 +181,13 @@ export function ProjectInputsModal({
     try {
       const res = await ingestDocument(project.id, {
         text,
-        title: `${project.name} — product information`,
+        title: `${project.name}: product information`,
         kind: PRODUCT_INFORMATION_KIND,
       });
       toast(
         "success",
         "Product information saved",
-        res.execution === "inline" ? "Stored immediately — the model can cite it now." : "Chunking in the background — the model can cite it shortly.",
+        res.execution === "inline" ? "Stored immediately. The model can cite it now." : "Chunking in the background. The model can cite it shortly.",
       );
       setFields({});
       await loadSummary();
@@ -253,12 +253,12 @@ export function ProjectInputsModal({
   const missingRequired = (summary?.missing ?? []).filter((k) => k === "architecture" || k === "requirements" || k === PRODUCT_INFORMATION_KIND);
 
   return (
-    <Modal open onClose={onClose} title={`Inputs — ${project.name}`} wide>
+    <Modal open onClose={onClose} title={`Inputs: ${project.name}`} wide>
       <div className="space-y-5">
         {/* Readiness — the whole point of this modal. */}
         <Card>
           <CardHeader
-            title="Threat-modelling inputs"
+            title="Threat-modeling inputs"
             subtitle="What the model reasons over, and what is still missing"
             action={
               loadingSummary ? (

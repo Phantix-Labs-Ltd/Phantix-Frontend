@@ -36,7 +36,7 @@ export interface FindingsCounts {
 }
 
 const FRAMINGS: Array<{ id: FindingsFraming; label: string; hint: string }> = [
-  { id: "lifecycle", label: "State", hint: "Is the programme working — fixed, regressed, accepted" },
+  { id: "lifecycle", label: "State", hint: "Is the program working: fixed, regressed, accepted" },
   { id: "severity", label: "Severity", hint: "How bad the open work is" },
   { id: "surface", label: "Surface", hint: "Which attack surface carries the exposure" },
 ];
@@ -123,7 +123,7 @@ export default function FindingsBreakdown({
       tableRows={data.map((d) => [
         d.name,
         d.value,
-        total ? `${Math.round((d.value / total) * 100)}%` : "—",
+        total ? `${Math.round((d.value / total) * 100)}%` : "Not set",
       ])}
     >
       {data.length === 0 ? (

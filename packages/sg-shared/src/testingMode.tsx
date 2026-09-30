@@ -23,7 +23,7 @@ export const TESTING_MODES: TestingModeDef[] = [
     label: "Blackbox",
     short: "External attacker",
     description:
-      "No credentials, no source, no docs. The agent discovers the surface from live traffic and infers business logic from behaviour.",
+      "No credentials, no source, no docs. The agent discovers the surface from live traffic and infers business logic from behavior.",
   },
   {
     id: "greybox",
@@ -78,7 +78,7 @@ export const CONTEXT_FIELDS: ContextField[] = [
   {
     key: "process_flow",
     label: "Process flows",
-    hint: "Login, checkout, admin, refund — how the app is meant to be used.",
+    hint: "Login, checkout, admin, refund. How the app is meant to be used.",
     placeholder: "e.g. register → verify email → login → browse → checkout → admin panel",
     type: "textarea",
     modes: ["blackbox", "greybox", "whitebox"],
@@ -93,7 +93,7 @@ export const CONTEXT_FIELDS: ContextField[] = [
   },
   {
     key: "out_of_scope_behaviours",
-    label: "Out-of-scope behaviours",
+    label: "Out-of-scope behavior",
     hint: "Beyond the allowlist, what must not be touched.",
     placeholder: "e.g. no spam/emails, no data deletion, skip SSO",
     type: "text",
@@ -101,7 +101,7 @@ export const CONTEXT_FIELDS: ContextField[] = [
   },
   {
     key: "rate_limit",
-    label: "Rate / volume ceiling",
+    label: "Rate and volume ceiling",
     hint: "What request rate and hours are allowed (and any no-load window).",
     placeholder: "e.g. ≤ 5 req/s, business hours only",
     type: "text",
@@ -124,7 +124,7 @@ export const CONTEXT_FIELDS: ContextField[] = [
   {
     key: "test_accounts",
     label: "Test accounts (one per line)",
-    hint: "Format: email:password@https://app.example/login — one per role.",
+    hint: "Format: email:password@https://app.example/login. Add one account for each role.",
     placeholder: "user@example.com:Passw0rd@https://app.example/login\nadmin@example.com:Passw0rd@https://app.example/login",
     type: "textarea",
     modes: ["greybox", "whitebox"],
@@ -147,7 +147,7 @@ export const CONTEXT_FIELDS: ContextField[] = [
   },
   {
     key: "source_paths",
-    label: "Source / repo paths",
+    label: "Source and repository paths",
     hint: "Where the agent can read source (path, bundle, or opencode handoff).",
     placeholder: "/repos/app  |  gs://bucket/src.zip",
     type: "text",
@@ -163,7 +163,7 @@ export const CONTEXT_FIELDS: ContextField[] = [
   },
   {
     key: "known_findings",
-    label: "Known / accepted risks",
+    label: "Known and accepted risks",
     hint: "Already-triaged issues so the agent does not re-report them.",
     placeholder: "e.g. missing CSP accepted; /debug internal only",
     type: "textarea",
@@ -171,7 +171,7 @@ export const CONTEXT_FIELDS: ContextField[] = [
   },
   {
     key: "secrets_locations",
-    label: "Config / secrets locations",
+    label: "Config and secret locations",
     hint: "Where config and secrets live (env files, vault, IaC) that may be read.",
     placeholder: "e.g. .env.production, k8s Secrets, Terraform state",
     type: "text",
@@ -179,7 +179,7 @@ export const CONTEXT_FIELDS: ContextField[] = [
   },
   {
     key: "fix_lifecycle",
-    label: "Fix / deploy lifecycle",
+    label: "Fix and deploy lifecycle",
     hint: "How fixes land so the agent can replay the PoC after.",
     placeholder: "e.g. PR to main, deploy within 24h",
     type: "text",

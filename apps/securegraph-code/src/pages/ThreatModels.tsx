@@ -5,7 +5,7 @@ import {
 import { Card, CardHeader, EmptyState, ErrorState, Modal, PageHeader, StatCard, PageBodySkeleton } from "@sg/ui";
 import { CreateProductModal, ProjectInputsModal } from "@sg/components/ThreatModelInputs";
 import { useStore } from "@sg/store";
-import { ApiError } from "@sg/api";
+import { ApiError, publicDetailCopy } from "@sg/api";
 import {
   answerThreatClarification, deliverThreatModel, exportThreatModel, generateThreatModel, getContextSummary, getThreatModel, GRADE_TONE,
   listProjects, listThreatModels, patchThreat, regenerateThreatModel,
@@ -77,7 +77,7 @@ export default function ThreatModels() {
       setRemembered([]);
       setError(
         e instanceof ApiError && e.status === 409
-          ? "Security storage is not activated yet — product context and threat models live there."
+          ? "Security storage is not activated yet. Product context and threat models live there."
           : e instanceof Error ? e.message : "Failed to load projects.",
       );
     } finally {
@@ -96,7 +96,7 @@ export default function ThreatModels() {
       toast(
         "success",
         "Generation queued",
-        res.message ?? "The model is being generated in the background. Open it by id once the worker finishes.",
+        res.message ?? "The system generates the model in the background. Open it by ID after the worker finishes.",
       );
       // Refresh index so the new model appears once the worker creates the row.
       window.setTimeout(() => { void load(); }, 2500);
@@ -145,7 +145,7 @@ export default function ThreatModels() {
           <p className="flex items-start gap-2 rounded-md border border-gold-400/30 bg-gold-400/10 p-3 text-[13px] leading-5 text-gold-200">
             <Info size={12} className="mt-0.5 shrink-0" />
             <span>
-              A model comes from a product's information. Add <strong className="font-semibold">product information</strong>, an architecture diagram
+              A model comes from the information of a product. Add <strong className="font-semibold">product information</strong>, an architecture diagram
               or requirements under <span className="mx-1 font-mono">Inputs</span>, then generate. Models load from the
               project-scoped index.
             </span>
@@ -157,7 +157,7 @@ export default function ThreatModels() {
               <EmptyState
                 icon={<ShieldAlert size={22} />}
                 title="No product yet"
-                body="Create your product, then add its information — product description, architecture diagram or requirements. Threats are derived from that context."
+                body="Create your product, then add its information: product description, architecture diagram or requirements. Threats are derived from that context."
                 action={
                   <button onClick={() => setCreating(true)} className="btn-primary text-xs !py-2">
                     <Plus size={13} className="mr-1.5 inline" /> New product
@@ -286,7 +286,7 @@ export default function ThreatModels() {
               }
             />
             {!remembered.length ? (
-              <p className="text-xs text-slate-500">No models for your projects yet — generate one above, or open by id.</p>
+              <p className="text-xs text-slate-500">No models for your projects yet. Generate one above, or open it by ID.</p>
             ) : (
               <div className="space-y-1.5">
                 {remembered.map((r) => (
@@ -375,7 +375,7 @@ function ReadinessChips({ summary }: { summary?: ProductContextSummary | null })
       {summary.inputs.map((item) => (
         <span
           key={item.key}
-          title={`${item.hint}${item.met ? " — present" : " — missing"}`}
+          title={`${item.hint}${item.met ? ": present" : ": missing"}`}
           className={cx(
             "chip",
             item.met ? "border-emerald-400/30 text-emerald-400" : "border-phantix-700 text-slate-600",
@@ -441,9 +441,9 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
       setAnswers((a) => ({ ...a, [clarificationId]: "" }));
       if (res.still_open) {
         // Contract: keep it open and say why, rather than clearing it.
-        toast("info", "Question not settled", "Your answer did not settle this question, so it stays open — a conditional threat is never over-stated.");
+        toast("info", "Question not settled", "Your answer did not settle this question, so it stays open. A conditional threat is never over-stated.");
       } else {
-        toast("success", "Answer applied", regraded ? `${regraded} threat(s) re-graded — only those changed.` : "Recorded.");
+        toast("success", "Answer applied", regraded ? `${regraded} threat(s) re-graded. Only those changed.` : "Recorded.");
       }
       await load();
     } catch (e) {
@@ -462,7 +462,7 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
     setRegenerating(true);
     try {
       await regenerateThreatModel(modelId, projectId);
-      toast("success", "Regeneration queued", "The model is being rebuilt from current context.");
+      toast("success", "Regeneration queued", "The system rebuilds the model from the current context.");
     } catch (e) {
       toast(
         "error",
@@ -488,7 +488,7 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
       toast(
         "error",
         "Export failed",
-        e instanceof ApiError && e.status === 503 ? "PDF renderer unavailable on this deployment — export Markdown or HTML instead." : e instanceof Error ? e.message : undefined,
+        e instanceof ApiError && e.status === 503 ? "PDF renderer unavailable on this deployment. Export Markdown or HTML instead." : e instanceof Error ? e.message : undefined,
       );
     } finally {
       setExporting(false);
@@ -504,7 +504,7 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
       const r = res as { pending?: boolean; ok?: boolean; failed?: number; detail?: string; status?: string };
       if (r.pending === true || r.status === "pending") {
         // Contract: 202 pending:true means nothing was delivered yet.
-        toast("info", "Sent for approval", "The push is parked for an authorizer — approve it from Authorizations for the tickets to be created.");
+        toast("info", "Sent for approval", "The push is parked for an authorizer. Approve it from Authorizations so that the system creates the tickets.");
       } else if (r.ok === false || (typeof r.failed === "number" && r.failed > 0)) {
         toast("warning", "Partly delivered", "Some issues were rejected by the tracker.");
       } else {
@@ -528,7 +528,8 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
       if (e instanceof ApiError && e.status === 422 && e.detail && typeof e.detail === "object") {
         const d = e.detail as { reason?: string; allowed?: unknown };
         const allowed = Array.isArray(d.allowed) ? d.allowed.map(String).join(", ") : null;
-        toast("error", "Not allowed", allowed ? `${d.reason ?? "Invalid value"} — choose one of: ${allowed}.` : (d.reason ?? "Invalid value."));
+        const reason = publicDetailCopy(d.reason) || "Invalid value";
+        toast("error", "Not allowed", allowed ? `${reason.replace(/\.$/, "")}. Choose one of: ${allowed}.` : `${reason}`);
       } else {
         toast("error", "Could not update", e instanceof Error ? e.message : undefined);
       }
@@ -551,7 +552,7 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
           {data?.model?.stage === "planned" && (
             <p className="flex items-start gap-2 rounded-md border border-sky-400/30 bg-sky-400/10 p-3 text-[13px] leading-5 text-sky-300">
               <Info size={12} className="mt-0.5 shrink-0" />
-              Planned design review — the entries below are design decisions to take, not confirmed defects.
+              Planned design review. The entries below are design decisions to take, not confirmed defects.
             </p>
           )}
           <div className="grid grid-cols-3 gap-3">
@@ -562,8 +563,8 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-[13px] text-slate-500">
-              Stage <span className="text-slate-300">{data?.model?.stage ?? "—"}</span> · status{" "}
-              <span className="text-slate-300">{data?.model?.status ?? "—"}</span>
+              Stage <span className="text-slate-300">{data?.model?.stage ?? "Not set"}</span> · status{" "}
+              <span className="text-slate-300">{data?.model?.status ?? "Not set"}</span>
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {/* Export dropdown (md/html/pdf) */}
@@ -636,7 +637,7 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
           <Card>
             <CardHeader title="Threats" subtitle="Evidence-supported first" />
             {!threats.length ? (
-              <EmptyState icon={<ShieldAlert size={20} />} title="No threats recorded" body="The model exists but produced no threats — it may still be generating." />
+              <EmptyState icon={<ShieldAlert size={20} />} title="No threats recorded" body="The model exists but produced no threats. It may still be generating." />
             ) : (
               <div className="space-y-2">
                 {threats.map((t) => (

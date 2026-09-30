@@ -27,4 +27,6 @@ e2e-test-prompt.txt
 .agents/
 brag-output/
 brag-output2/
+skills-lock.json
 extracted_text.md
+staging-system-map/

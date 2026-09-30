@@ -225,7 +225,7 @@ export default function SocAvailability() {
   const markFp = async (inc: AvailabilityIncident) => {
     try {
       await markAvailabilityFalsePositive(inc.id);
-      toast("success", "Marked false positive", "Excluded from MTTR / SLA");
+      toast("success", "Marked false positive", "Excluded from MTTR and SLA");
       await refresh();
     } catch (e) { toast("error", "Update failed", e instanceof Error ? e.message : ""); }
   };
@@ -241,7 +241,7 @@ export default function SocAvailability() {
         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
           <AlertTriangle size={26} className="text-severity-medium" />
           <p className="text-sm font-semibold text-slate-200">Security database needs bootstrap</p>
-          <p className="max-w-md text-xs leading-5 text-slate-500">Configure & bootstrap your Security Database (schema 1.7.0+) to use availability monitoring. Open Platform → Connections.</p>
+          <p className="max-w-md text-xs leading-5 text-slate-500">Configure and bootstrap your Security Database (schema 1.7.0+) to use availability monitoring. Open Platform → Connections.</p>
         </div>
       </Card>
     );
@@ -265,7 +265,7 @@ export default function SocAvailability() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Open outages" value={<span className="text-severity-critical">{summary?.openIncidents ?? 0}</span>} icon={<WifiOff size={18} />} />
         <StatCard label="Checks healthy" value={<span className="text-emerald-400">{upCount}/{enabledCount || 0}</span>} icon={<Wifi size={18} />} />
-        <StatCard label="Uptime snapshot" value={summary?.uptimePercentSnapshot != null ? `${summary.uptimePercentSnapshot}%` : "—"} icon={<Activity size={18} />} />
+        <StatCard label="Uptime snapshot" value={summary?.uptimePercentSnapshot != null ? `${summary.uptimePercentSnapshot}%` : "Not set"} icon={<Activity size={18} />} />
         <StatCard label="Median MTTR (7d)" value={<span className="font-mono text-sm">{formatDuration(summary?.mttrLast7d?.medianSeconds)}</span>} icon={<Clock size={18} />} />
       </div>
 
@@ -273,7 +273,7 @@ export default function SocAvailability() {
       <Card>
         <CardHeader
           title="Open downtime"
-          subtitle="Live outages — elapsed time ticks while open"
+          subtitle="Live outages: elapsed time ticks while open"
           action={<button onClick={() => void refresh()} className="btn-ghost text-sm px-3 py-1.5" aria-label="Refresh availability" title="Refresh availability"><RefreshCw size={14} /></button>}
         />
         {openIncidents.length === 0 ? (
@@ -312,7 +312,7 @@ export default function SocAvailability() {
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-400/15 text-emerald-400"><CheckCircle2 size={16} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-slate-200">{inc.title}</p>
-                  <p className="text-xs text-slate-500">{timeAgo(inc.down_at)} → {inc.recovered_at ? timeAgo(inc.recovered_at) : "—"}</p>
+                  <p className="text-xs text-slate-500">{timeAgo(inc.down_at)} → {inc.recovered_at ? timeAgo(inc.recovered_at) : "Not set"}</p>
                 </div>
                 {inc.excluded_from_sla && <span className="chip border-slate-500/50 bg-slate-500/10 text-[12px] text-slate-400">excluded</span>}
                 <div className="text-right">
@@ -358,7 +358,7 @@ export default function SocAvailability() {
                     <td className="px-3 py-2.5 text-sm font-medium text-slate-200">{c.name}</td>
                     <td className="px-3 py-2.5"><span className="chip font-mono text-[12px] text-slate-400">{c.check_type}</span></td>
                     <td className="px-3 py-2.5 font-mono text-xs text-slate-400">{c.target}</td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-slate-400">{c.last_latency_ms != null ? `${c.last_latency_ms}ms` : "—"}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs text-slate-400">{c.last_latency_ms != null ? `${c.last_latency_ms}ms` : "Not set"}</td>
                     <td className="px-3 py-2.5 text-xs text-slate-400">{c.last_status === "down" ? <span className="text-severity-critical font-mono">{c.consecutive_failures}/{c.failures_to_down}</span> : <span className="font-mono">{c.consecutive_failures}/{c.failures_to_down}</span>}</td>
                     <td className="px-3 py-2.5 text-xs text-slate-500">{c.last_checked_at ? timeAgo(c.last_checked_at) : "never"}</td>
                     <td className="px-3 py-2.5">
@@ -392,26 +392,26 @@ export default function SocAvailability() {
         />
         <div className="mb-3 rounded-xl border border-gold-400/20 bg-gold-400/5 px-3.5 py-2.5 text-xs leading-5 text-slate-400">
           Auth header: <span className="font-mono text-gold-300">{agentCatalog?.authHeader ?? "X-Org-Api-Key"}</span>
-          {" — "}
+          {" · "}
           {agentCatalog?.authHint ?? "Create a service key on Platform. Never paste a personal sign-in token on the server."}
           {" "}
           <a href={PLATFORM_URL} className="font-semibold text-gold-400 hover:text-gold-300">Platform →</a>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {(agentCatalog?.downloads ?? [
-            { os: "linux", label: "Linux", filename: "phantix-heartbeat-linux.tar.gz", sizeBytes: 0, sha256: "—" },
-            { os: "macos", label: "macOS", filename: "phantix-heartbeat-macos.tar.gz", sizeBytes: 0, sha256: "—" },
-            { os: "windows", label: "Windows", filename: "phantix-heartbeat-windows.zip", sizeBytes: 0, sha256: "—" },
-            { os: "python", label: "Python-only", filename: "phantix_heartbeat.py", sizeBytes: 0, sha256: "—" },
+            { os: "linux", label: "Linux", filename: "phantix-heartbeat-linux.tar.gz", sizeBytes: 0, sha256: "Not set" },
+            { os: "macos", label: "macOS", filename: "phantix-heartbeat-macos.tar.gz", sizeBytes: 0, sha256: "Not set" },
+            { os: "windows", label: "Windows", filename: "phantix-heartbeat-windows.zip", sizeBytes: 0, sha256: "Not set" },
+            { os: "python", label: "Python-only", filename: "phantix_heartbeat.py", sizeBytes: 0, sha256: "Not set" },
           ]).map((d) => (
             <div key={d.os} className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3.5">
               <p className="text-sm font-semibold text-slate-100">{d.label || titleCase(d.os)}</p>
               <p className="mt-1 truncate font-mono text-[13px] text-slate-500" title={d.filename}>{d.filename}</p>
               <p className="mt-1 text-[13px] text-slate-500">
-                {d.sizeBytes ? formatBytes(d.sizeBytes) : "—"}
+                {d.sizeBytes ? formatBytes(d.sizeBytes) : "Not set"}
               </p>
               <p className="mt-1 break-all font-mono text-[12px] text-slate-600" title={d.sha256}>
-                sha256: {d.sha256 ? `${d.sha256.slice(0, 16)}…` : "—"}
+                sha256: {d.sha256 ? `${d.sha256.slice(0, 16)}…` : "Not set"}
               </p>
               <button
                 type="button"
@@ -465,7 +465,7 @@ export default function SocAvailability() {
         <div className="grid grid-cols-1 gap-3 text-xs text-slate-400 md:grid-cols-2">
           <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3">
             <p className="font-semibold text-slate-200">External tool events</p>
-            <p className="mt-1 leading-5">Any tool (Uptime Kuma, Healthchecks, Alertmanager) can open/close MTTR-tracked incidents. Point the tool at your organization's availability webhook and authenticate with your organization API key — both are available from the Integrations hub.</p>
+            <p className="mt-1 leading-5">Any tool (Uptime Kuma, Healthchecks, Alertmanager) can open/close MTTR-tracked incidents. Point the tool at the availability webhook of your organization and authenticate with your organization API key. Both are available from the Integrations Hub.</p>
           </div>
           <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3">
             <p className="font-semibold text-slate-200">Heartbeat address</p>
@@ -494,7 +494,7 @@ export default function SocAvailability() {
       </Modal>
 
       {/* Create / edit check modal */}
-      <Modal open={formOpen} onClose={() => setFormOpen(false)} title={editing ? `Edit check — ${editing.name}` : "Add monitor"} wide>
+      <Modal open={formOpen} onClose={() => setFormOpen(false)} title={editing ? `Edit check: ${editing.name}` : "Add monitor"} wide>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -533,7 +533,7 @@ export default function SocAvailability() {
               <label className="flex items-center gap-1.5 text-xs text-slate-300"><input type="checkbox" checked={form.notify_on_recovery} onChange={(e) => setForm({ ...form, notify_on_recovery: e.target.checked })} className="accent-[rgb(var(--gold-400))]" /> Notify recovery</label>
             </div>
           </div>
-          <p className="text-[12px] text-slate-500">Critical downtime also notifies email / WhatsApp / Telegram per Alerts settings when configured.</p>
+          <p className="text-[12px] text-slate-500">Critical downtime also notifies email, WhatsApp or Telegram per Alerts settings when configured.</p>
           <button onClick={() => void save()} disabled={saving} className="btn-primary w-full !py-2.5 !text-xs">{saving ? <Spinner className="h-3 w-3" /> : editing ? <Pencil size={13} /> : <Plus size={13} />} {editing ? "Save check" : "Create check"}</button>
         </div>
       </Modal>
@@ -550,7 +550,7 @@ export default function SocAvailability() {
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="rounded-lg bg-phantix-950/60 p-3"><p className="text-slate-500">Down at</p><p className="mt-1 font-mono text-slate-200">{new Date(detail.down_at).toLocaleString()}</p></div>
-              <div className="rounded-lg bg-phantix-950/60 p-3"><p className="text-slate-500">Recovered at</p><p className="mt-1 font-mono text-slate-200">{detail.recovered_at ? new Date(detail.recovered_at).toLocaleString() : "—"}</p></div>
+              <div className="rounded-lg bg-phantix-950/60 p-3"><p className="text-slate-500">Recovered at</p><p className="mt-1 font-mono text-slate-200">{detail.recovered_at ? new Date(detail.recovered_at).toLocaleString() : "Not set"}</p></div>
               <div className="rounded-lg bg-emerald-400/10 p-3"><p className="text-emerald-300">Time to resolve</p><p className="mt-1 font-mono text-lg font-bold text-emerald-300">{formatDuration(detail.time_to_resolve_seconds)}</p></div>
               <div className="rounded-lg bg-phantix-950/60 p-3"><p className="text-slate-500">Time to acknowledge</p><p className="mt-1 font-mono text-slate-200">{formatDuration(detail.time_to_acknowledge_seconds)}</p></div>
             </div>

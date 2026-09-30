@@ -13,7 +13,7 @@ import DocLink from "@sg/components/DocLink";
 
 const THRESHOLD_COPY: Record<string, string> = {
   off: "Never consult the AI planner. Procedures run exactly as written.",
-  critical: "Only for critical findings — the narrowest AI involvement.",
+  critical: "Only for critical findings. This is the smallest AI involvement.",
   high: "Critical and high findings.",
   medium: "Critical, high and medium findings.",
   low: "Almost everything except informational noise.",
@@ -88,8 +88,8 @@ export default function VaptSettings() {
             />
             <p className="text-sm leading-6 text-slate-400">
               With consent on, patterns from your campaigns can be mined into candidate correlation
-              rules. Candidates always go through human review before they become active rules —
-              nothing is applied automatically.
+              rules. Candidates always go through human review before they become active rules.
+              Nothing is applied automatically.
             </p>
 
             <button

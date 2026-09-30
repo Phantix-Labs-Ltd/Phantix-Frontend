@@ -1,10 +1,10 @@
-# Email & SMTP setup
+# Email and SMTP setup
 
 Phantix uses email for:
 
 | Use | Who sends |
 |-----|-----------|
-| Login MFA / setup OTP | **Phantix platform** SMTP (operated by Phantix) |
+| Login MFA and setup OTP | **Phantix platform** SMTP (operated by Phantix) |
 | Security **alerts** (scan finished, critical risk, …) | **Your organization’s SMTP** (client settings) |
 
 You only configure **client SMTP** if you want alerts from **your** domain (recommended for production).
@@ -13,7 +13,7 @@ You only configure **client SMTP** if you want alerts from **your** domain (reco
 
 ## Where to configure (in app)
 
-**Alerts → Settings → Email / SMTP**
+**Alerts → Settings → Email or SMTP**
 
 Or API:
 
@@ -65,25 +65,25 @@ Then **Send test alert** from the UI (or `POST /api/v1/alerts/test`).
 
 1. Open [AWS SES](https://console.aws.amazon.com/ses/).
 2. Verify a **domain** or single **email** (DKIM recommended).
-3. Leave sandbox only after requesting production access (otherwise only verified recipients work).
+3. Leave sandbox only after you request production access (otherwise only verified recipients work).
 4. Create **SMTP credentials** (SES → SMTP settings → Create SMTP credentials).
 5. Note region-specific host, e.g.:
    - `email-smtp.eu-west-1.amazonaws.com`
    - `email-smtp.us-east-1.amazonaws.com`
 6. Port **587**, TLS **on**.
-7. Username / password = the SMTP credentials (not your AWS root key).
+7. Username and password = the SMTP credentials (not your AWS root key).
 8. Paste into Phantix alert SMTP settings.
 
 ### Brevo (Sendinblue)
 
 1. Account at [brevo.com](https://www.brevo.com/).
-2. **SMTP & API → SMTP**.
+2. **SMTP and API → SMTP**.
 3. Copy:
    - Server: `smtp-relay.brevo.com`
    - Port: `587`
    - Login: your Brevo SMTP login
    - Password: SMTP key
-4. Verify sender domain / email.
+4. Verify sender domain or email.
 5. Enter in Phantix; set `from_email` to a verified sender.
 
 ### Mailgun
@@ -156,4 +156,4 @@ If OTPs never arrive, check spam and contact Phantix support (platform mail conf
 - [ ] Test alert received
 - [ ] SPF/DKIM configured
 
-**Next:** [Alert channels (WhatsApp / Telegram) →](./04-alert-channels.md)
+**Next:** [Alert channels (WhatsApp or Telegram) →](./04-alert-channels.md)

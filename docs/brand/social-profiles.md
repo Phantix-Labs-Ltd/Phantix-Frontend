@@ -1,18 +1,18 @@
-# Social profiles — Phantix Security Solutions (SecureGraph)
+# Social profiles. Phantix Labs ltd (SecureGraph)
 
-**Status:** draft v2 — company/product profile copy, a founder-facing profile and the first five launch
-posts are drafted and length-checked. Handles and a few company facts still need a human decision —
+**Status:** draft v2. Company/product profile copy, a founder-facing profile and the first five launch
+posts are drafted and length-checked. Handles and a few company facts still need a human decision
 see [Open questions](#14-open-questions).
 
 | | |
 |---|---|
 | **Scope** | Company/product profiles: LinkedIn, X, Instagram, Facebook, YouTube, GitHub · founder profile · launch posts |
-| **Owner** | Marketing / founders |
-| **Brand lines** | Locked in [docs/README.md](../README.md#brand-lines-locked) — quote them, don't paraphrase |
-| **Founder profile** | [§9](#9-founder-facing-linkedin-profile) — headline + About, first-person |
-| **Launch posts** | [§10](#10-first-five-launch-posts) — the first five, LinkedIn / X / Instagram |
+| **Owner** | Marketing and founders |
+| **Brand lines** | Locked in [docs/README.md](../README.md#brand-lines-locked). Quote them, do not paraphrase |
+| **Founder profile** | [§9](#9-founder-facing-linkedin-profile). Headline + About, first-person |
+| **Launch posts** | [§10](#10-first-five-launch-posts). The first five, LinkedIn and X and Instagram |
 | **Copy source** | [docs/01-what-is-securegraph.md](../01-what-is-securegraph.md), [docs/05-product-capabilities.md](../05-product-capabilities.md), [docs/06-privacy-and-trust.md](../06-privacy-and-trust.md), [docs/09-ai-with-accountability.md](../09-ai-with-accountability.md) |
-| **Length check** | `npm run validate:social` — fails if a draft overflows its platform field or a cross-reference is broken |
+| **Length check** | `npm run validate:social`. Fails if a draft overflows its platform field or a cross-reference is broken |
 | **Assets** | [§7 asset matrix](#7-asset-matrix--what-goes-where-from-this-repo) |
 
 ---
@@ -23,31 +23,31 @@ Only what is already published in this repo. Anything marked ⚠️ needs a deci
 
 | Field | Value | Source |
 |---|---|---|
-| Company | **Phantix Security Solutions** | `landing/index.html` structured data |
+| Company | **Phantix Labs ltd** | `landing/index.html` structured data |
 | Alternate names already declared | Phantix Labs · Phantom Labs · Phantom Security | `landing/index.html` |
-| Product | **SecureGraph** — Command Centre | `public/site.webmanifest`, [docs/01](../01-what-is-securegraph.md) |
+| Product | **SecureGraph**: Command Centre | `public/site.webmanifest`, [docs/01](../01-what-is-securegraph.md) |
 | Product surfaces | Core (`app.`) · Attack (`attack.`) · Defend (`defend.`) · Code (`code.`) · Platform (`platform.`) | `DEPLOYMENT.md`, `landing/src/lib/config.ts` |
-| Blog | The SecureGraph Weekly — `blog.phantixlabs.com` | `staff-portal/src/lib/config.ts` |
+| Blog | The SecureGraph Weekly. `blog.phantixlabs.com` | `staff-portal/src/lib/config.ts` |
 | Website | `https://phantixlabs.com` | `landing/src/lib/config.ts` |
 | Tagline | **PROTECT. PREVENT. PERFORM.** | [docs/README.md](../README.md) |
-| Locked brand lines | Your security record lives under your keys. · If it isn't verified, it doesn't ship to the board. · AI orchestrates. Engines execute. Facts stay grounded. | [docs/README.md](../README.md) |
+| Locked brand lines | Your security record lives under your keys. · If it is not verified, it does not ship to the board. · AI orchestrates. Engines execute. Facts stay grounded. | [docs/README.md](../README.md) |
 | Support | `support@phantixlabs.com` | `apps/securegraph-core/src/pages/Support.tsx` |
-| Privacy / DPO | `privacy@phantixlabs.com` | `landing/src/pages/Cookies.tsx` |
+| Privacy and DPO | `privacy@phantixlabs.com` | `landing/src/pages/Cookies.tsx` |
 | Public numbers already on site | 13 engines · 10+ AI agents · 600+ checks | `landing/src/components/chrome.tsx` |
-| Plans | Free (no card) · Starter ₦19,900/mo · Growth ₦49,900/mo ⚠️ *verify against live billing before quoting* | `landing/index.html` `Offer` |
+| Plans | Free (no card) · Starter ₦19,900/mo · Growth ₦49,900/mo ⚠️ *verify against live billing before you quote* | `landing/index.html` `Offer` |
 | Billing | Paystack, NGN-first | [docs/07](../07-pricing-and-plans.md) |
-| Privacy posture | Data-isolation design aligned with Nigeria's **NDPA** | [docs/06](../06-privacy-and-trust.md) |
-| GitHub org | `https://github.com/Phantom-Fort` (existing — do not rename for social tidy-up) | repo remote |
-| Headquarters / city | ⚠️ not stated anywhere in this repo | — |
-| Founded year, team size, phone | ⚠️ not stated anywhere in this repo | — |
+| Privacy posture | Data-isolation design aligned with the **NDPA** of Nigeria | [docs/06](../06-privacy-and-trust.md) |
+| GitHub org | `https://github.com/Phantom-Fort` (existing. Do not rename for social tidy-up) | repo remote |
+| Headquarters and city | ⚠️ not stated anywhere in this repo |. |
+| Founded year, team size, phone | ⚠️ not stated anywhere in this repo |. |
 
 **Never claim** (explicitly ruled out in the docs): zero false positives, "AI finds vulnerabilities
-by itself", a public full-platform API, or customer logos and ARR we can't evidence
+by itself", a public full-platform API, or customer logos and ARR we cannot evidence
 ([docs/04](../04-for-investors-and-partners.md), [docs/05](../05-product-capabilities.md)).
 
 ---
 
-## 2. Handles & naming
+## 2. Handles and naming
 
 One handle everywhere we can get it. Primary is `phantixlabs` because it matches the domain.
 
@@ -58,10 +58,10 @@ One handle everywhere we can get it. Primary is `phantixlabs` because it matches
 | Instagram | `@phantixlabs` | `@phantix.security`, `@securegraph` | |
 | Facebook Page | `@phantixlabs` | `@phantixsecuritysolutions` | Username is editable later |
 | YouTube | `@phantixlabs` | `@phantixsecurity` | Handle feeds the channel URL |
-| GitHub | `Phantom-Fort` (keep) | — | Org already exists; set the display name and bio, don't migrate |
+| GitHub | `Phantom-Fort` (keep) |. | Org already exists; set the display name and bio, do not migrate |
 
-⚠️ **Check availability before claiming anything.** Availability is not verifiable from this repo,
-and a squatted X handle is not worth renaming the company over — take the fallback and keep the
+⚠️ **Check availability before you claim anything.** Availability is not verifiable from this repo,
+and a squatted X handle is not worth renaming the company over. Take the fallback and keep the
 display name exact.
 
 ---
@@ -71,17 +71,17 @@ display name exact.
 Each draft below is fenced as `bio:<id> limit=<n>` (or `limit=<n>w` for word ceilings) so
 `npm run validate:social` can prove it fits the field before you paste it.
 
-### LinkedIn — company page
+### LinkedIn. Company page
 
 | Field | Limit | Value |
 |---|---|---|
-| Page name | 120 | Phantix Security Solutions |
+| Page name | 120 | Phantix Labs ltd |
 | Tagline ("slogan") | 120 | see below |
 | About us | 2,000 | see below |
-| Industry | — | Computer and Network Security |
-| Company size | — | ⚠️ decide (e.g. "2–10 employees") |
-| Headquarters | — | ⚠️ decide |
-| Website | — | `https://phantixlabs.com` |
+| Industry |. | Computer and Network Security |
+| Company size |. | ⚠️ decide (e.g. "2–10 employees") |
+| Headquarters |. | ⚠️ decide |
+| Website |. | `https://phantixlabs.com` |
 | Specialties | 20 tags | Attack surface management · Vulnerability assessment · Penetration testing · VAPT · Continuous security · Verified findings · Risk prioritization · Remediation tracking · Compliance mapping · Dual-control governance · Audit trail · AI security agents · Security reporting · Asset intelligence · Privacy-first security · NDPA |
 
 ```bio:linkedin-tagline limit=120
@@ -89,7 +89,7 @@ SecureGraph: vulnerability assessment, pentesting and continuous security. Verif
 ```
 
 ```bio:linkedin-about limit=2000
-Phantix Security Solutions builds SecureGraph — a cybersecurity command centre for organizations that need real visibility, honest findings and board-ready proof, without handing their security record to another black-box SaaS.
+Phantix Labs ltd builds SecureGraph — a cybersecurity command centre for organizations that need real visibility, honest findings and board-ready proof, without handing their security record to another black-box SaaS.
 
 SECUREGRAPH IN ONE LINE
 Discover what you own, test what matters, and deliver verified findings leadership can trust — while your security inventory stays in your database.
@@ -120,7 +120,7 @@ Support: support@phantixlabs.com
 Pinned post: the [brag-output/brag.mp4](../../brag-output/brag.mp4) launch film with the caption in
 [brag-output/share-copy.txt](../../brag-output/share-copy.txt).
 
-The founder's personal profile copy — headline and About — is in
+The personal profile copy, headline and About of the founder is in
 [§9](#9-founder-facing-linkedin-profile); the company page and the founder profile should never
 contradict each other.
 
@@ -133,16 +133,16 @@ contradict each other.
 | Display name | 50 | SecureGraph by Phantix |
 | Bio | 160 | see below |
 | Location | 30 | ⚠️ decide (e.g. `Nigeria`) |
-| Website | — | `https://phantixlabs.com` |
+| Website |. | `https://phantixlabs.com` |
 
 ```bio:x-bio limit=160
 VAPT and continuous security for lean teams. Verified findings, security data you control. SecureGraph by Phantix. PROTECT. PREVENT. PERFORM.
 ```
 
-Alternative display name if the legal brand should lead: `Phantix Security Solutions` (26 chars).
+Alternative display name if the legal brand should lead: `Phantix Labs ltd` (16 chars).
 
-**Pinned post:** launch film plus one-line claim — *"Open findings are the verified ones.
-Heuristic noise never gets here."* — then the link. Keep the "we're looking for builders" line for
+**Pinned post:** launch film plus one-line claim. *"Open findings are the verified ones.
+Heuristic noise never gets here."*, then the link. Keep the "we are looking for builders" line for
 a separate post ([brag-output/brag-plan.md](../../brag-output/brag-plan.md)).
 
 ---
@@ -151,30 +151,30 @@ a separate post ([brag-output/brag-plan.md](../../brag-output/brag-plan.md)).
 
 | Field | Limit | Value |
 |---|---|---|
-| Name (searchable) | 30 | Phantix Security Solutions |
+| Name (searchable) | 30 | Phantix Labs ltd |
 | Username | 30 | `phantixlabs` |
 | Bio | 150 | see below |
-| Link | — | `https://phantixlabs.com` (or a link-in-bio page) |
+| Link |. | `https://phantixlabs.com` (or a link-in-bio page) |
 
 ```bio:instagram-bio limit=150
 SecureGraph by Phantix — VAPT & continuous security for lean teams. Verified findings. Your data stays yours. PROTECT. PREVENT. PERFORM.
 ```
 
-**Highlights to build:** Surfaces · How it works · Trust & data · Pricing · Docs · Blog.
+**Highlights to build:** Surfaces · How it works · Trust and data · Pricing · Docs · Blog.
 **First content:** the 20s launch film, cut vertical (see [§7](#7-asset-matrix--what-goes-where-from-this-repo)),
 then carousels built from `landing/public/scenes/product-*.jpg`.
 
 ---
 
-## 6. Facebook Page, YouTube & GitHub
+## 6. Facebook Page, YouTube and GitHub
 
 ### Facebook Page
 
 | Field | Value |
 |---|---|
-| Page name | Phantix Security Solutions |
+| Page name | Phantix Labs ltd |
 | Username | `@phantixlabs` |
-| Category | Software Company (add Computer Company / Network Security if offered) |
+| Category | Software Company (add Computer Company and Network Security if offered) |
 | Website | `https://phantixlabs.com` |
 | CTA button | Sign Up → `https://platform.phantixlabs.com/register` |
 | Short description | see below |
@@ -185,7 +185,7 @@ SecureGraph by Phantix is a cybersecurity command centre for lean teams: vulnera
 ```
 
 ```bio:facebook-about limit=1000
-Phantix Security Solutions builds SecureGraph — a cybersecurity command centre for organizations that need real visibility, honest findings and board-ready proof, without giving up control of their security record.
+Phantix Labs ltd builds SecureGraph — a cybersecurity command centre for organizations that need real visibility, honest findings and board-ready proof, without giving up control of their security record.
 
 SecureGraph takes a lean team from inventory to evidence: know what you own, test what matters, prioritize by business impact, and prove remediation with verified findings. Sensitive tests can require dual control — an initiator and an authorizer — and every action is auditable.
 
@@ -202,14 +202,14 @@ PROTECT. PREVENT. PERFORM.
 
 | Field | Value |
 |---|---|
-| Channel name | Phantix Security Solutions |
+| Channel name | Phantix Labs ltd |
 | Handle | `@phantixlabs` |
 | Links | Website · Docs · Blog · LinkedIn |
-| Banner | 2560×1440 upload; keep everything inside the 1546×423 centre safe area |
-| Trailer | `brag-output/brag.mp4` (20s, 1920×1080, no voice) — channel trailer, not the featured video |
+| Banner | 2560×1440 upload; keep everything inside the 1546×423 center safe area |
+| Trailer | `brag-output/brag.mp4` (20s, 1920×1080, no voice). Channel trailer, not the featured video |
 
 ```bio:youtube-about limit=1000
-SecureGraph is a cybersecurity command centre for lean security teams — built by Phantix Security Solutions.
+SecureGraph is a cybersecurity command centre for lean security teams — built by Phantix Labs ltd.
 
 Know what you own. Test what matters. Prove what you fixed.
 Asset and attack-surface inventory, scoped scanning and VAPT campaigns, explainable risk prioritization, and verified findings with business impact — packaged for engineers and for the board. Your security record lives in a dedicated database you control, sensitive tests can require dual control, and AI agents explain and plan while the engines carry the evidence.
@@ -229,23 +229,23 @@ PROTECT. PREVENT. PERFORM.
 
 | Field | Limit | Value |
 |---|---|---|
-| Display name | — | Phantix Security Solutions |
+| Display name |. | Phantix Labs ltd |
 | Bio | 160 | see below |
-| Website | — | `https://phantixlabs.com` |
-| Location | — | ⚠️ decide |
+| Website |. | `https://phantixlabs.com` |
+| Location |. | ⚠️ decide |
 
 ```bio:github-bio limit=160
-Phantix Security Solutions — building SecureGraph, an AI-native cybersecurity command centre for lean teams. PROTECT. PREVENT. PERFORM.
+Phantix Labs ltd — building SecureGraph, an AI-native cybersecurity command centre for lean teams. PROTECT. PREVENT. PERFORM.
 ```
 
 Add an org profile README (`Phantom-Fort/.github/profile/README.md`) that repeats the
 [§8 boilerplate](#8-boilerplates) and links Support and Docs. Keep client work, tokens and internal
-hostnames out of public repos — the rule in [brag-output/brag-plan.md](../../brag-output/brag-plan.md)
+hostnames out of public repos. The rule in [brag-output/brag-plan.md](../../brag-output/brag-plan.md)
 applies to anything published, not only to the video.
 
 ---
 
-## 7. Asset matrix — what goes where, from this repo
+## 7. Asset matrix. What goes where, from this repo
 
 Dimensions below were measured from the committed files, so the crop maths is real.
 
@@ -253,66 +253,66 @@ Dimensions below were measured from the committed files, so the crop maths is re
 
 | Asset | Size | Use |
 |---|---|---|
-| `logo.svg` / `logo-white.svg` | vector wordmark, ≈3.97:1 | Any cover or banner — scale freely, never stretch |
-| `logo-transparent.png` / `logo.png` | 1200×302 | Light backgrounds; current `og:image` |
+| `logo.svg` and `logo-white.svg` | vector wordmark, ≈3.97:1 | Any cover or banner. Scale freely, never stretch |
+| `logo-transparent.png` and `logo.png` | 1200×302 | Light backgrounds; current `og:image` |
 | `logo-white.png` | 1200×302 | Dark backgrounds (`#090806` canvas) |
-| `mark-white.svg` / `mark-white.png` | vector / 471×512 | Profile avatars — pad to a square canvas |
-| `mark-navy.png`, `mark-black.svg` | 471×512 / vector | Light-background variants |
+| `mark-white.svg` and `mark-white.png` | vector and 471×512 | Profile avatars. Pad to a square canvas |
+| `mark-navy.png`, `mark-black.svg` | 471×512 and vector | Light-background variants |
 | `android-chrome-512x512.png`, `favicon-512x512.png` | 512×512 | Already square: safe as an avatar if the tile background suits |
-| `apple-touch-icon.png` | 180×180 | App icon only — below avatar minimums |
-| `favicon.svg`, `favicon.ico` | vector / 48 | Browser tabs, not profiles |
+| `apple-touch-icon.png` | 180×180 | App icon only. Below avatar minimums |
+| `favicon.svg`, `favicon.ico` | vector and 48 | Browser tabs, not profiles |
 
 ### Profile avatars (1:1)
 
 Every platform here wants 400×400 or larger, so:
 
-- `public/android-chrome-512x512.png` — 512×512, the simplest "works everywhere" avatar.
-- `public/mark-white.png` — 471×512; pad to 512×512 with `#090806` so the mark isn't clipped.
+- `public/android-chrome-512x512.png`. 512×512, the simplest "works everywhere" avatar.
+- `public/mark-white.png`. 471×512; pad to 512×512 with `#090806` so the mark is not clipped.
 
 Do **not** use the wordmark as an avatar: at ≈3.97:1 it renders as a sliver in a circular crop.
 
-### Covers and banners — **nothing in this repo is the right shape yet**
+### Covers and banners. **Nothing in this repo is the right shape yet**
 
 | Platform | Upload target (verify in the current uploader) |
 |---|---|
 | LinkedIn company cover | 1128×191 (≈5.9:1) |
 | LinkedIn personal background | 1584×396 |
-| X header | 1500×500, safe area ≈1500×360 centre |
+| X header | 1500×500, safe area ≈1500×360 center |
 | Facebook cover | 820×312 |
-| YouTube banner | 2560×1440 upload, 1546×423 centre safe area |
+| YouTube banner | 2560×1440 upload, 1546×423 center safe area |
 | Instagram post | 1080×1080 or 1080×1350 |
-| Story / Reel / Short | 1080×1920 |
+| Story and Reel and Short | 1080×1920 |
 
-Compose these from the existing scene renders — 2000×1226 and 1400-wide JPEGs are enough
+Compose these from the existing scene renders. 2000×1226 and 1400-wide JPEGs are enough
 resolution for every slot above once cropped:
 
-| Scene | Size | Best cover / banner material |
+| Scene | Size | Best cover and banner material |
 |---|---|---|
 | `landing/public/scenes/command-centre-dashboard.jpg` | 2000×1226 | X header, LinkedIn cover (dashboard crop left, wordmark right) |
-| `landing/public/scenes/product-agent.jpg` | 1400×1196 | AI / agent posts |
+| `landing/public/scenes/product-agent.jpg` | 1400×1196 | AI and agent posts |
 | `landing/public/scenes/product-vapt.jpg` | 1400×2666 | Vertical posts, Story backgrounds |
 | `landing/public/scenes/product-soc.jpg` | 1400×1769 | Vertical posts |
 | `landing/public/scenes/product-assets.jpg` | 1400×1570 | Carousels |
 | `landing/public/scenes/product-risks.jpg` | 1400×1251 | Risk-prioritization posts |
-| `landing/public/scenes/product-reports.jpg` | 1400×1338 | Verified-findings / board-pack posts |
+| `landing/public/scenes/product-reports.jpg` | 1400×1338 | Verified-findings and board-pack posts |
 | `landing/public/scenes/privacy-your-database-poster.jpg` | 1280×720 | Privacy and trust posts |
 | `landing/public/scenes/hero-command-centre-poster.jpg` | 1280×702 | Fallback thumbnail |
 
-Each scene also ships a `-light` variant — use dark by default, light only for light-mode feeds.
+Each scene also ships a `-light` variant. Use dark by default, light only for light-mode feeds.
 
 ### Screenshots and video
 
 | Asset | Size | Use |
 |---|---|---|
 | `brag-output/brag.mp4` + `brag.jpg` | 1920×1080, 20s | YouTube trailer, LinkedIn/X native video, Facebook |
-| `brag-output/share-copy.txt` | — | Ready-made caption for the launch film |
-| `landing/public/scenes/hero-command-centre.mp4` / `.webm` | 1280×702 | Looping product demo for posts |
+| `brag-output/share-copy.txt` |. | Ready-made caption for the launch film |
+| `landing/public/scenes/hero-command-centre.mp4` and `.webm` | 1280×702 | Looping product demo for posts |
 | `public/screenshots/app/*.png` | 1440×900 viewport shots | Product feature posts |
-| `public/screenshots/landing-*.png` | 1440×9577 full-page | **Crop first** — never post a full-page capture |
+| `public/screenshots/landing-*.png` | 1440×9577 full-page | **Crop first**: never post a full-page capture |
 | `docs/screenshots/**` | mixed | Same library, docs-facing |
-| `AAAnimations/` | — | Motion assets for Reels / Shorts |
+| `AAAnimations/` |. | Motion assets for Reels and Shorts |
 
-**Gap:** vertical 1080×1920 video does not exist. The launch film is landscape — re-render it with
+**Gap:** vertical 1080×1920 video does not exist. The launch film is landscape. Re-render it with
 `/brag --format vertical` before the first Reels or Shorts post.
 
 ---
@@ -322,25 +322,25 @@ Each scene also ships a `-light` variant — use dark by default, light only for
 Reuse one of these wherever a profile field or a press listing needs a fixed blurb.
 
 ```bio:boilerplate-15w limit=25w
-Phantix Security Solutions builds SecureGraph, a cybersecurity command centre for lean security teams.
+Phantix Labs ltd builds SecureGraph, a cybersecurity command centre for lean security teams.
 ```
 
 ```bio:boilerplate-30w limit=40w
-Phantix Security Solutions builds SecureGraph, a cybersecurity command centre that turns vulnerability assessment and penetration testing into verified, board-ready evidence: with the security record kept in a database the customer controls.
+Phantix Labs ltd builds SecureGraph, a cybersecurity command centre that turns vulnerability assessment and penetration testing into verified, board-ready evidence: with the security record kept in a database the customer controls.
 ```
 
 ```bio:boilerplate-50w limit=65w
-Phantix Security Solutions builds SecureGraph, a cybersecurity command centre for teams that need real visibility, honest findings and board-ready proof. It covers asset and attack-surface inventory, scoped scanning and VAPT campaigns, explainable risk prioritization and verified reporting, with security posture data held in a dedicated database the customer controls. PROTECT. PREVENT. PERFORM.
+Phantix Labs ltd builds SecureGraph, a cybersecurity command centre for teams that need real visibility, honest findings and board-ready proof. It covers asset and attack-surface inventory, scoped scanning and VAPT campaigns, explainable risk prioritization and verified reporting, with security posture data held in a dedicated database the customer controls. PROTECT. PREVENT. PERFORM.
 ```
 
 ```bio:boilerplate-100w limit=125w
-Phantix Security Solutions builds SecureGraph, a cybersecurity command centre for organizations that cannot staff a full security operations centre. SecureGraph takes a team from inventory to evidence: know what you own across domains, apps, APIs, repos and mobile; test what matters with scoped scans and VAPT campaigns; prioritize by explainable risk; and prove remediation with findings that have been verified rather than raw scanner noise. Sensitive tests can require dual control, every action is auditable, AI agents explain and plan while the engines carry the evidence, and the security record lives in a dedicated database the customer controls. Free to start, no card required. PROTECT. PREVENT. PERFORM.
+Phantix Labs ltd builds SecureGraph, a cybersecurity command centre for organizations that cannot staff a full security operations centre. SecureGraph takes a team from inventory to evidence: know what you own across domains, apps, APIs, repos and mobile; test what matters with scoped scans and VAPT campaigns; prioritize by explainable risk; and prove remediation with findings that have been verified rather than raw scanner noise. Sensitive tests can require dual control, every action is auditable, AI agents explain and plan while the engines carry the evidence, and the security record lives in a dedicated database the customer controls. Free to start, no card required. PROTECT. PREVENT. PERFORM.
 ```
 
 ```bio:boilerplate-press limit=300w
-About Phantix Security Solutions
+About Phantix Labs ltd
 
-Phantix Security Solutions builds SecureGraph, a cybersecurity command centre for organizations that need real visibility, honest findings and board-ready proof without surrendering control of their security record.
+Phantix Labs ltd builds SecureGraph, a cybersecurity command centre for organizations that need real visibility, honest findings and board-ready proof without surrendering control of their security record.
 
 SecureGraph covers the full programme in one platform: asset and attack-surface intelligence across domains, applications, APIs, repositories and mobile packages; scoped scanning and VAPT campaigns; explainable risk scoring and remediation order; verified findings with business impact; and compliance-aware reporting for both engineers and the board. Alerts reach email, WhatsApp and Telegram, sensitive actions can require dual control, and every action is audit-controlled.
 
@@ -355,25 +355,25 @@ PROTECT. PREVENT. PERFORM.
 
 ## 9. Founder-facing LinkedIn profile
 
-The company page earns trust; a founder profile earns reach. Both say the same things — the personal
+The company page earns trust; a founder profile earns reach. Both say the same things. The personal
 profile just leads with the problem instead of the product.
 
 | Field | Limit | Value |
 |---|---|---|
 | Headline | 220 | see below |
 | About | 2,600 | see below |
-| Location | — | ⚠️ decide |
-| Website | — | `https://phantixlabs.com` |
-| Featured | — | pin the launch film (`brag-output/brag.mp4`) and the landing page |
-| Skills worth listing | — | Vulnerability Assessment · Penetration Testing · Application Security · Cloud Security · Threat Modeling · Risk Management · Security Architecture · Compliance (NDPA, ISO-oriented) · LLM/AI security |
-| Contact info | — | ⚠️ a business address rather than a personal one |
+| Location |. | ⚠️ decide |
+| Website |. | `https://phantixlabs.com` |
+| Featured |. | pin the launch film (`brag-output/brag.mp4`) and the landing page |
+| Skills worth listing |. | Vulnerability Assessment · Penetration Testing · Application Security · Cloud Security · Threat Modeling · Risk Management · Security Architecture · Compliance (NDPA, ISO-oriented) · LLM/AI security |
+| Contact info |. | ⚠️ a business address rather than a personal one |
 
-⚠️ Swap `Founder` if the title is different (CEO / CTO / co-founder), and keep `{{founder email}}`
-out of the live profile until it's replaced — placeholders count as characters, so re-run
-`npm run validate:social` after editing.
+⚠️ Swap `Founder` if the title is different (CEO and CTO and co-founder), and keep `{{founder email}}`
+out of the live profile until it is replaced. Placeholders count as characters, so re-run
+`npm run validate:social` after you edit it.
 
 ```bio:founder-headline limit=220
-Founder at Phantix Security Solutions — we build SecureGraph, a cybersecurity command centre for lean teams: verified findings, dual control, and security data you keep. PROTECT. PREVENT. PERFORM.
+Founder at Phantix Labs ltd — we build SecureGraph, a cybersecurity command centre for lean teams: verified findings, dual control, and security data you keep. PROTECT. PREVENT. PERFORM.
 ```
 
 ```bio:founder-about limit=2600
@@ -411,14 +411,14 @@ PROTECT. PREVENT. PERFORM.
 
 **Voice rules for founder posts:** lead with the problem, never with the product; name the constraint
 you refused to accept; one CTA per post; no client names, live findings, tokens or internal hostnames
-([§12](#12-governance--what-never-gets-posted)); never claim traction we can't evidence.
+([§12](#12-governance--what-never-gets-posted)); never claim traction we cannot evidence.
 
 ---
 
 ## 10. First five launch posts
 
 Same idea per platform, never the same text. LinkedIn carries the argument, X carries the claim,
-Instagram carries the visual. Every draft is ready to paste — just swap the visual in the
+Instagram carries the visual. Every draft is ready to paste. Just swap the visual in the
 `Pair with` line for anything in [§7](#7-asset-matrix--what-goes-where-from-this-repo).
 
 | # | Post | Claim it lands | Pair with |
@@ -427,12 +427,12 @@ Instagram carries the visual. Every draft is ready to paste — just swap the vi
 | 2 | Verified findings | Open findings are the verified ones | `product-reports.jpg` |
 | 3 | Dual control | Initiator and authorizer, not a checkbox | `public/screenshots/app/authorizations.png` |
 | 4 | Your database | Your security record lives under your keys | `privacy-your-database-poster.jpg` |
-| 5 | NDPA / Nigeria | Data residency is architecture, not policy | `product-compliance.jpg` |
+| 5 | NDPA and Nigeria | Data residency is architecture, not policy | `product-compliance.jpg` |
 
-Suggested order: **1 → 4 → 2 → 3 → 5** — introduce the product, lead with the differentiator buyers
+Suggested order: **1 → 4 → 2 → 3 → 5**: introduce the product, lead with the differentiator buyers
 actually ask about, then the quality and governance claims, then the local angle.
 
-### Post 1 — What SecureGraph is
+### Post 1. What SecureGraph is
 
 ```bio:post-1-linkedin limit=3000
 Most security programmes don't have a tooling problem. They have an evidence problem.
@@ -469,7 +469,7 @@ Free to start. Link in bio.
 #cybersecurity #VAPT #pentesting #infosec #appsec #securityoperations #NDPA
 ```
 
-### Post 2 — Verified findings
+### Post 2. Verified findings
 
 ```bio:post-2-linkedin limit=3000
 Open findings are the verified ones. Heuristic noise never gets here.
@@ -507,7 +507,7 @@ If it isn't verified, it doesn't ship to the board.
 #infosec #vulnerabilitymanagement #VAPT #cybersecurity #remediation
 ```
 
-### Post 3 — Dual control
+### Post 3. Dual control
 
 ```bio:post-3-linkedin limit=3000
 One person should not be able to run the most sensitive test in your estate without a second pair of eyes. We made that a platform rule instead of a paragraph in a process document.
@@ -541,7 +541,7 @@ Authorised testing only.
 #cybersecurity #infosec #governance #audit #pentesting
 ```
 
-### Post 4 — Your database
+### Post 4. Your database
 
 ```bio:post-4-linkedin limit=3000
 "Where does our vulnerability list actually live?" is the first question serious buyers ask. Too many platforms answer it with a shrug.
@@ -581,7 +581,7 @@ Privacy by architecture, not by paragraph.
 #cybersecurity #privacy #dataprotection #infosec #NDPA
 ```
 
-### Post 5 — NDPA and the Nigerian market
+### Post 5. NDPA and the Nigerian market
 
 ```bio:post-5-linkedin limit=3000
 A note for the Nigerian market: privacy-first isn't a feature request here. It's the architecture question.
@@ -616,9 +616,9 @@ Local pricing. Local privacy expectations.
 ```
 
 **Cadence and housekeeping:** one LinkedIn post a week and two or three on X; reply to comments
-within a business day; one CTA per post; never post identical text across platforms — the reasoning
-changes, the claim doesn't; keep the first 125 characters of every Instagram caption self-contained,
-because that's all that displays before "more".
+within a business day; one CTA per post; never post identical text across platforms. The reasoning
+changes, the claim does not; keep the first 125 characters of every Instagram caption self-contained,
+because that is all that displays before "more".
 
 ---
 
@@ -638,12 +638,12 @@ because that's all that displays before "more".
    ]
    ```
 
-   Edit only the URLs that actually resolve — a dead `sameAs` entry is worse than none.
+   Edit only the URLs that actually resolve. A dead `sameAs` entry is worse than none.
 
-2. **Social / OG card.** All three `og:image` / `twitter:image` values point at
+2. **Social and OG card.** All three `og:image` and `twitter:image` values point at
    `logo-transparent.png`, which is 1200×302. Feed scrapers want a 1200×630 card; a ≈3.97:1
    wordmark gets letterboxed or badly cropped. Produce one 1200×630 card (wordmark on `#090806`
-   with the tagline) and point both meta tags at it — `landing/index.html` lines 49 and 57.
+   with the tagline) and point both meta tags at it. `landing/index.html` lines 49 and 57.
 
 3. **Consistent link targets.** Send every "start free" link to
    `https://platform.phantixlabs.com/register` and the product link to `https://phantixlabs.com`,
@@ -651,33 +651,33 @@ because that's all that displays before "more".
 
 ---
 
-## 12. Governance — what never gets posted
+## 12. Governance. What never gets posted
 
 | Rule | Why |
 |---|---|
-| No customer names, logos, quotes or ARR we can't evidence | [docs/04](../04-for-investors-and-partners.md) explicitly forbids inventing traction |
+| No customer names, logos, quotes or ARR we cannot evidence | [docs/04](../04-for-investors-and-partners.md) explicitly forbids inventing traction |
 | No live findings, real asset lists, tokens, emails or internal hostnames | Same rule as the brag pipeline; public repos and screenshots count as public |
 | No "zero false positives", no "AI finds vulnerabilities on its own" | [docs/05](../05-product-capabilities.md) and [docs/09](../09-ai-with-accountability.md) rule these out |
 | No "full platform API" framing | Public API is sold only as the AI Agent plan |
 | Say "available now" vs "coming" honestly | Product rule in [docs/05](../05-product-capabilities.md) |
 | Authorized testing only, in every demo we show | [docs/06](../06-privacy-and-trust.md) |
-| Refresh NGN prices from live billing before quoting them | Note in [docs/README.md](../README.md) |
+| Refresh NGN prices from live billing before you quote them | Note in [docs/README.md](../README.md) |
 
 Response expectations worth agreeing up front: reply to comments within one business day; route
-security reports and privacy requests to `support@phantixlabs.com` / `privacy@phantixlabs.com`
+security reports and privacy requests to `support@phantixlabs.com` and `privacy@phantixlabs.com`
 rather than DMs; never debug a customer issue in a public thread.
 
 ---
 
 ## 13. Launch checklist
 
-- [ ] Confirm the ⚠️ facts in [§1](#1-facts-we-may-state-publicly) — city, size, entity name, prices
+- [ ] Confirm the ⚠️ facts in [§1](#1-facts-we-may-state-publicly). City, size, entity name, prices
 - [ ] Claim the handles in [§2](#2-handles--naming) in order, and record which ones were taken
 - [ ] Export avatars: `android-chrome-512x512.png` (512×512) plus a padded `mark-white` variant
 - [ ] Compose the covers per [§7](#7-asset-matrix--what-goes-where-from-this-repo)
 - [ ] Create the 1200×630 OG card and update the two meta tags in `landing/index.html`
-- [ ] Run `npm run validate:social`, then paste the bios plus the founder profile in [§9](#9-founder-facing-linkedin-profile) — replace `{{founder email}}` first
-- [ ] Re-render the launch film vertical with `/brag --format vertical` for Reels / Shorts
+- [ ] Run `npm run validate:social`, then paste the bios plus the founder profile in [§9](#9-founder-facing-linkedin-profile). Replace `{{founder email}}` first
+- [ ] Re-render the launch film vertical with `/brag --format vertical` for Reels and Shorts
 - [ ] Publish LinkedIn page + X + GitHub org first, then Instagram, Facebook and YouTube
 - [ ] Update `sameAs` in `landing/index.html` with the handles that actually resolved
 - [ ] Publish the launch film with the caption from [brag-output/share-copy.txt](../../brag-output/share-copy.txt)
@@ -693,7 +693,7 @@ rather than DMs; never debug a customer issue in a public thread.
 | 1 | Which platforms are actually in scope for launch? (LinkedIn + X + GitHub is the credible minimum) | Instagram, Facebook and YouTube demand a cadence we may not want yet |
 | 2 | City and country for the location fields? | LinkedIn (HQ) and Facebook require them |
 | 3 | Registered entity name and founding year for the press boilerplate? | Press listings usually ask |
-| 4 | Public contact email on social: `support@` or a new `hello@` / `social@`? | The bios currently point at `support@` |
-| 5 | Are the NGN prices safe to quote publicly today? | Site structured data says Starter ₦19,900 / Growth ₦49,900; [docs/07](../07-pricing-and-plans.md) warns to load live prices |
+| 4 | Public contact email on social: `support@` or a new `hello@` and `social@`? | The bios currently point at `support@` |
+| 5 | Are the NGN prices safe to quote publicly today? | Site structured data says Starter ₦19,900 or Growth ₦49,900; [docs/07](../07-pricing-and-plans.md) warns to load live prices |
 | 6 | Founder profile specifics: exact title, business email, city? | [§9](#9-founder-facing-linkedin-profile) is drafted with a `{{founder email}}` placeholder still in it |
-| 7 | Should Instagram / TikTok be fed from `AAAnimations/` motion assets? | Determines whether we need 1080×1920 renders |
+| 7 | Should Instagram and TikTok be fed from `AAAnimations/` motion assets? | Determines whether we need 1080×1920 renders |

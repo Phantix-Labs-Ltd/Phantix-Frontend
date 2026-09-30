@@ -30,8 +30,8 @@ repository (do **not** set a Root Directory above `apps/...` while keeping this 
 
 ## GitHub Actions
 
-- `.github/workflows/ci.yml` — typecheck + build every app on push/PR.
-- `.github/workflows/deploy-<app>.yml` — build and deploy one app to Vercel on push to
+- `.github/workflows/ci.yml`. Typecheck + build every app on push/PR.
+- `.github/workflows/deploy-<app>.yml`. Build and deploy one app to Vercel on push to
   `main`, filtered to that app plus the shared paths (`packages/sg-shared`, `public`,
   `docs`). Also runnable via **workflow_dispatch**.
 

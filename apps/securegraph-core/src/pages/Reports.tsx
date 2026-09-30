@@ -7,7 +7,7 @@ import DocLink from "@sg/components/DocLink";
 import ReportSolutions from "@sg/components/ReportSolutions";
 import { loadReportsBundle, loadReportTypes } from "@sg/data";
 import type { ReportTypeEntry } from "@sg/types";
-import { api, ApiError, publicErrorMessage } from "@sg/api";
+import { api, ApiError, publicErrorMessage, publicDetailCopy } from "@sg/api";
 import { useResource } from "@sg/useResource";
 import { timeAgo, formatBytes, titleCase, cx, normalizeReportRow, extractReportFindings } from "@sg/utils";
 import { useStore } from "@sg/store";
@@ -117,7 +117,8 @@ async function handleDownload(
       (err.detail as { code?: string }).code === "report_artifact_missing";
     const msg =
       artifactMissing && err.detail && typeof err.detail === "object"
-        ? ((err.detail as { hint?: string }).hint || err.message)
+        // The hint is backend prose; normalize it before it reaches the panel.
+        ? (publicDetailCopy((err.detail as { hint?: string }).hint) || err.message)
         : err instanceof Error ? err.message : "Could not download this report format";
     if (onError) onError(msg, !!artifactMissing);
     else console.error("Report download failed:", msg);
@@ -314,7 +315,7 @@ export default function Reports() {
       const queued = {
         id: Number(params.get("report")) || Date.now() % 100000,
         report_type: genForm.report_type as "vapt_campaign",
-        title: `Autonomous pentest · session #${agiSession ?? "—"}`,
+        title: `Autonomous pentest · session #${agiSession ?? "Not set"}`,
         status: "generating" as const,
         formats_requested: genForm.formats,
         campaign_id: genForm.campaign_id ? Number(genForm.campaign_id) : null,
@@ -344,7 +345,7 @@ export default function Reports() {
       ...(fromAgi ? { source: "phantix_agi", session_id: agiSession ? Number(agiSession) : undefined } : {}),
     });
     setGenOpen(false);
-    toast("success", "Report queued", fromAgi ? "Autonomous agent findings submitted to the report engine." : "Large PDF/DOCX exports can take a few minutes — the report status updates as it progresses.");
+    toast("success", "Report queued", fromAgi ? "Autonomous agent findings submitted to the report engine." : "A large PDF or DOCX export can take a few minutes. The report status updates as the export progresses.");
     setTimeout(() => reload(), 800);
   }, [genForm, toast, reload, fromAgi, agiSession, params, setData]);
 
@@ -458,7 +459,7 @@ export default function Reports() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load the report library. Check your connection and retry — your session stays signed in."
+        body="We could not load the report library. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -578,7 +579,7 @@ export default function Reports() {
                         <td className="td hidden text-right font-mono text-[13px] text-phantix-300 lg:table-cell">{stats.after_dedupe ?? extractReportFindings(r).length}</td>
                         <td className="td hidden text-right font-mono text-[13px] text-emerald-400 lg:table-cell">{stats.after_verification ?? 0}</td>
                         <td className="td hidden text-right font-mono text-[13px] text-slate-400 xl:table-cell">{stats.excluded_from_report ?? 0}</td>
-                        <td className="td hidden whitespace-nowrap text-[13px] text-slate-400 xl:table-cell">{(r as any).size_bytes ? formatBytes((r as any).size_bytes) : "—"}</td>
+                        <td className="td hidden whitespace-nowrap text-[13px] text-slate-400 xl:table-cell">{(r as any).size_bytes ? formatBytes((r as any).size_bytes) : "Not set"}</td>
                         <td className="td whitespace-nowrap text-[13px] text-slate-400" title={r.created_at}>{timeAgo(r.created_at)}</td>
                         <td className="td whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                           {r.status !== "generating" && (
@@ -623,7 +624,7 @@ export default function Reports() {
           <p className="text-xs text-slate-500">
             Retention is <strong className="text-slate-400">per report type</strong>: each type keeps
             its own {retention?.max_versions_per_type ?? 3} most recent versions and archives its own
-            oldest with a ReportArchived alert — generating an overview never displaces a VAPT report.
+            oldest with a ReportArchived alert. An overview never displaces a VAPT report.
             For large campaigns, generate in the background to avoid timeouts, then check back as
             the report completes.
           </p>
@@ -635,7 +636,7 @@ export default function Reports() {
         <form className="space-y-4" onSubmit={handleGenerate}>
           {fromAgi && (
             <div className="rounded-xl border border-gold-400/30 bg-gold-400/10 px-3.5 py-2.5 text-xs leading-5 text-gold-200">
-              Autonomous Pentest Agent submitted session #{agiSession ?? "—"} (tag <span className="font-mono">phantix_agi</span>). Generate the client package from those verified findings.
+              Autonomous Pentest Agent submitted session #{agiSession ?? "Not set"} (tag <span className="font-mono">phantix_agi</span>). Generate the client package from those verified findings.
             </div>
           )}
           <div>
@@ -674,7 +675,7 @@ export default function Reports() {
               return (
                 <div className="rounded-lg border border-phantix-700/40 bg-phantix-950/40 px-3 py-2">
                   <p className="text-[13px] leading-5 text-slate-500">
-                    Organization-scoped — this report reads every engine for the whole org, so there
+                    Organization-scoped. This report reads every engine for the whole organization, so there
                     is no campaign to pick.
                   </p>
                 </div>

@@ -27,16 +27,16 @@ export interface FeedbackResult {
 
 export const FEEDBACK_CATEGORY_OPTIONS: { id: FeedbackCategory; label: string; hint: string }[] = [
   { id: "bug", label: "Something is broken", hint: "It should work but does not" },
-  { id: "error", label: "It failed / errored", hint: "An action errored or a page would not load" },
+  { id: "error", label: "It failed or errored", hint: "An action errored or a page would not load" },
   { id: "missing_feature", label: "Missing feature", hint: "There is no way to do what I need" },
   { id: "other", label: "Something else", hint: "Feedback, confusion or a rough edge" },
 ];
 
 export const FEEDBACK_SEVERITY_OPTIONS: { id: FeedbackSeverity; label: string }[] = [
-  { id: "low", label: "Low — annoyance" },
-  { id: "medium", label: "Medium — slows me down" },
-  { id: "high", label: "High — blocking my work" },
-  { id: "critical", label: "Critical — data or security risk" },
+  { id: "low", label: "Low: annoyance" },
+  { id: "medium", label: "Medium: it slows me down" },
+  { id: "high", label: "High: it blocks my work" },
+  { id: "critical", label: "Critical: data or security risk" },
 ];
 
 /**

@@ -19,6 +19,7 @@ import {
   VerificationBadge,
 } from "@sg/ui";
 import { Pagination } from "@sg/components/Pagination";
+import DocLink from "@sg/components/DocLink";
 import {
   INTAKE_APPS,
   emptyIntake,
@@ -155,11 +156,14 @@ export default function FindingsIntake() {
     <div>
       <PageHeader
         title="Findings intake"
-        description="Every raw finding across the scanner, VAPT, code review and SOC stores — flagged when it is not on the tracker or not yet verified, so nothing is worked twice."
+        description="Every raw finding across the scanner, VAPT, code review and SOC stores. SecureGraph flags a finding when it is not on the tracker or not yet verified, so that no work is repeated."
         actions={
-          <button className="btn-ghost !py-1.5 text-xs" onClick={() => void load()} disabled={loading} title="Refresh">
-            <RefreshCw size={13} className={cx("inline", loading && "animate-spin")} />
-          </button>
+          <div className="flex items-center gap-2">
+            <DocLink docId="howto-app-30" label="Findings intake how-to" />
+            <button className="btn-ghost !py-1.5 text-xs" onClick={() => void load()} disabled={loading} title="Refresh">
+              <RefreshCw size={13} className={cx("inline", loading && "animate-spin")} />
+            </button>
+          </div>
         }
       />
 
@@ -289,7 +293,7 @@ export default function FindingsIntake() {
                       )}
                     </td>
                     <td className="td hidden text-[12px] text-slate-500 lg:table-cell">
-                      {f.detected_at ? timeAgo(f.detected_at) : "—"}
+                      {f.detected_at ? timeAgo(f.detected_at) : "Not set"}
                     </td>
                     <td className="td text-right">
                       {f.tracked ? (

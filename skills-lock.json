@@ -6,6 +6,18 @@
       "sourceType": "github",
       "skillPath": "skills/brag/SKILL.md",
       "computedHash": "b1111a4d54d860939164d4f249f9b33563257c11cf2c0545f6ecad6942ef03e5"
+    },
+    "ste100-writer": {
+      "source": "blagoySimandov/asd-ste100-writer-skill",
+      "sourceType": "github",
+      "skillPath": "skills/ste100-writer/SKILL.md",
+      "computedHash": "2eabd9410a4eaf7f60f33382f5c050f8c74590d363fb4916733b346c05877c89"
+    },
+    "technical-writing": {
+      "source": "gwagjiug/technical-writing",
+      "sourceType": "github",
+      "skillPath": "skills/technical-writing/SKILL.md",
+      "computedHash": "92beffc3f4f4e0ec159390095b5a74342e0334f8d97d7f49de1ca032c05d41ed"
     }
   }
 }

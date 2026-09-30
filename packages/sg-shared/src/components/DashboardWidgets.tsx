@@ -101,7 +101,7 @@ export function KpiTile({
               size === "lg" ? "text-[30px]" : "text-[26px]",
             )}
           >
-            {value == null ? "—" : <AnimatedNumber value={value} />}
+            {value == null ? "Not set" : <AnimatedNumber value={value} />}
             {value != null && suffix ? <span className="text-[0.6em] text-slate-400">{suffix}</span> : null}
           </span>
           {delta}

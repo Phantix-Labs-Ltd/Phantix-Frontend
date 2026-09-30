@@ -38,7 +38,7 @@ export function UpgradeGate({
   const detail =
     body ??
     up?.blurb ??
-    "Your current plan does not include this. Upgrading unlocks it immediately — nothing you have already configured is lost.";
+    "Your current plan does not include this. Upgrading unlocks it immediately, and nothing that you already configured is lost.";
   return (
     <Card className={cx("mx-auto max-w-2xl text-center", className)}>
       <div className="flex flex-col items-center gap-3 py-6">
@@ -54,7 +54,7 @@ export function UpgradeGate({
             : "Ask your organization admin to upgrade the plan"}
         </p>
         <p className="text-[13px] text-slate-500">
-          Plan changes and billing are managed on the Platform by your company admin. Cards are charged per company —
+          Plan changes and billing are managed on the Platform by your company admin. Cards are charged per company.
           nothing you have already configured is lost while you wait.
         </p>
       </div>

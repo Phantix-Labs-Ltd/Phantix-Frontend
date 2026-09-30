@@ -1,4 +1,4 @@
-# Pricing & plans
+# Pricing and plans
 
 **Headline:** Simple per-company pricing. **No card required for Free.**
 
@@ -8,11 +8,7 @@ Amounts in **NGN** are set in the Platform billing configuration and may include
 
 ## Three layers of access
 
-```mermaid
-flowchart TD
-  A[Free / trial] -->|baseline tools · know your surface| B[Starter / Growth]
-  B -->|continuous assurance suite · active subscription| C[Add-ons & engagements · heavier packs and human-led projects]
-```
+![Pricing and plans process flow](./diagrams/07-pricing-and-plans.svg)
 
 ---
 
@@ -22,11 +18,11 @@ flowchart TD
 
 Typical inclusions (subject to product config):
 
-- Organization & dual-control foundation
+- Organization and dual-control foundation
 - Asset inventory (fair-use caps)
-- Baseline hygiene (e.g. DNS / light network class tools)
+- Baseline hygiene (e.g. DNS and light network class tools)
 - Email alerts
-- Data-friendly exports (e.g. JSON / Markdown class formats)
+- Data-friendly exports (e.g. JSON or Markdown class formats)
 - **GitHub:** public repositories
 
 **Not included:** Full VAPT suite, private-repo analysis, board PDF package, and AI domain agents (available on paid plans).
@@ -35,36 +31,36 @@ Typical inclusions (subject to product config):
 
 ---
 
-## Starter & Growth
+## Starter and Growth
 
 **Outcome:** Continuous assurance for the business.
 
 Typical inclusions (active paid subscription):
 
-- VAPT campaigns & deeper scanners
+- VAPT campaigns and deeper scanners
 - Risk prioritization
 - Asset intelligence emphasis
-- AI assist & domain agents (as entitled)
-- Channel alerts (e.g. WhatsApp / Telegram where configured)
-- Board-ready report formats (PDF / DOCX class)
+- AI assist and domain agents (as entitled)
+- Channel alerts (e.g. WhatsApp or Telegram where configured)
+- Board-ready report formats (PDF or DOCX class)
 - **GitHub:** public **and** private repositories (via GitHub App)
 
-**CTA:** Start with Starter / See Platform
+**CTA:** Start with Starter or See Platform
 
 ---
 
-## Public API — AI Agent plan (only public API SKU)
+## Public API. AI Agent plan (only public API SKU)
 
 **Product decision:** The **only payment plan we offer for public API access** is for the **Phantix AI Agent**.
 
 | Included with AI Agent API plan | Not sold as “public API” |
 |---------------------------------|---------------------------|
 | Programmatic access to domain agents (SOC, GRC, VAPT, TI, Asset, Chief) | Selling the entire Platform API as a standalone developer product |
-| Invoke / poll runs, skills, approvals, agent callbacks | Unmetered scan/VAPT/report automation without Platform membership |
-| Integrators & automation that need the agent | Free anonymous agent API |
+| Invoke and poll runs, skills, approvals, agent callbacks | Unmetered scan/VAPT/report automation without Platform membership |
+| Integrators and automation that need the agent | Free anonymous agent API |
 
-- **Platform Free / Starter / Growth** still cover the in-app product (inventory, scans, reports, etc.).
-- **Public developers / external integrators** who want API access buy the **AI Agent plan** (see live pricing in-app or sales).
+- **Platform Free or Starter or Growth** still cover the in-app product (inventory, scans, reports, etc.).
+- **Public developers and external integrators** who want API access buy the **AI Agent plan** (see live pricing in-app or sales).
 - Agent use may still require an active org and entitlement checks (402 if not entitled).
 
 Landing copy suggestion:
@@ -75,10 +71,10 @@ Landing copy suggestion:
 
 ## Add-ons
 
-For Starter and Growth subscribers who need more depth — for example:
+For Starter and Growth subscribers who need more depth. For example:
 
 - Compliance workbench depth
-- Cloud / container / secrets / SAST class packs
+- Cloud and container and secrets and SAST class packs
 - SOC console depth
 - Usage-based dynamic mobile
 - AI pentest agent (engagement-style add-on; related to but distinct from public AI Agent API packaging)
@@ -91,17 +87,17 @@ Request or subscribe in-product; staff may provision design partners.
 
 When you need experts or a full assessment program:
 
-- Full external / internal VAPT
+- Full external and internal VAPT
 - Complex application or mobile dynamic testing
 - Guided onboarding and board reporting
 
-**CTA:** Request engagement / Talk to us
+**CTA:** Request engagement or Talk to us
 
 ---
 
-## Partners & enterprise
+## Partners and enterprise
 
-Multi-company delivery, branding, and success packaging — contact sales. Same product engines; different commercial terms.
+Multi-company delivery, branding, and success packaging. Contact sales. Same product engines; different commercial terms.
 
 ---
 
@@ -125,5 +121,5 @@ Billing is built around Paystack (NGN-first). Ask sales for your region.
 Design partners may receive time-bound full-access coupons from Phantix staff.
 
 **Is AI charged separately?**
-- **In the Platform app:** AI assist may be included with Starter / Growth or gated by pack — see live entitlements.
+- **In the Platform app:** AI assist may be included with Starter or Growth or gated by pack. See live entitlements.
 - **Public API:** The only public API payment plan is the **AI Agent plan** (programmatic domain agents), not a full-platform API SKU.

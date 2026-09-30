@@ -9,6 +9,7 @@ import { useStore } from "@sg/store";
 import { APPLICATION_LABEL, type ApplicationKey, type NavSection } from "@sg/shell/types";
 import LatestAssessmentPanel from "../components/LatestAssessment";
 import AppMiniDashboard from "../components/AppMiniDashboard";
+import DocLink from "../components/DocLink";
 
 /**
  * An application's landing page: what this application is, and every page it
@@ -126,6 +127,9 @@ export default function AppLauncher({
           {card?.description ? (
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{card.description}</p>
           ) : null}
+          <div className="mt-2">
+            <DocLink docId="howto-app-38" label="Overview and navigation how-to" />
+          </div>
         </div>
       </motion.div>
 

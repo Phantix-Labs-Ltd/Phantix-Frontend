@@ -20,7 +20,7 @@ const RISK_TONE: Record<string, string> = {
   low: "border-severity-low/30 bg-severity-low/10 text-severity-low",
 };
 
-function text(v: unknown, fallback = "—"): string {
+function text(v: unknown, fallback = "Not set"): string {
   return v == null || v === "" ? fallback : String(v);
 }
 
@@ -43,7 +43,7 @@ export default function ComplianceGaps() {
     } catch (e) {
       setError(
         e instanceof ApiError && e.status === 409
-          ? "Security storage is not activated, so findings cannot be read for mapping."
+          ? "Security storage is not activated, so SecureGraph cannot read findings to build the mapping."
           : e instanceof Error ? e.message : "Failed to run gap analysis.",
       );
     } finally {
@@ -198,7 +198,7 @@ export default function ComplianceGaps() {
                 body={
                   data.gaps.length
                     ? "Every control in this framework is demonstrated by at least one finding."
-                    : "Either your findings cover every mapped control, or no findings have been collected yet."
+                    : "Either your findings cover every mapped control, or SecureGraph has not collected findings yet."
                 }
               />
             ) : (
@@ -259,11 +259,11 @@ function GapRow({ gap }: { gap: ControlGap }) {
           {text(gap.title ?? gap.control_id, "Untitled control")}
         </span>
       </td>
-      <td className="td whitespace-nowrap text-[13px] uppercase text-phantix-300">{gap.framework_id ? String(gap.framework_id) : "—"}</td>
-      <td className="td whitespace-nowrap font-mono text-[13px] text-slate-400">{gap.control_id ? String(gap.control_id) : "—"}</td>
-      <td className="td hidden whitespace-nowrap text-[13px] text-slate-400 md:table-cell">{gap.category ? String(gap.category) : "—"}</td>
+      <td className="td whitespace-nowrap text-[13px] uppercase text-phantix-300">{gap.framework_id ? String(gap.framework_id) : "Not set"}</td>
+      <td className="td whitespace-nowrap font-mono text-[13px] text-slate-400">{gap.control_id ? String(gap.control_id) : "Not set"}</td>
+      <td className="td hidden whitespace-nowrap text-[13px] text-slate-400 md:table-cell">{gap.category ? String(gap.category) : "Not set"}</td>
       <td className="td whitespace-nowrap">
-        {risk ? <span className={cx("chip capitalize", RISK_TONE[risk] ?? "border-phantix-700 text-slate-400")}>{risk}</span> : <span className="text-slate-600">—</span>}
+        {risk ? <span className={cx("chip capitalize", RISK_TONE[risk] ?? "border-phantix-700 text-slate-400")}>{risk}</span> : <span className="text-slate-600">Not set</span>}
       </td>
     </tr>
   );

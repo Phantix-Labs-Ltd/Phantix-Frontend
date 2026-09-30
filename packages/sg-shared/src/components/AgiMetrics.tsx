@@ -27,7 +27,7 @@ function pct(used: number, total: number): number {
 }
 
 function fmtInt(n: number | undefined): string {
-  return typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : "—";
+  return typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : "Not set";
 }
 
 /** Naira, grouped. Provider spend is metered in USD but the product shows NGN,
@@ -35,23 +35,23 @@ function fmtInt(n: number | undefined): string {
 function fmtNgn(n: number | undefined): string {
   return typeof n === "number" && Number.isFinite(n)
     ? `₦${Math.round(n).toLocaleString()}`
-    : "—";
+    : "Not set";
 }
 
 /** Which ceiling refused the work — the AI-credit pool is the pricing-v3 gate. */
 function exhaustionReason(usage: AiUsage): string {
-  if (usage.credits_exhausted) return "AI credits exhausted — top up to continue";
-  if (usage.over_tokens) return "Monthly token ceiling reached — AI work is refused";
-  if (usage.over_spend) return "Monthly spend limit reached — AI work is refused";
-  return "Budget exhausted — new AI work is refused until it is raised or the window rolls over";
+  if (usage.credits_exhausted) return "AI credits exhausted. Top up to continue.";
+  if (usage.over_tokens) return "Monthly token ceiling reached. AI work is refused.";
+  if (usage.over_spend) return "Monthly spend limit reached. AI work is refused.";
+  return "Budget exhausted. New AI work is refused until the budget rises or the window rolls over.";
 }
 
 /** Elapsed run time. Ends at `ended_at` so a finished run stops counting up. */
 export function sessionElapsed(session: AgiSession | null): string {
-  if (!session?.started_at) return "—";
+  if (!session?.started_at) return "Not set";
   const start = new Date(session.started_at).getTime();
   const end = session.ended_at ? new Date(session.ended_at).getTime() : Date.now();
-  if (!Number.isFinite(start) || end < start) return "—";
+  if (!Number.isFinite(start) || end < start) return "Not set";
   const mins = Math.floor((end - start) / 60000);
   if (mins < 60) return `${mins}m`;
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
@@ -112,7 +112,7 @@ function Budget({
         </p>
         <p className="shrink-0 font-mono text-[12px] text-slate-500">
           {render(used)}
-          {hasBudget ? ` / ${render(total)}` : ""}
+          {hasBudget ? ` of ${render(total)}` : ""}
         </p>
       </div>
       <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-phantix-800">
@@ -155,7 +155,7 @@ export default function AgiMetrics({
   const agi = access?.agi;
   const limits = agi?.limits;
   const loop = session?.loop ?? null;
-  const phase = loop?.active_phase || loop?.phase || (running ? "starting" : "—");
+  const phase = loop?.active_phase || loop?.phase || (running ? "starting" : "Not set");
   const turn = typeof loop?.turn === "number" ? loop.turn : null;
   const blockers = loop?.blockers?.length ?? 0;
 
@@ -195,7 +195,7 @@ export default function AgiMetrics({
             tone={running ? "gold" : "default"}
           />
           <Metric label="Phase" value={phase} title={loop?.working_on || undefined} />
-          <Metric label="Turn" value={turn != null ? turn : "—"} />
+          <Metric label="Turn" value={turn != null ? turn : "Not set"} />
           <Metric label="Elapsed" value={sessionElapsed(session)} />
           <Metric
             label="Findings"
@@ -256,7 +256,7 @@ export default function AgiMetrics({
             >
               {typeof usage.credits_remaining === "number"
                 ? `${usage.credits_remaining.toLocaleString()} remaining`
-                : "—"}
+                : "Not set"}
               {usage.free_models_only ? " · free models only" : ""}
             </span>
           </div>
@@ -280,7 +280,7 @@ export default function AgiMetrics({
       {/* Governance & scope */}
       <section className="border-t border-phantix-800/70 pt-2.5">
         <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-          <ShieldCheck size={10} /> Scope &amp; governance
+          <ShieldCheck size={10} /> Scope and governance
         </p>
         <div className={cx("grid gap-3", compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4")}>
           <Metric
@@ -290,8 +290,8 @@ export default function AgiMetrics({
             title={agi?.active_policy_version ? `policy ${agi.active_policy_version}` : undefined}
           />
           <Metric
-            label="Targets / session"
-            value={limits?.max_allowlist_targets ?? "—"}
+            label="Targets per session"
+            value={limits?.max_allowlist_targets ?? "Not set"}
             title="Most targets one session may run against"
           />
           <Metric
@@ -305,7 +305,7 @@ export default function AgiMetrics({
           />
           <Metric
             label="Daily runs"
-            value={limits?.daily_session_limit ?? "—"}
+            value={limits?.daily_session_limit ?? "Not set"}
             title="Set by your org admin in AI settings"
           />
         </div>

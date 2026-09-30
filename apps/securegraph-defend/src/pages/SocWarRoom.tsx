@@ -82,7 +82,7 @@ export default function SocWarRoom() {
                             >
                               <td className="td"><SeverityBadge severity={c.severity as Severity} /></td>
                               <td className="td font-medium text-slate-200">{c.title}</td>
-                              <td className="td text-xs text-slate-500">{c.opened_at ? timeAgo(c.opened_at) : "—"}</td>
+                              <td className="td text-xs text-slate-500">{c.opened_at ? timeAgo(c.opened_at) : "Not set"}</td>
                               <td className="td"><StatusBadge status={c.status} /></td>
                               <td className="td">
                                 {slaBreached ? (

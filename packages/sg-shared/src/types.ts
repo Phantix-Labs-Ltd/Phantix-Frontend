@@ -750,6 +750,9 @@ export interface TrackerFinding {
    * dimensions must not be collapsed into one.
    */
   verification_status?: TrackerVerification;
+  /** Raw-store row the finding came from — keys the remediation artifact. */
+  source_finding_id?: number | null;
+  source_store?: string | null;
 }
 
 /** The three evidence levels the tracker board carries. */

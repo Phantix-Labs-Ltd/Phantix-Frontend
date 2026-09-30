@@ -203,7 +203,7 @@ export default function AssetIntelligenceDashboard() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load asset intelligence. Check your connection and retry — your session stays signed in."
+        body="We could not load asset intelligence. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -215,7 +215,7 @@ export default function AssetIntelligenceDashboard() {
         description="Find out more on each asset you own"
         actions={
           <div className="flex items-center gap-2">
-            <DocLink docId="howto-app-04" label="Discovery how-to" />
+            <DocLink docId="howto-app-35" label="Asset intelligence how-to" />
             <button onClick={handleRefreshIntel} className="btn-ghost text-sm px-3 py-1.5">
               <RefreshCw size={14} />
               Refresh Intel
@@ -358,7 +358,7 @@ export default function AssetIntelligenceDashboard() {
                 </table>
               </div>
             ) : (
-              <EmptyState icon={<Search size={24} />} title="Nothing new" body="All discovered assets have been scanned" />
+              <EmptyState icon={<Search size={24} />} title="Nothing new" body="SecureGraph scanned all discovered assets" />
             );
           })()}
         </Card>
@@ -394,7 +394,7 @@ export default function AssetIntelligenceDashboard() {
             <p className="text-xs text-slate-500">
               {lastHeartbeatAt
                 ? <>Last heartbeat ping <span className="font-mono text-gold-300/90">{timeAgo(lastHeartbeatAt)}</span> · stream healthy</>
-                : liveConnected ? "Connected — awaiting the first heartbeat ping…" : "Reconnecting to the event stream…"}
+                : liveConnected ? "Connected. It is waiting for the first heartbeat ping…" : "Reconnecting to the event stream…"}
             </p>
           </div>
           {/* Animated ECG trace */}
@@ -437,7 +437,7 @@ export default function AssetIntelligenceDashboard() {
                       {valueLabel && !isHeartbeat && <span className="font-mono text-slate-500"> · {valueLabel}</span>}
                     </p>
                     {isHeartbeat && (
-                      <p className="text-[12px] text-gold-400/70">Security database reachable — event stream healthy</p>
+                      <p className="text-[12px] text-gold-400/70">Security database reachable. The event stream is healthy.</p>
                     )}
                   </div>
                   {isRiskEvent(evt.event) && (payload.previousRiskLevel || payload.riskLevel) && (
@@ -453,9 +453,9 @@ export default function AssetIntelligenceDashboard() {
         ) : (
           <div className="flex items-center gap-2 px-5 py-5 text-xs text-slate-500">
             {liveConnected ? (
-              <><span className="h-1.5 w-1.5 rounded-full bg-gold-400" /> Connected — waiting for the first heartbeat ping…</>
+              <><span className="h-1.5 w-1.5 rounded-full bg-gold-400" /> Connected. Waiting for the first heartbeat ping…</>
             ) : (
-              <><span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-severity-medium" /> Offline — live updates will resume on reconnect.</>
+              <><span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-severity-medium" /> Offline. Live updates resume on reconnect.</>
             )}
           </div>
         )}
@@ -466,7 +466,7 @@ export default function AssetIntelligenceDashboard() {
         <Card>
           <CardHeader
             title={<><Network size={16} className="inline text-gold-400 mr-1" /> Relationship Graph</>}
-            subtitle="Force-directed map — assets clustered by tags and asset types, connected to real engine relationships"
+            subtitle="Force-directed map. Assets are clustered by tags and asset types, and connected to real engine relationships"
             action={
               <Link to="/assets/intelligence/graph" className="text-xs font-semibold text-gold-400 hover:text-gold-300 flex items-center gap-1">
                 Open full view <ArrowRight size={12} />
@@ -491,7 +491,7 @@ export default function AssetIntelligenceDashboard() {
       <Card>
         <CardHeader
           title={<><Sparkles size={16} className="inline text-gold-400 mr-1" /> Explain with AI</>}
-          subtitle="Pick any asset — SecureGraph gathers its intelligence, findings, risks, SOC signals and relationships into one comprehensive deep-dive. Never invents CVEs or scores."
+          subtitle="Pick any asset. SecureGraph gathers its intelligence, findings, risks, SOC signals and relationships into one comprehensive deep-dive. It never invents CVEs or scores."
         />
         <div className="space-y-3">
           <div data-asset-picker>
@@ -561,7 +561,7 @@ export default function AssetIntelligenceDashboard() {
             className="btn-secondary w-full text-sm disabled:opacity-50"
           >
             {explainStage === "gather" ? (
-              <><RefreshCw size={14} className="animate-spin" /> Gathering intelligence, findings, risks, SOC & graph data…</>
+              <><RefreshCw size={14} className="animate-spin" /> Gathering intelligence, findings, risks, SOC and graph data…</>
             ) : explainStage === "ai" ? (
               <><Sparkles size={14} className="animate-pulse-soft" /> Composing comprehensive explanation…</>
             ) : (
@@ -570,11 +570,11 @@ export default function AssetIntelligenceDashboard() {
           </button>
           {explanation && (
             <p className="text-[13px] leading-4 text-slate-500">
-              Built from the engines' own records for <span className="font-mono text-slate-400">{explanation.brief.assetLabel}</span> — regenerate after scans or intel refresh to see it evolve.
+              Built from the engines' own records for <span className="font-mono text-slate-400">{explanation.brief.assetLabel}</span>. Regenerate after a scan or an intelligence refresh to see it evolve.
             </p>
           )}
           {allAssets.length === 0 && (
-            <p className="text-xs text-slate-500">Inventory is empty — add assets on the <Link to="/assets" className="text-gold-400 hover:text-gold-300">Asset Inventory</Link> page first.</p>
+            <p className="text-xs text-slate-500">Inventory is empty. Add assets on the <Link to="/assets" className="text-gold-400 hover:text-gold-300">Asset Inventory</Link> page first.</p>
           )}
         </div>
       </Card>
@@ -588,11 +588,11 @@ export default function AssetIntelligenceDashboard() {
         >
           <Card>
             <CardHeader
-              title={<><Sparkles size={16} className="inline text-gold-400 mr-1" /> AI Deep-Dive — {explanation.brief.assetLabel}</>}
+              title={<><Sparkles size={16} className="inline text-gold-400 mr-1" /> AI Deep-Dive: {explanation.brief.assetLabel}</>}
               subtitle={
                 explanation.source === "ai"
-                  ? "Model narrative woven with engine-gathered context — never invents CVEs or scores"
-                  : "Composed deterministically from every engine record — never invents CVEs or scores"
+                  ? "Model narrative woven with engine-gathered context. It never invents CVEs or scores."
+                  : "Composed deterministically from every engine record. It never invents CVEs or scores."
               }
               action={
                 <span className={cx("chip text-[12px]", explanation.source === "ai" ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "text-slate-400")}>
@@ -686,7 +686,7 @@ export default function AssetIntelligenceDashboard() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Section title={`Relationships (${explanation.brief.related.length})`} icon={<GitBranch size={13} />}>
                   {explanation.brief.related.length === 0 ? (
-                    <p className="text-xs text-slate-500">No mapped neighbours — a scan or discovery job will build links.</p>
+                    <p className="text-xs text-slate-500">No mapped neighbours. A scan or discovery job builds the links.</p>
                   ) : (
                     <div className="space-y-1">
                       {explanation.brief.related.slice(0, 6).map((rel) => (
@@ -701,7 +701,7 @@ export default function AssetIntelligenceDashboard() {
                   )}
                 </Section>
 
-                <Section title="Grouping & threats" icon={<TagsIcon size={13} />}>
+                <Section title="Grouping and threats" icon={<TagsIcon size={13} />}>
                   <div className="space-y-2.5">
                     <div className="flex flex-wrap gap-1.5">
                       {explanation.brief.tags.length === 0
@@ -719,7 +719,7 @@ export default function AssetIntelligenceDashboard() {
                     </div>
                     {explanation.brief.criticality && (
                       <p className="flex items-center gap-1.5 text-[13px] text-slate-500">
-                        <Clock size={11} /> criticality <span className="capitalize text-slate-300">{explanation.brief.criticality}</span> · env <span className="capitalize text-slate-300">{explanation.brief.environment ?? "—"}</span>
+                        <Clock size={11} /> criticality <span className="capitalize text-slate-300">{explanation.brief.criticality}</span> · env <span className="capitalize text-slate-300">{explanation.brief.environment ?? "Not set"}</span>
                       </p>
                     )}
                   </div>

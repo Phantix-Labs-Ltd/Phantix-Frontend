@@ -77,7 +77,7 @@ function AssetValue({ value, term }: { value: string; term: string }) {
   );
 }
 
-const Dash = () => <span className="text-slate-600" aria-label="none">—</span>;
+const Dash = () => <span className="text-slate-600" aria-label="none">Not set</span>;
 
 /** Wraps each case-insensitive occurrence of ``term`` in a <mark>. */
 function Highlight({ text, term }: { text: string; term: string }) {
@@ -102,7 +102,7 @@ function Highlight({ text, term }: { text: string; term: string }) {
   return <>{parts}</>;
 }
 
-/** The port an asset listens on, lifted out of the asset name ("—" when none). */
+/** The port an asset listens on, lifted out of the asset name ("Not set" when none). */
 function PortCell({ a }: { a: Asset }) {
   const p = assetPort(a);
   if (!p) return <Dash />;
@@ -534,7 +534,7 @@ export default function AssetListView({
                         <span className="shrink-0 text-phantix-300 [&>svg]:h-[15px] [&>svg]:w-[15px]" aria-hidden="true">
                           {typeIcon[a.asset_type] ?? <Boxes size={15} />}
                         </span>
-                        <span className="truncate" title={a.name && a.name !== a.value ? `${a.value} — ${a.name}` : a.value}>
+                        <span className="truncate" title={a.name && a.name !== a.value ? `${a.value}: ${a.name}` : a.value}>
                           <AssetValue value={assetValueWithoutPort(a)} term={q} />
                         </span>
                         <DiscoveryDot status={a.discoveryStatus} />

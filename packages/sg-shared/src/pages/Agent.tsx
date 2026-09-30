@@ -64,7 +64,7 @@ const DOMAINS = [
   { id: "vapt", label: "VAPT", icon: <Crosshair size={14} />, desc: "Campaign write-ups" },
   { id: "soc", label: "SOC", icon: <Radar size={14} />, desc: "Triage assist" },
   { id: "grc", label: "GRC", icon: <Scale size={14} />, desc: "Explain gaps" },
-  { id: "threat_model", label: "Threat model", icon: <ShieldCheck size={14} />, desc: "Model & explain design threats" },
+  { id: "threat_model", label: "Threat model", icon: <ShieldCheck size={14} />, desc: "Model and explain design threats" },
   { id: "ti", label: "Threat Intel", icon: <Globe2 size={14} />, desc: "Correlate" },
   { id: "asset", label: "Asset", icon: <Boxes size={14} />, desc: "Exposure brief" },
   { id: "cross", label: "Cross", icon: <ShieldAlert size={14} />, desc: "Global ask" },
@@ -109,7 +109,7 @@ function clarifyRequest(raw: string): ClarifyResult {
   if (/^(hi|hello|hey|thanks|thank you|ok|okay|bye)\b/.test(q)) {
     return {
       clear: false,
-      reply: "I'm SecureGraph Agent — your security operations assistant. I can summarize your posture, surface highest-risk assets, list open critical risks, preview report findings, and explain risks or findings. What would you like to look into?",
+      reply: "I am SecureGraph Agent, your security operations assistant. I can summarize your posture and surface highest-risk assets. I can list open critical risks, preview report findings, and explain risks or findings. What would you like to look into?",
       followUps: ["Summarize my current security posture", "Which assets are highest risk?", "How many critical risks are open right now?"],
     };
   }
@@ -139,7 +139,7 @@ function clarifyRequest(raw: string): ClarifyResult {
     const byTopic: Record<string, { reply: string; followUps: string[] }> = {
       assets: {
         reply: "Happy to help with assets. To pull the right information, which one did you have in mind?",
-        followUps: ["Which of my assets are highest risk?", "List assets discovered recently", "Show assets that haven't been scanned"],
+        followUps: ["Which of my assets are highest risk?", "List assets discovered recently", "Show assets that have not been scanned"],
       },
       risks: {
         reply: "I can walk through your risk register. What would you like me to focus on?",
@@ -154,7 +154,7 @@ function clarifyRequest(raw: string): ClarifyResult {
         followUps: ["List my active campaigns", "Status of campaign #12", "What findings would appear in my next report?"],
       },
       findings: {
-        reply: "I can explain findings or summarize them for reports. What's the specific question?",
+        reply: "I can explain findings or summarize them for reports. What is the specific question?",
         followUps: ["What findings would appear in my next report?", "Explain the most critical open finding", "List verified findings"],
       },
       compliance: {
@@ -171,7 +171,7 @@ function clarifyRequest(raw: string): ClarifyResult {
       },
       posture: {
         reply: "I can summarize your posture. What angle would help most?",
-        followUps: ["Summarize my current security posture", "Show my posture trend", "What's driving my posture score down?"],
+        followUps: ["Summarize my current security posture", "Show my posture trend", "What is driving my posture score down?"],
       },
     };
     const m = byTopic[topic];
@@ -181,7 +181,7 @@ function clarifyRequest(raw: string): ClarifyResult {
   // No recognizable topic → guide the user toward a concrete ask.
   return {
     clear: false,
-    reply: "I want to make sure I answer the right thing. Could you be more specific — for example, ask me about your assets, risks, scans, VAPT campaigns, findings, compliance, reports, or SOC queue?",
+    reply: "I want to make sure I answer the right thing. Could you be more specific? For example, ask me about your assets, risks, scans, VAPT campaigns, findings, compliance, reports, or SOC queue?",
     followUps: SUGGESTIONS,
   };
 }
@@ -224,7 +224,7 @@ export default function Agent({ initialMode = "agent", allowAgi = false }: { ini
             <h2 className="mt-5 font-display text-2xl font-bold text-white">SecureGraph Agent is disabled</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
               Your organization has turned off the SecureGraph Agent. Ask an administrator to enable it from the
-              Platform's AI settings to start chatting with your security data.
+              the AI settings of the Platform to start chatting with your security data.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <a href={PLATFORM_AI_URL} className="btn-primary"><Sparkles size={15} /> Enable on Platform</a>
@@ -264,7 +264,10 @@ export default function Agent({ initialMode = "agent", allowAgi = false }: { ini
                 <FileText size={11} className="mr-1 inline" /> Prior reports
               </a>
             )}
-            <DocLink docId="howto-app-13" label="Agent how-to" />
+            <DocLink
+              docId={mode === "agi" ? "howto-app-17" : "howto-app-13"}
+              label={mode === "agi" ? "Autonomous pentest how-to" : "Agent how-to"}
+            />
             <ModelPicker
               surface={mode === "agi" ? "pentest" : "general"}
               value={status?.agent?.model ?? MODEL_BADGE}
@@ -306,7 +309,7 @@ export default function Agent({ initialMode = "agent", allowAgi = false }: { ini
           <Card className="p-8 text-center">
             <Radar size={28} className="mx-auto text-gold-400" />
             <p className="mt-3 font-display text-sm font-semibold text-white">Session stays in the pentest console</p>
-            <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-slate-400">Closing or leaving this tab does not stop a running session. Reopen the Pentest Agent rail anytime to continue from the last transcript.</p>
+            <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-slate-400">If you close or leave this tab, the session continues. Reopen the Pentest Agent rail at any time to continue from the last transcript.</p>
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("phantix:agi-open", { detail: { fullscreen: true } }))}
               className="btn-primary mt-4 !text-xs"
@@ -321,7 +324,7 @@ export default function Agent({ initialMode = "agent", allowAgi = false }: { ini
             onClick={() => setTab("chat")}
             className={cx("flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors", tab === "chat" ? "bg-phantix-800/70 text-white" : "text-slate-400 hover:text-slate-200")}
           >
-            <Bot size={15} /> Chat & investigations
+            <Bot size={15} /> Chat and investigations
           </button>
           <button
             onClick={() => setTab("skills")}
@@ -421,7 +424,7 @@ function AgentChat({
       toast(
         "info",
         "Approval requested",
-        "An authorizer can allow it once in Agent guard — and only once; the authorization is then spent."
+        "An authorizer can allow it once in Agent guard, and only once. The authorization is then spent."
       );
     } catch (e) {
       toast("error", "Could not request approval", e instanceof Error ? e.message : undefined);
@@ -507,7 +510,7 @@ function AgentChat({
             setMessages((prev) => [...prev, m]);
             resetLive();
           } else if (event === "scope_cancelled") {
-            setMessages((prev) => [...prev, { role: "agent", text: "Scope selection cancelled — no organization data was shared with the agent." }]);
+            setMessages((prev) => [...prev, { role: "agent", text: "Scope selection cancelled. No organization data was shared with the agent." }]);
           } else if (event === "error") {
             throw new Error(data?.error ?? "Agent stream error");
           }
@@ -523,7 +526,7 @@ function AgentChat({
           setMessages((m) => [...m, { role: "agent", text: "This reply requires the SecureGraph Agent, which is part of a paid plan. Upgrade on the Platform to keep chatting with your security data." }]);
         } else {
           toast("error", "Agent unavailable", e instanceof Error ? e.message : "");
-          setMessages((m) => [...m, { role: "agent", text: "I couldn't process that request. Please try again." }]);
+          setMessages((m) => [...m, { role: "agent", text: "I could not process that request. Please try again." }]);
         }
       }
     } finally {
@@ -564,7 +567,7 @@ function AgentChat({
             setMessages((prev) => [...prev, { role: "agent", text: (data?.summary ?? summary) || `${domain} analysis complete.`, runId: liveRunId || undefined, skills }]);
             resetLive();
           } else if (event === "scope_cancelled") {
-            setMessages((prev) => [...prev, { role: "agent", text: "Scope selection cancelled — no organization data was shared with the agent." }]);
+            setMessages((prev) => [...prev, { role: "agent", text: "Scope selection cancelled. No organization data was shared with the agent." }]);
           } else if (event === "error") {
             throw new Error(data?.error ?? "Run stream error");
           }
@@ -804,7 +807,7 @@ function AgentChat({
           <p className="mt-2 flex items-center gap-1.5 text-[12px] text-slate-600">
             <ShieldCheck size={10} />
             {chatSend.hint === "queued"
-              ? "Queued — press Enter again to send now, or wait for the current reply."
+              ? "Queued. Press Enter again to send now, or wait for the current reply."
               : "PII redacted before provider calls · skills governed · every interaction audited · agent never changes findings or risk scores"}
           </p>
         </div>
@@ -837,7 +840,7 @@ function SkillsLibrary({ toast }: { toast: (kind: "success" | "error" | "info" |
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   const act = async (skill: AgentSkill, status: "active" | "quarantined" | "retired") => {
-    if (!(await requireDualControl("Changing a skill's governance state requires a dual-control operate session."))) return;
+    if (!(await requireDualControl("Use a dual-control operate session to change the governance state of a skill."))) return;
     setBusyId(skill.id);
     try {
       await setAgentSkillStatus(skill.id, skill.version, status);

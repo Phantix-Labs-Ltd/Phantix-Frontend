@@ -99,7 +99,7 @@ export default function Compliance() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load compliance frameworks. Check your connection and retry — your session stays signed in."
+        body="We could not load compliance frameworks. Check your connection and try again. Your session stays signed in."
       />
     );
   }
