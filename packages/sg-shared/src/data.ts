@@ -3256,9 +3256,9 @@ function trackerSummaryFrom(raw: unknown): TrackerSummary | null {
  */
 export async function loadTrackerSummary(): Promise<TrackerSummary | null> {
   if (isDemoMode()) { await delay(250); return demo.trackerSummary; }
-  // One page at the backend ceiling is enough: the counts come back computed
-  // server-side, and the local derivation below only needs representative rows.
-  const raw = await softOne<any>(`/reports/tracker?limit=${LIST_PAGE_SIZE}`);
+  // Dashboards count **verified** findings only; the tracker page keeps the full
+  // board itself. The summary comes back computed server-side over the filter.
+  const raw = await softOne<any>(`/reports/tracker?verification=verified&limit=${LIST_PAGE_SIZE}`);
   return trackerSummaryFrom(raw);
 }
 

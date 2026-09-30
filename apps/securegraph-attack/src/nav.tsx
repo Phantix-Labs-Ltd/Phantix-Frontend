@@ -6,12 +6,12 @@ import {
   Crosshair,
   FileText,
   FileSignature,
+  KanbanSquare,
   LayoutDashboard,
   Radar,
   SlidersHorizontal,
   Smartphone,
   Target,
-  Wrench,
 } from "lucide-react";
 import type { NavSection } from "@sg/shell/types";
 
@@ -31,7 +31,8 @@ export const NAV: NavSection[] = [
     items: [
       { to: "/scans", label: "Web and API", icon: <Radar size={17} /> },
       { to: "/mobile", label: "Mobile", icon: <Smartphone size={17} /> },
-      { to: "/remediation", label: "Remediation", icon: <Wrench size={17} /> },
+      // The remediation queue is the tracker with fix guidance embedded.
+      { to: "/tracker", label: "Findings tracker", icon: <KanbanSquare size={17} /> },
     ],
   },
   {

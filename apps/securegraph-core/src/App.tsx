@@ -4,6 +4,7 @@ import { ApplicationShell } from "@sg/shell/ApplicationShell";
 import type { ApplicationKey } from "@sg/shell/types";
 import { StoreProvider, ToastViewport, useStore } from "@sg/store";
 import DualControlOverlay from "@sg/components/DualControlOverlay";
+import AiBudgetOverlay from "@sg/components/AiBudgetOverlay";
 import BrandLoader from "@sg/components/BrandLoader";
 import { HOSTS } from "./hosts";
 import { coreNav } from "./nav";
@@ -31,7 +32,8 @@ const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Assets = React.lazy(() => import("./pages/Assets"));
 const Analytics = React.lazy(() => import("./pages/Analytics"));
 const Reports = React.lazy(() => import("./pages/Reports"));
-const Tracker = React.lazy(() => import("./pages/Tracker"));
+// Shared with the attack app so one live board serves both (SSE-backed).
+const Tracker = React.lazy(() => import("@sg/pages/Tracker"));
 const FindingsIntake = React.lazy(() => import("./pages/FindingsIntake"));
 const ReportViewer = React.lazy(() => import("./pages/ReportViewer"));
 const IntegrationsHub = React.lazy(() => import("./pages/IntegrationsHub"));
@@ -118,6 +120,7 @@ export default function App() {
       </Suspense>
       <ToastViewport />
       <DualControlOverlay />
+      <AiBudgetOverlay />
     </StoreProvider>
   );
 }

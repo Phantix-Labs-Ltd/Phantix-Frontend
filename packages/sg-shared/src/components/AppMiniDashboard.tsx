@@ -4,6 +4,8 @@ import {
 } from "lucide-react";
 import { SeverityBadge, StatCardSkeleton, ChartCardSkeleton } from "../ui";
 import { useResource } from "../useResource";
+import { useSseStream } from "../useSse";
+import { isDemoMode } from "../api";
 import {
   loadAlertsBundle, loadPostureTrend, loadRisksBundle, loadScansBundle, loadSocDetectionTrend,
   loadTrackerSummary, loadVaptBundle,
@@ -74,15 +76,35 @@ async function loadAttack() {
 }
 
 function AttackDashboard() {
-  const { data, loading } = useResource(loadAttack, null as Awaited<ReturnType<typeof loadAttack>> | null, "mini-attack");
+  const { data, loading, reload } = useResource(loadAttack, null as Awaited<ReturnType<typeof loadAttack>> | null, "mini-attack");
+  // Live over SSE: a campaign that verifies a finding, or any board write,
+  // refreshes these counts without a manual reload.
+  useSseStream("/org/command-center/stream", {
+    enabled: !isDemoMode(),
+    onEvent: (evt) => {
+      if (
+        evt.event === "trackerUpdated" ||
+        evt.event === "agiFindingRecorded" ||
+        evt.event === "newFindingOnAsset" ||
+        evt.event === "CampaignCompleted"
+      ) {
+        reload();
+      }
+    },
+  });
   if (loading && !data) return <Skeleton />;
   const campaigns = (data?.vapt?.campaigns ?? []) as Row[];
   const findings = (data?.vapt?.findings ?? []) as Row[];
+  // Charts report evidence only: a candidate that has not been verified is not a
+  // finding a dashboard may count.
+  const verifiedFindings = findings.filter(
+    (f) => String(f.verification_status).endsWith("verified") && f.verification_status !== "unverified",
+  );
   const jobs = (data?.scans?.scanJobs ?? []) as Row[];
   const running = campaigns.filter((c) => ["running", "approved", "pending_approval"].includes(String(c.status))).length;
-  const verified = findings.filter((f) => String(f.verification_status).endsWith("verified") && f.verification_status !== "unverified").length;
+  const verified = verifiedFindings.length;
   const doneJobs = jobs.filter((j) => j.status === "completed").length;
-  const testOpen = Number(data?.tracker?.bySurface?.test ?? 0);
+  const testOpen = Number(data?.tracker?.open ?? 0);
   const byStatus = countBy(campaigns, (c) => String(c.status));
   const statusRows = Object.entries(byStatus)
     .map(([k, v]) => ({ key: k, label: titleCase(k.replace(/_/g, " ")), value: v }))
@@ -100,11 +122,11 @@ function AttackDashboard() {
         <KpiTile icon={<Crosshair size={22} />} label="VAPT campaigns" value={campaigns.length} hint={`${running} in flight`} to="/vapt" />
         <KpiTile icon={<CheckCircle2 size={22} />} label="Verified findings" value={verified} hint={`of ${findings.length} campaign findings`} to="/vapt" delay={0.04} />
         <KpiTile icon={<Radar size={22} />} label="Scan jobs" value={jobs.length} hint={`${doneJobs} completed`} to="/scans" delay={0.08} />
-        <KpiTile icon={<Bug size={22} />} label="Open test findings" value={testOpen} hint="Test surface, from the tracker" to="/remediation" delay={0.12} />
+        <KpiTile icon={<Bug size={22} />} label="Open verified findings" value={testOpen} hint="Verified work awaiting a fix" to="/tracker" delay={0.12} />
       </div>
       <div className={PANEL_GRID}>
         <Panel title="Campaign findings by severity" delay={0.1}>
-          {findings.length ? <Donut slices={severitySlices(countBy(findings, (f) => String(f.severity).toLowerCase()))} centerLabel="findings" /> : <PanelEmpty>No campaign findings yet.</PanelEmpty>}
+          {verifiedFindings.length ? <Donut slices={severitySlices(countBy(verifiedFindings, (f) => String(f.severity).toLowerCase()))} centerLabel="findings" /> : <PanelEmpty>No verified campaign findings yet.</PanelEmpty>}
         </Panel>
         <Panel title="Campaigns by status" delay={0.14} action={<ViewAll to="/vapt" />}>
           {statusRows.length ? <RankedBars rows={statusRows} /> : <PanelEmpty>No campaigns yet. Start one from Campaigns.</PanelEmpty>}

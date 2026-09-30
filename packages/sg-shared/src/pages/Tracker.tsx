@@ -2,17 +2,19 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  AlarmClock, ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, CircleDot, FileText, KanbanSquare, Lock, RefreshCw,
-  Search, ShieldAlert, Timer, UserX, X,
+  AlarmClock, ArrowDown, ArrowUp, ArrowUpDown, BookOpen, CheckCircle2, CircleDot, FileText, KanbanSquare, Loader2, Lock, RefreshCw,
+  Search, ShieldAlert, Sparkles, Timer, UserX, Wrench, X,
 } from "lucide-react";
-import { EmptyState, ErrorState, Modal, PageHeader, PageSkeleton, SeverityBadge, Spinner, VerificationBadge, Card } from "@sg/ui";
-import { Pagination, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS as PAGE_SIZES } from "@sg/components/Pagination";
-import DocLink from "@sg/components/DocLink";
-import { loadTrackerBundle, patchTrackerFinding, retestTrackerFinding } from "@sg/data";
-import { useResource } from "@sg/useResource";
-import { useStore } from "@sg/store";
-import { cx, humanize, normalizeTrackerVerification, timeAgo, titleCase, TRACKER_STATUSES } from "@sg/utils";
-import type { TrackerFinding, TrackerSummary, TrackerVerification } from "@sg/types";
+import { EmptyState, ErrorState, Modal, PageHeader, PageSkeleton, SeverityBadge, Spinner, VerificationBadge, Card } from "../ui";
+import { Pagination, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS as PAGE_SIZES } from "../components/Pagination";
+import DocLink from "../components/DocLink";
+import { loadTrackerBundle, patchTrackerFinding, retestTrackerFinding } from "../data";
+import { api, isDemoMode } from "../api";
+import { useSseStream } from "../useSse";
+import { useResource } from "../useResource";
+import { useStore } from "../store";
+import { cx, humanize, normalizeTrackerVerification, timeAgo, titleCase, TRACKER_STATUSES } from "../utils";
+import type { TrackerFinding, TrackerSummary, TrackerVerification } from "../types";
 
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
 const CLOSED = new Set(["fixed", "accepted"]);
@@ -22,14 +24,46 @@ const CLOSED = new Set(["fixed", "accepted"]);
  * unverified candidates back from the client deliverable, but they are still
  * open work and belong on the tracker.
  */
-const EVIDENCE: { key: TrackerVerification | "all"; label: string }[] = [
-  { key: "all", label: "All evidence" },
+const EVIDENCE: { key: TrackerVerification | "verified" | "all"; label: string }[] = [
+  { key: "verified", label: "Verified" },
+  { key: "unverified", label: "Unverified" },
   { key: "auto_verified", label: "Auto-verified" },
   { key: "manually_verified", label: "Human-verified" },
-  { key: "unverified", label: "Unverified" },
+  { key: "all", label: "All evidence" },
 ];
 
+/** A finding is in the verified group when any evidence level above "unverified". */
+function inEvidence(
+  finding: TrackerFinding,
+  scope: TrackerVerification | "verified" | "all",
+): boolean {
+  if (scope === "all") return true;
+  const v = normalizeTrackerVerification(finding.verification_status);
+  if (scope === "verified") return v === "auto_verified" || v === "manually_verified";
+  return v === scope;
+}
+
 type SortKey = "severity" | "status" | "age" | "updated" | "key";
+
+/** The AI fix artifact the remediation agent persists beside a finding. */
+type TrackerProps = {
+  /** Where "Export as a report" goes. Defaults to Core's own report library. */
+  reportHref?: string;
+  /** Base for asset deep links; the attack app points this at Core. */
+  assetBase?: string;
+};
+
+type FixBlock = {
+  status?: string;
+  summary?: string;
+  steps?: string[];
+  references?: string[];
+  validation?: string;
+  effort?: string | null;
+  priority?: string | null;
+  generated_by?: string;
+  model?: string;
+};
 
 const STATUS_ORDER = ["regressed", "retest_failed", "open", "in_progress", "accepted", "fixed"];
 
@@ -66,7 +100,7 @@ function summaryFrom(findings: TrackerFinding[], server: TrackerSummary | null) 
   };
 }
 
-export default function Tracker() {
+export default function Tracker({ reportHref = "/reports", assetBase = "/assets" }: TrackerProps = {}) {
   const { toast, requireDualControl } = useStore();
   const [params, setParams] = useSearchParams();
   const { data, loading, error, reload, setData } = useResource(
@@ -74,13 +108,33 @@ export default function Tracker() {
     { trackerFindings: [] as TrackerFinding[], trackerSummary: null as TrackerSummary | null, trackerNote: null as string | null },
     "tracker",
   );
+  // Live board over SSE: a finding verified or changed in any app lands here at
+  // once, instead of on a polling tick. Falls back to the last load if the
+  // stream is unavailable.
+  useSseStream("/org/command-center/stream", {
+    enabled: !isDemoMode(),
+    onEvent: (evt) => {
+      if (
+        evt.event === "trackerUpdated" ||
+        evt.event === "agiFindingRecorded" ||
+        evt.event === "newFindingOnAsset"
+      ) {
+        reload();
+      }
+    },
+  });
   const findings = data.trackerFindings;
 
   // URL is the source of truth for the view, so it can be shared or linked to.
   const q = params.get("q") ?? "";
   const status = params.get("status") ?? "active";
   const severity = params.get("severity") ?? "all";
-  const evidence = (params.get("evidence") ?? "all") as TrackerVerification | "all";
+  // The board opens on evidenced findings; unverified candidates are still one
+  // click away, so nothing is hidden — it is just not the default work list.
+  const evidence = (params.get("evidence") ?? "verified") as
+    | TrackerVerification
+    | "verified"
+    | "all";
   const owner = params.get("owner") ?? "all";
   const highlightKey = params.get("key") ?? "";
   const [sortKey, sortDir] = (() => {
@@ -116,10 +170,20 @@ export default function Tracker() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchDraft]);
 
-  const summary = useMemo(() => summaryFrom(findings, data.trackerSummary), [findings, data.trackerSummary]);
+  // Tiles reflect the current evidence scope, so "Open work" is the verified
+  // backlog while the board is on the verified view — not every raw candidate.
+  const scoped = useMemo(
+    () => findings.filter((f) => inEvidence(f, evidence)),
+    [findings, evidence],
+  );
+  const summary = useMemo(() => summaryFrom(scoped, null), [scoped]);
   const evidenceCounts = useMemo(() => {
-    const c: Record<string, number> = { all: findings.length, unverified: 0, auto_verified: 0, manually_verified: 0 };
-    for (const f of findings) c[normalizeTrackerVerification(f.verification_status)] += 1;
+    const c: Record<string, number> = { all: findings.length, verified: 0, unverified: 0, auto_verified: 0, manually_verified: 0 };
+    for (const f of findings) {
+      const v = normalizeTrackerVerification(f.verification_status);
+      c[v] += 1;
+      if (v === "auto_verified" || v === "manually_verified") c.verified += 1;
+    }
     return c;
   }, [findings]);
 
@@ -131,7 +195,7 @@ export default function Tracker() {
       if (status === "overdue" && !isOverdue(f)) return false;
       if (status !== "active" && status !== "all" && status !== "overdue" && s !== status) return false;
       if (severity !== "all" && f.severity !== severity) return false;
-      if (evidence !== "all" && normalizeTrackerVerification(f.verification_status) !== evidence) return false;
+      if (!inEvidence(f, evidence)) return false;
       if (owner === "unassigned" && f.owner) return false;
       if (
         needle &&
@@ -217,6 +281,36 @@ export default function Tracker() {
     }
   };
 
+  // Remediation popup: a verified finding opens its fix guidance in place, so the
+  // board and the fix live on one page. Generation is synchronous; an existing
+  // artifact is returned unchanged.
+  const [fixTarget, setFixTarget] = useState<TrackerFinding | null>(null);
+  const [fixBusy, setFixBusy] = useState(false);
+  const [fixBlock, setFixBlock] = useState<FixBlock | null>(null);
+  const [fixError, setFixError] = useState<string | null>(null);
+  const openFix = async (f: TrackerFinding) => {
+    setFixTarget(f);
+    setFixBlock(null);
+    setFixError(null);
+    if (f.source_finding_id == null) {
+      setFixError("This finding has no source row to attach fix guidance to.");
+      return;
+    }
+    setFixBusy(true);
+    try {
+      const res = await api.post<{ remediation?: FixBlock; error?: string | null }>(
+        `/scans/results/${f.source_finding_id}/remediation`,
+        {},
+      );
+      if (res?.remediation) setFixBlock(res.remediation);
+      else setFixError(res?.error || "The AI engine could not produce guidance for this finding. Try again.");
+    } catch (err: any) {
+      setFixError(err?.message ?? "Could not generate fix guidance");
+    } finally {
+      setFixBusy(false);
+    }
+  };
+
   if (loading && findings.length === 0) return <PageSkeleton variant="table" rows={8} />;
   if (error && findings.length === 0) {
     return <ErrorState onRetry={reload} body="We could not load the findings tracker. Check your connection and try again. Your session stays signed in." />;
@@ -234,7 +328,8 @@ export default function Tracker() {
   if (q) chips.push({ key: "q", label: `Search: “${q}”`, clear: () => update({ q: null }) });
   if (status !== "active") chips.push({ key: "status", label: `Status: ${status === "all" ? "Any" : titleCase(status)}`, clear: () => update({ status: null }) });
   if (severity !== "all") chips.push({ key: "sev", label: `Severity: ${titleCase(severity)}`, clear: () => update({ severity: null }) });
-  if (evidence !== "all") chips.push({ key: "ev", label: `Evidence: ${EVIDENCE.find((e) => e.key === evidence)?.label}`, clear: () => update({ evidence: null }) });
+  // Verified is the default view, so only a deliberate change gets a chip.
+  if (evidence !== "verified" && evidence !== "all") chips.push({ key: "ev", label: `Evidence: ${EVIDENCE.find((e) => e.key === evidence)?.label}`, clear: () => update({ evidence: null }) });
   if (owner !== "all") chips.push({ key: "owner", label: "Unassigned only", clear: () => update({ owner: null }) });
 
   const SortHeader = ({ k, children, className }: { k: SortKey; children: React.ReactNode; className?: string }) => {
@@ -257,7 +352,7 @@ export default function Tracker() {
         actions={
           <>
             <DocLink docId="howto-app-12" label="Findings tracker how-to" />
-            <Link to="/reports" className="btn-secondary">
+            <Link to={reportHref} className="btn-secondary">
               <FileText size={15} /> Export as a report
             </Link>
           </>
@@ -334,7 +429,7 @@ export default function Tracker() {
               <button
                 key={key}
                 type="button"
-                onClick={() => update({ evidence: key === "all" ? null : key })}
+                onClick={() => update({ evidence: key })}
                 aria-pressed={evidence === key}
                 className={cx(
                   "rounded-md border px-2.5 py-1.5 text-[13px] transition-colors",
@@ -413,7 +508,7 @@ export default function Tracker() {
                         <td className="td whitespace-nowrap"><SeverityBadge severity={f.severity} /></td>
                         <td className="td max-w-[14rem]">
                           <span className="block truncate font-mono text-[13px] text-slate-400" title={f.asset_value}>
-                            {f.asset_id != null ? <Link to={`/assets?q=${encodeURIComponent(f.asset_value || "")}`} className="hover:text-gold-300">{f.asset_value}</Link> : f.asset_value}
+                            {f.asset_id != null ? <Link to={`${assetBase}?q=${encodeURIComponent(f.asset_value || "")}`} className="hover:text-gold-300">{f.asset_value}</Link> : f.asset_value}
                           </span>
                         </td>
                         <td className="td hidden max-w-[12rem] xl:table-cell">
@@ -439,6 +534,17 @@ export default function Tracker() {
                                 <option key={s} value={s}>{titleCase(s)}</option>
                               ))}
                             </select>
+                            {inEvidence(f, "verified") && f.source_finding_id != null && (
+                              <button
+                                type="button"
+                                title="Open the AI fix guidance for this verified finding"
+                                aria-label={`Fix guidance for ${f.finding_key}`}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20"
+                                onClick={() => void openFix(f)}
+                              >
+                                <Wrench size={13} />
+                              </button>
+                            )}
                             <button
                               type="button"
                               title="Retest just this finding's asset; closes it automatically when the fix is confirmed"
@@ -520,6 +626,71 @@ export default function Tracker() {
                 <Lock size={10} className="mr-1 inline text-gold-400" /> Retesting needs an operate session when dual control is configured.
               </p>
             </form>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!fixTarget}
+        onClose={() => setFixTarget(null)}
+        title={fixTarget ? `How to fix: ${fixTarget.title}` : "Fix guidance"}
+        wide
+      >
+        {fixTarget && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <SeverityBadge severity={fixTarget.severity} />
+              <span className="font-mono text-[12px] text-slate-500">{fixTarget.finding_key}</span>
+              {fixBlock?.priority && <span className="chip capitalize">{fixBlock.priority}</span>}
+              {fixBlock?.effort && <span className="chip capitalize text-slate-400">effort: {fixBlock.effort}</span>}
+            </div>
+
+            {fixBusy && (
+              <p className="flex items-center gap-2 text-[13px] text-slate-400">
+                <Loader2 size={14} className="animate-spin text-gold-400" /> Generating fix guidance…
+              </p>
+            )}
+            {fixError && !fixBusy && (
+              <p className="flex items-start gap-1.5 text-[13px] text-severity-high">
+                <ShieldAlert size={14} className="mt-0.5 shrink-0" /> {fixError}
+              </p>
+            )}
+
+            {fixBlock?.summary && <p className="text-[13px] leading-relaxed text-slate-200">{fixBlock.summary}</p>}
+
+            {Array.isArray(fixBlock?.steps) && fixBlock!.steps!.length > 0 && (
+              <ol className="space-y-2">
+                {fixBlock!.steps!.filter((s) => String(s).trim()).map((step, i) => (
+                  <li key={i} className="flex gap-2.5 text-[13px] leading-relaxed text-slate-300">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-phantix-600/50 bg-phantix-800/60 text-[12px] font-semibold text-phantix-200">{i + 1}</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+
+            {fixBlock?.validation && (
+              <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2">
+                <p className="text-[12px] font-semibold uppercase tracking-wider text-emerald-300/80">How to confirm the fix</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-emerald-100/90">{fixBlock.validation}</p>
+              </div>
+            )}
+
+            {Array.isArray(fixBlock?.references) && fixBlock!.references!.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <BookOpen size={13} className="text-slate-500" />
+                {fixBlock!.references!.map((r, i) => (
+                  <span key={i} className="chip border-slate-500/30 bg-slate-500/10 text-slate-400">{r}</span>
+                ))}
+              </div>
+            )}
+
+            <p className="flex items-center gap-1.5 text-[12px] text-slate-600">
+              <Sparkles size={11} /> Generated by AI{fixBlock?.model ? ` · ${fixBlock.model}` : ""}
+            </p>
+            <p className="text-[12px] leading-5 text-slate-500">
+              Apply the fix on the asset, then run a unit retest. A fix that is not retested stays open.
+            </p>
           </div>
         )}
       </Modal>
