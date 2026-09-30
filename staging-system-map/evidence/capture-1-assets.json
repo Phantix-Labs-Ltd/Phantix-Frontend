@@ -1,0 +1,307 @@
+{
+ "ok": true,
+ "real": true,
+ "source": "live staging https://staging.phantix.site",
+ "org": 4,
+ "captured_at": "2026-09-30T08:28:02.510Z",
+ "span_ms": 9772,
+ "accounts": {
+  "initiator": {
+   "email": "agi-test@phantixvulnserver.online",
+   "device": "agi-test-device-0001",
+   "user": 14
+  },
+  "authorizer": {
+   "email": "agi-authorizer@phantixvulnserver.online",
+   "device": "agi-authorizer-device-0001",
+   "user": 15
+  }
+ },
+ "phases": [
+  {
+   "id": "assets",
+   "label": "Phase 1 — asset onboarding (3 for VAPT, 3 for AGI)",
+   "t0": 1,
+   "t1": 9769,
+   "summary": "6 assets in org 4 (3 VAPT + 3 AGI)"
+  }
+ ],
+ "hops": [
+  {
+   "at": 1466,
+   "phase": "assets",
+   "status": 200,
+   "ms": 1465,
+   "path": "/api/v1/org-users/auth/login",
+   "method": "POST",
+   "note": "initiator login"
+  },
+  {
+   "at": 1730,
+   "phase": "assets",
+   "status": 200,
+   "ms": 261,
+   "path": "/api/v1/assets?limit=200",
+   "method": "GET",
+   "note": "baseline asset count"
+  },
+  {
+   "at": 2309,
+   "phase": "assets",
+   "status": 201,
+   "ms": 579,
+   "path": "/api/v1/assets",
+   "method": "POST",
+   "note": "vapt: https://juice.phantixvulnserver.online"
+  },
+  {
+   "at": 3053,
+   "phase": "assets",
+   "status": 201,
+   "ms": 508,
+   "path": "/api/v1/assets",
+   "method": "POST",
+   "note": "vapt: https://dvwa.phantixvulnserver.online"
+  },
+  {
+   "at": 3857,
+   "phase": "assets",
+   "status": 201,
+   "ms": 574,
+   "path": "/api/v1/assets",
+   "method": "POST",
+   "note": "vapt: https://bwapp.phantixvulnserver.online"
+  },
+  {
+   "at": 4557,
+   "phase": "assets",
+   "status": 201,
+   "ms": 475,
+   "path": "/api/v1/assets",
+   "method": "POST",
+   "note": "agi: https://crapi.phantixvulnserver.online"
+  },
+  {
+   "at": 5255,
+   "phase": "assets",
+   "status": 201,
+   "ms": 471,
+   "path": "/api/v1/assets",
+   "method": "POST",
+   "note": "agi: https://vampi.phantixvulnserver.online"
+  },
+  {
+   "at": 6237,
+   "phase": "assets",
+   "status": 201,
+   "ms": 748,
+   "path": "/api/v1/assets",
+   "method": "POST",
+   "note": "agi: https://dvga.phantixvulnserver.online"
+  },
+  {
+   "at": 6896,
+   "phase": "assets",
+   "status": 200,
+   "ms": 431,
+   "path": "/api/v1/assets?limit=200",
+   "method": "GET",
+   "note": "asset count after onboarding"
+  },
+  {
+   "at": 7463,
+   "phase": "assets",
+   "status": 200,
+   "ms": 566,
+   "path": "/api/v1/asset-tags",
+   "method": "GET",
+   "note": "tags"
+  },
+  {
+   "at": 7879,
+   "phase": "assets",
+   "status": 200,
+   "ms": 416,
+   "path": "/api/v1/assets/1",
+   "method": "GET",
+   "note": "read back #1",
+   "quiet": true
+  },
+  {
+   "at": 8386,
+   "phase": "assets",
+   "status": 200,
+   "ms": 507,
+   "path": "/api/v1/assets/2",
+   "method": "GET",
+   "note": "read back #2",
+   "quiet": true
+  },
+  {
+   "at": 8780,
+   "phase": "assets",
+   "status": 200,
+   "ms": 394,
+   "path": "/api/v1/assets/3",
+   "method": "GET",
+   "note": "read back #3",
+   "quiet": true
+  },
+  {
+   "at": 9191,
+   "phase": "assets",
+   "status": 200,
+   "ms": 410,
+   "path": "/api/v1/assets/4",
+   "method": "GET",
+   "note": "read back #4",
+   "quiet": true
+  },
+  {
+   "at": 9511,
+   "phase": "assets",
+   "status": 200,
+   "ms": 319,
+   "path": "/api/v1/assets/5",
+   "method": "GET",
+   "note": "read back #5",
+   "quiet": true
+  },
+  {
+   "at": 9769,
+   "phase": "assets",
+   "status": 200,
+   "ms": 258,
+   "path": "/api/v1/assets/6",
+   "method": "GET",
+   "note": "read back #6",
+   "quiet": true
+  }
+ ],
+ "events": [
+  {
+   "at": 1,
+   "phase": "assets",
+   "kind": "phase",
+   "text": "▶ Phase 1 — asset onboarding (3 for VAPT, 3 for AGI)"
+  },
+  {
+   "at": 2310,
+   "phase": "assets",
+   "kind": "done",
+   "text": "asset #1 created — https://juice.phantixvulnserver.online",
+   "node": "eng-asset"
+  },
+  {
+   "at": 3054,
+   "phase": "assets",
+   "kind": "done",
+   "text": "asset #2 created — https://dvwa.phantixvulnserver.online",
+   "node": "eng-asset"
+  },
+  {
+   "at": 3857,
+   "phase": "assets",
+   "kind": "done",
+   "text": "asset #3 created — https://bwapp.phantixvulnserver.online",
+   "node": "eng-asset"
+  },
+  {
+   "at": 4558,
+   "phase": "assets",
+   "kind": "done",
+   "text": "asset #4 created — https://crapi.phantixvulnserver.online",
+   "node": "eng-asset"
+  },
+  {
+   "at": 5256,
+   "phase": "assets",
+   "kind": "done",
+   "text": "asset #5 created — https://vampi.phantixvulnserver.online",
+   "node": "eng-asset"
+  },
+  {
+   "at": 6237,
+   "phase": "assets",
+   "kind": "done",
+   "text": "asset #6 created — https://dvga.phantixvulnserver.online",
+   "node": "eng-asset"
+  },
+  {
+   "at": 9769,
+   "phase": "assets",
+   "kind": "phase",
+   "text": "■ 6 assets in org 4 (3 VAPT + 3 AGI)"
+  }
+ ],
+ "sse": [],
+ "notes": {
+  "actor": {
+   "who": "initiator",
+   "user": 14,
+   "email": "agi-test@phantixvulnserver.online",
+   "mfa": false
+  },
+  "assets_before": 0,
+  "assets_after": 6,
+  "assets_vapt": [
+   {
+    "id": 1,
+    "value": "https://juice.phantixvulnserver.online",
+    "name": "OWASP Juice Shop (lab)",
+    "criticality": "high",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   },
+   {
+    "id": 2,
+    "value": "https://dvwa.phantixvulnserver.online",
+    "name": "DVWA (lab)",
+    "criticality": "high",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   },
+   {
+    "id": 3,
+    "value": "https://bwapp.phantixvulnserver.online",
+    "name": "bWAPP (lab)",
+    "criticality": "medium",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   }
+  ],
+  "assets_agi": [
+   {
+    "id": 4,
+    "value": "https://crapi.phantixvulnserver.online",
+    "name": "crAPI (lab)",
+    "criticality": "critical",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   },
+   {
+    "id": 5,
+    "value": "https://vampi.phantixvulnserver.online",
+    "name": "VAmPI (lab)",
+    "criticality": "high",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   },
+   {
+    "id": 6,
+    "value": "https://dvga.phantixvulnserver.online",
+    "name": "Damn Vulnerable GraphQL (lab)",
+    "criticality": "medium",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   }
+  ],
+  "asset_tags": 11
+ }
+}

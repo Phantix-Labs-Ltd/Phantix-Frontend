@@ -1,0 +1,11 @@
+mode=plan apply=false db=db-vtm5vs1bjkltpx3atda799cv-214640649641 sec=bench-security-db
+──────── platform ────────
+*** PLAN — counting only, then rolling back ***
+ERROR:  syntax error at or near ":"
+LINE 10:   IF :apply AND n > 0 THEN
+              ^
+──────── security ────────
+*** PLAN — counting only, then rolling back ***
+ERROR:  syntax error at or near ":"
+LINE 17:     total, CASE WHEN :apply THEN '(truncating)' ELSE '(would...
+                              ^

@@ -1,0 +1,133 @@
+════════ PLATFORM db (org 4) ════════
+NOTICE:    [platform] 
+assets                             (absent)
+NOTICE:    [platform] asset_tags                          (absent)
+NOTICE:    [platform] asset_tag_assignments               (absent)
+NOTICE:    [platform] asset_history                       (absent)
+NOTICE:    [platform] asset_relationships                 (absent)
+NOTICE:    [platform] asset_candidates                    (absent)
+NOTICE:    [platform] discovery_jobs
+scans                (absent)
+NOTICE:    [platform] scan_jobs                           (absent)
+NOTICE:    [platform] scan_work_items                     (absent)
+NOTICE:    [platform] scan_results
+findings               (absent)
+NOTICE:    [platform] assessments
+code_review_findings    (absent)
+NOTICE:    [platform] verification_evidence               (absent)
+NOTICE:    [platform] remediation_tasks                   (absent)
+NOTICE:    [platform] compliance_evidence
+risks           (absent)
+NOTICE:    [platform] risk_treatments                     (absent)
+NOTICE:    [platform] risk_history                        (absent)
+NOTICE:    [platform] risk_assessments
+vapt_campaigns     (absent)
+NOTICE:    [platform] vapt_campaign_steps                25
+NOTICE:    [platform] vapt_mining_patterns               20
+NOTICE:    [platform] vapt_org_settings
+agi_engagements   (absent)
+NOTICE:    [platform] agi_sessions                        (no organization_id — skipped)
+NOTICE:    [platform] agi_transcripts                     (no organization_id — skipped)
+NOTICE:    [platform] agi_actions                         (no organization_id — skipped)
+NOTICE:    [platform] agi_engine_invocations
+agi_capabil  (absent)
+NOTICE:    [platform] agi_engine_capabilities            28
+NOTICE:    [platform] agi_knowledge_summaries
+agi_openco  (absent)
+NOTICE:    [platform] agi_skill_outcomes                 135
+NOTICE:    [platform] agi_skills                         60
+NOTICE:    [platform] agi_org_agreement_acceptances
+agi_  (absent)
+NOTICE:    [platform] agi_org_context_packs              1
+NOTICE:    [platform] agi_org_test_accounts              10
+NOTICE:    [platform] agi_usage_policies
+ai_agent_runs    (absent)
+NOTICE:    [platform] ai_agent_repo_jobs                 4
+NOTICE:    [platform] ai_agent_skills                    4
+NOTICE:    [platform] ai_agent_approvals
+soc_detections   (absent)
+NOTICE:    [platform] soc_cases                           (absent)
+NOTICE:    [platform] soc_case_notes
+alert_events         (absent)
+NOTICE:    [platform] alert_deliveries
+notifications      (absent)
+NOTICE:    [platform] org_application_logs               15940
+NOTICE:    [platform] application_logs                    (absent)
+NOTICE:    [platform] platform_events                    171
+NOTICE:    [platform] audit_events
+audit_pending_actions  (absent)
+
+════════ SECURITY db (schema phantix, org 4) ════════
+NOTICE:    [platform] ai_audit_logs                      4211
+NOTICE:    [platform] server_logs
+product_projects        (absent)
+NOTICE:    [platform] product_components                  (absent)
+NOTICE:    [platform] product_flows                       (absent)
+NOTICE:    [platform] product_documents                   (absent)
+NOTICE:    [platform] product_confirmations
+product_clar  (absent)
+NOTICE:    [platform] threat_clarifications
+target_intel  (absent)
+NOTICE:    [platform] deployed_agents
+integration_instal  (absent)
+NOTICE:    [platform] organization_integrations
+github_i  (absent)
+NOTICE:    [platform] github_repositories                9
+NOTICE:    [platform] github_repository_review_settings
+  (absent)
+NOTICE:    [platform] branch_review_usage_events
+complia  (absent)
+NOTICE:    [platform] compliance_answerer_sessions
+exter  (absent)
+NOTICE:    [platform] service_feedback
+support_tickets    (absent)
+NOTICE:    [platform] access_coupon_redemptions
+otp_chal  (absent)
+NOTICE:    [platform] device_confirm_challenges          66
+NOTICE:    [platform] organization_password_resets       1
+NOTICE:    [platform] organization_user_login_links
+app_  (absent)
+NOTICE:    [platform] organization_user_sessions
+launch_  (absent)
+NOTICE:    [platform] launch_sandbox_update_receipts
+clo  (absent)
+NOTICE:    [platform] TOTAL 20685 rows would be deleted
+NOTICE:    [security] report_tracker_history             4
+NOTICE:    [security] report_finding_tracker             4
+NOTICE:    [security] asset_tag_assignments              279
+NOTICE:    [security] asset_tags                         39
+NOTICE:    [security] assessment_findings                4
+NOTICE:    [security] assessments                        1
+NOTICE:    [security] risks                              22
+NOTICE:    [security] product_projects                   1
+NOTICE:    [security] product_components                 40
+NOTICE:    [security] product_confirmations              3
+NOTICE:    [security] soc_detections                     41
+NOTICE:    [security] server_logs                        81170
+NOTICE:    [security] risk_assessments                   1
+NOTICE:    [security] scan_results                       25
+NOTICE:    [security] risk_treatments                    1
+NOTICE:    [security] risk_history                       1
+NOTICE:    [security] scan_work_items                    1
+NOTICE:    [security] soc_detection_rules                9
+NOTICE:    [security] agi_decisions                      1
+NOTICE:    [security] asset_relationships                14
+NOTICE:    [security] agi_intelligence_nodes             1
+NOTICE:    [security] agi_intelligence_edges             4
+NOTICE:    [security] agi_session_packages               2
+NOTICE:    [security] target_intel_snapshots             20
+NOTICE:    [security] discovery_jobs                     7
+NOTICE:    [security] scan_jobs                          1
+NOTICE:    [security] deployed_agents                    1
+NOTICE:    [security] product_flows                      19
+NOTICE:    [security] product_documents                  1
+NOTICE:    [security] asset_history                      33
+NOTICE:    [security] application_logs                   14455
+NOTICE:    [security] assets                             37
+NOTICE:    [security] TOTAL 96242 rows across 65 tables
+
+════════ REDIS (org-4 transient keys only; broker + redbeat untouched) ════════
+  scan_spool:* → 2 key(s)
+  tool_lock:org:4* → 0 key(s)
+  tool_lock:global_scan_slots → 0 key(s)
+  secdb:creds:4* → 1 key(s)

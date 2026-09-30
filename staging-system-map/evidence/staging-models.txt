@@ -1,0 +1,58 @@
+=== configured model/provider keys (boolean, no values) ===
+ANTHROPIC_API_KEY = EMPTY
+BURP_API_URL = EMPTY
+VIRUSTOTAL_API_KEY = SET(64 chars)
+WHATSAPP_META_ACCESS_TOKEN = EMPTY
+BURP_MCP_ENDPOINT = EMPTY
+QWEN_API_KEY = EMPTY
+NVIDIA_BASE_URL = SET(52 chars)
+AGENTROUTER_API_KEY = SET(51 chars)
+ELASTICSEARCH_ENABLED = SET(5 chars)
+DEEPSEEK_API_KEY = SET(35 chars)
+GITHUB_APP_ID = SET(7 chars)
+CAIDO_GRAPHQL_URL = EMPTY
+PAYSTACK_SECRET_KEY = SET(48 chars)
+NVIDIA_API_KEY = SET(70 chars)
+TYPESAFE_BASE_URL = SET(23 chars)
+KIMI_API_KEY = SET(51 chars)
+OPENROUTER_API_KEY = EMPTY
+OPENAI_API_KEY = EMPTY
+TELEGRAM_BOT_TOKEN = EMPTY
+ZAI_API_KEY = SET(49 chars)
+XAI_API_KEY = EMPTY
+TYPESAFE_API_KEY = SET(107 chars)
+NVD_API_KEY = SET(36 chars)
+=== AGI runner model/provider keys ===
+ZAI_BASE_URL = SET(28 chars)
+TYPESAFE_MODEL = SET(10 chars)
+PHANTIX_AGI_GLM_FALLBACK = SET(4 chars)
+DEEPSEEK_API_KEY = SET(35 chars)
+DEEPSEEK_API_BASE = SET(24 chars)
+TAVILY_API_KEY = EMPTY
+TYPESAFE_API_KEY = SET(107 chars)
+ZAI_MODEL = SET(13 chars)
+DEEPSEEK_MODEL = SET(17 chars)
+PHANTIX_AGI_DEEPSEEK_ONLY = SET(4 chars)
+ZAI_API_KEY = SET(49 chars)
+TYPESAFE_BASE_URL = SET(23 chars)
+=== origin egress test from api container (model reachability) ===
+https://api.deepseek.com -> 401
+https://api.z.ai -> 301
+https://api.typesafe.ai -> 404
+https://api.nvidia.com -> 000
+https://api.moonshot.cn -> 200
+https://agentrouter.org -> 200
+=== second hosts ===
+169.58.162.46:22 closed/filtered
+169.58.162.46:443 closed/filtered
+169.58.110.182:22 OPEN
+169.58.110.182:443 OPEN
+=== phantix-security db schema list ===
+public
+phantix
+=== platform db: orgs ===
+1|NexaPay|nexapay-djprr96fzh
+3|QA Test Company|qa-test-company
+4|Phantix Vulnerable Organization|phantix-vulnerable-organization-ilws4azy6u
+11|Phantix Funnel (anonymous test-pentest)|phantix-funnel
+12|Bifoluwa|bifoluwa-augfgvw4tv

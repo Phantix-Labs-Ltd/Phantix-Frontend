@@ -1,0 +1,1364 @@
+{
+  "ok": true,
+  "real": true,
+  "captured_at": "2026-09-30T07:14:32.601Z",
+  "source": "live staging https://staging.phantix.site",
+  "org": 4,
+  "account": "agi-test@phantixvulnserver.online",
+  "scoped_asset_ids": [
+    37,
+    36
+  ],
+  "scope_card_status": "needs_selection",
+  "scope_grant_issued": true,
+  "assistant_frames": 188,
+  "assistant_delta_frames": 82,
+  "assistant_reasoning_frames": 102,
+  "analysis_id": "7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+  "hop_count": 22,
+  "hops": [
+    {
+      "at_ms": 1399,
+      "node": "edge→api→db",
+      "kind": "http",
+      "method": "POST",
+      "path": "/org-users/auth/login",
+      "status": 200,
+      "ms": 1396,
+      "note": "mfa=false"
+    },
+    {
+      "at_ms": 1646,
+      "node": "api(asset_engine)→security-db",
+      "kind": "http",
+      "method": "GET",
+      "path": "/assets",
+      "status": 200,
+      "ms": 245,
+      "note": "5 assets in scope card"
+    },
+    {
+      "at_ms": 1914,
+      "node": "api(ai_engine)→org_data_scope→db",
+      "kind": "http",
+      "method": "POST",
+      "path": "/ai/agent/scope/resolve",
+      "status": 200,
+      "ms": 268,
+      "note": "status=needs_selection token=yes"
+    },
+    {
+      "at_ms": 2185,
+      "node": "api(ai_engine)→org_data_scope",
+      "kind": "http",
+      "method": "POST",
+      "path": "/ai/agent/scope/confirm",
+      "status": 200,
+      "ms": 270,
+      "note": "grant=issued"
+    },
+    {
+      "at_ms": 2628,
+      "node": "ai_engine assistant→deepseek",
+      "kind": "sse-open",
+      "status": 200
+    },
+    {
+      "at_ms": 4519,
+      "node": "ai_engine assistant→deepseek",
+      "kind": "sse-closed",
+      "frames": 188,
+      "ms": 2331
+    },
+    {
+      "at_ms": 5107,
+      "node": "api(ai_engine)→ai queue",
+      "kind": "http",
+      "method": "POST",
+      "path": "/ai/agent/runs",
+      "status": 200,
+      "ms": 587,
+      "note": "{\"analysis_id\":\"7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6\",\"status\":\"queued\",\"domain\":\"consultant\",\"specialist\":\"chief\",\"agent_id\":\"chief\",\"skills\":[\"securegraph-meta-skill-miner@1.0.0\",\"phantix-meta-skill"
+    },
+    {
+      "at_ms": 9352,
+      "node": "api→db(ai_agent_runs poll)",
+      "kind": "poll",
+      "method": "GET",
+      "path": "/ai/agent/runs/7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+      "status": 200,
+      "ms": 240,
+      "note": "status=queued"
+    },
+    {
+      "at_ms": 13602,
+      "node": "api→db(ai_agent_runs poll)",
+      "kind": "poll",
+      "method": "GET",
+      "path": "/ai/agent/runs/7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+      "status": 200,
+      "ms": 248,
+      "note": "status=queued"
+    },
+    {
+      "at_ms": 17841,
+      "node": "api→db(ai_agent_runs poll)",
+      "kind": "poll",
+      "method": "GET",
+      "path": "/ai/agent/runs/7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+      "status": 200,
+      "ms": 235,
+      "note": "status=queued"
+    },
+    {
+      "at_ms": 22144,
+      "node": "api→db(ai_agent_runs poll)",
+      "kind": "poll",
+      "method": "GET",
+      "path": "/ai/agent/runs/7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+      "status": 200,
+      "ms": 293,
+      "note": "status=success"
+    },
+    {
+      "at_ms": 26629,
+      "node": "api→db(ai_agent_runs poll)",
+      "kind": "poll",
+      "method": "GET",
+      "path": "/ai/agent/runs/7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+      "status": 200,
+      "ms": 482,
+      "note": "status=success"
+    },
+    {
+      "at_ms": 30886,
+      "node": "api→db(ai_agent_runs poll)",
+      "kind": "poll",
+      "method": "GET",
+      "path": "/ai/agent/runs/7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+      "status": 200,
+      "ms": 248,
+      "note": "status=success"
+    },
+    {
+      "at_ms": 35162,
+      "node": "api→db(ai_agent_runs poll)",
+      "kind": "poll",
+      "method": "GET",
+      "path": "/ai/agent/runs/7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+      "status": 200,
+      "ms": 265,
+      "note": "status=success"
+    },
+    {
+      "at_ms": 39399,
+      "node": "api→db(ai_agent_runs poll)",
+      "kind": "poll",
+      "method": "GET",
+      "path": "/ai/agent/runs/7ce3d35f-0f21-4ae3-b86d-35debd9fbbc6",
+      "status": 200,
+      "ms": 233,
+      "note": "status=success"
+    },
+    {
+      "at_ms": 39781,
+      "node": "api(ai_engine)→db",
+      "kind": "http",
+      "method": "GET",
+      "path": "/ai/agent/activity",
+      "status": 200,
+      "ms": 381,
+      "note": "items,total,limit,offset,summary"
+    },
+    {
+      "at_ms": 40494,
+      "node": "api(ai_engine)→db",
+      "kind": "http",
+      "method": "GET",
+      "path": "/ai/agent/skills",
+      "status": 200,
+      "ms": 711,
+      "note": "items"
+    },
+    {
+      "at_ms": 40721,
+      "node": "api(ai_engine)→db",
+      "kind": "http",
+      "method": "GET",
+      "path": "/ai/agent/domains",
+      "status": 200,
+      "ms": 227,
+      "note": "items,spin_up_model"
+    },
+    {
+      "at_ms": 40958,
+      "node": "api(ai_engine)→db",
+      "kind": "http",
+      "method": "GET",
+      "path": "/ai/agent/intents",
+      "status": 200,
+      "ms": 237,
+      "note": "schema,items"
+    },
+    {
+      "at_ms": 41183,
+      "node": "api(ai_engine)→db",
+      "kind": "http",
+      "method": "GET",
+      "path": "/ai/agent/runs",
+      "status": 200,
+      "ms": 225,
+      "note": "items"
+    },
+    {
+      "at_ms": 41437,
+      "node": "api(ai_engine)→db",
+      "kind": "http",
+      "method": "GET",
+      "path": "/ai/agent/authorizations/status",
+      "status": 422,
+      "ms": 253,
+      "note": "detail"
+    },
+    {
+      "at_ms": 41746,
+      "node": "api(ai_engine)→db",
+      "kind": "http",
+      "method": "GET",
+      "path": "/ai/agent/approvals",
+      "status": 200,
+      "ms": 309,
+      "note": "items,total"
+    }
+  ],
+  "frames": [
+    {
+      "at_ms": 2628,
+      "label": "ai_engine assistant→deepseek",
+      "event": "connected",
+      "data": "{\"type\":\"connected\",\"organizationId\":4,\"protocol\":\"sse\",\"streamPath\":\"/api/v1/ai/agent/chat/stream\",\"scoped_asset_ids\":[36,37]}"
+    },
+    {
+      "at_ms": 2723,
+      "label": "ai_engine assistant→deepseek",
+      "event": "meta",
+      "data": "{\"type\":\"meta\",\"provider\":\"deepseek\",\"model\":\"deepseek-v4-flash\",\"stream\":true,\"thinking\":true,\"reasoning_effort\":\"high\",\"protocol\":\"sse\",\"deepseek_api\":\"https://api.deepseek.com/v1/chat/completions\"}"
+    },
+    {
+      "at_ms": 3676,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"The\""
+    },
+    {
+      "at_ms": 3749,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" user\""
+    },
+    {
+      "at_ms": 3763,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" wants\""
+    },
+    {
+      "at_ms": 3765,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" a\""
+    },
+    {
+      "at_ms": 3765,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" two\""
+    },
+    {
+      "at_ms": 3770,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"-s\""
+    },
+    {
+      "at_ms": 3778,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"entence\""
+    },
+    {
+      "at_ms": 3778,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" summary\""
+    },
+    {
+      "at_ms": 3778,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" of\""
+    },
+    {
+      "at_ms": 3778,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" the\""
+    },
+    {
+      "at_ms": 3778,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" exposure\""
+    },
+    {
+      "at_ms": 3784,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" of\""
+    },
+    {
+      "at_ms": 3785,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" the\""
+    },
+    {
+      "at_ms": 3785,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" two\""
+    },
+    {
+      "at_ms": 3798,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" selected\""
+    },
+    {
+      "at_ms": 3801,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" assets\""
+    },
+    {
+      "at_ms": 3801,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \":\""
+    },
+    {
+      "at_ms": 3803,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" id\""
+    },
+    {
+      "at_ms": 3804,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"=\""
+    },
+    {
+      "at_ms": 3816,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"36\""
+    },
+    {
+      "at_ms": 3818,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" robots\""
+    },
+    {
+      "at_ms": 3820,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \".txt\""
+    },
+    {
+      "at_ms": 3821,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" and\""
+    },
+    {
+      "at_ms": 3821,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" id\""
+    },
+    {
+      "at_ms": 3833,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"=\""
+    },
+    {
+      "at_ms": 3833,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"37\""
+    },
+    {
+      "at_ms": 3833,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" s\""
+    },
+    {
+      "at_ms": 3833,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"item\""
+    },
+    {
+      "at_ms": 3833,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"ap\""
+    },
+    {
+      "at_ms": 3834,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \".xml\""
+    },
+    {
+      "at_ms": 3839,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" on\""
+    },
+    {
+      "at_ms": 3841,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" ph\""
+    },
+    {
+      "at_ms": 3842,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"ant\""
+    },
+    {
+      "at_ms": 3842,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"ix\""
+    },
+    {
+      "at_ms": 3856,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"v\""
+    },
+    {
+      "at_ms": 3856,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"ul\""
+    },
+    {
+      "at_ms": 3856,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"n\""
+    },
+    {
+      "at_ms": 3866,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"server\""
+    },
+    {
+      "at_ms": 3866,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \".on\""
+    },
+    {
+      "at_ms": 3866,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"line\""
+    },
+    {
+      "at_ms": 3868,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \",\""
+    },
+    {
+      "at_ms": 3870,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" both\""
+    },
+    {
+      "at_ms": 3871,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" classified\""
+    },
+    {
+      "at_ms": 3891,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" low\""
+    },
+    {
+      "at_ms": 3893,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" severity\""
+    },
+    {
+      "at_ms": 3893,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \",\""
+    },
+    {
+      "at_ms": 3896,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" verified\""
+    },
+    {
+      "at_ms": 3897,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \",\""
+    },
+    {
+      "at_ms": 3907,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" web\""
+    },
+    {
+      "at_ms": 3908,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"_path\""
+    },
+    {
+      "at_ms": 3911,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \".\n\n\""
+    },
+    {
+      "at_ms": 3912,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"I\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" should\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" keep\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" it\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" concise\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \",\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" two\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" sentences\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \",\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" no\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" invention\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \".\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" I\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" don\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"'t\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" have\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" actual\""
+    },
+    {
+      "at_ms": 3971,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" scan\""
+    },
+    {
+      "at_ms": 3983,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" content\""
+    },
+    {
+      "at_ms": 3991,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" beyond\""
+    },
+    {
+      "at_ms": 3991,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" classification\""
+    },
+    {
+      "at_ms": 4003,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \".\""
+    },
+    {
+      "at_ms": 4009,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" I\""
+    },
+    {
+      "at_ms": 4009,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" should\""
+    },
+    {
+      "at_ms": 4009,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" describe\""
+    },
+    {
+      "at_ms": 4022,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" exposure\""
+    },
+    {
+      "at_ms": 4031,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" based\""
+    },
+    {
+      "at_ms": 4031,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" on\""
+    },
+    {
+      "at_ms": 4031,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" what\""
+    },
+    {
+      "at_ms": 4046,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"'s\""
+    },
+    {
+      "at_ms": 4046,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" given\""
+    },
+    {
+      "at_ms": 4047,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \":\""
+    },
+    {
+      "at_ms": 4054,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" both\""
+    },
+    {
+      "at_ms": 4061,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" are\""
+    },
+    {
+      "at_ms": 4061,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" publicly\""
+    },
+    {
+      "at_ms": 4078,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" accessible\""
+    },
+    {
+      "at_ms": 4078,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" informational\""
+    },
+    {
+      "at_ms": 4086,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" web\""
+    },
+    {
+      "at_ms": 4086,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" paths\""
+    },
+    {
+      "at_ms": 4101,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" with\""
+    },
+    {
+      "at_ms": 4101,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" low\""
+    },
+    {
+      "at_ms": 4105,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" risk\""
+    },
+    {
+      "at_ms": 4114,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" rating\""
+    },
+    {
+      "at_ms": 4115,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \",\""
+    },
+    {
+      "at_ms": 4115,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" verified\""
+    },
+    {
+      "at_ms": 4125,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" as\""
+    },
+    {
+      "at_ms": 4147,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" present\""
+    },
+    {
+      "at_ms": 4147,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \".\n\n\""
+    },
+    {
+      "at_ms": 4148,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \"Two\""
+    },
+    {
+      "at_ms": 4155,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \" sentences\""
+    },
+    {
+      "at_ms": 4156,
+      "label": "ai_engine assistant→deepseek",
+      "event": "reasoning",
+      "data": "reasoning: \".\""
+    },
+    {
+      "at_ms": 4156,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"Both\""
+    },
+    {
+      "at_ms": 4175,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" selected\""
+    },
+    {
+      "at_ms": 4175,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" assets\""
+    },
+    {
+      "at_ms": 4175,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" on\""
+    },
+    {
+      "at_ms": 4189,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" ph\""
+    },
+    {
+      "at_ms": 4189,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"ant\""
+    },
+    {
+      "at_ms": 4189,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"ix\""
+    },
+    {
+      "at_ms": 4189,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"v\""
+    },
+    {
+      "at_ms": 4191,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"ul\""
+    },
+    {
+      "at_ms": 4191,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"n\""
+    },
+    {
+      "at_ms": 4197,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"server\""
+    },
+    {
+      "at_ms": 4197,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \".on\""
+    },
+    {
+      "at_ms": 4200,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"line\""
+    },
+    {
+      "at_ms": 4200,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" are\""
+    },
+    {
+      "at_ms": 4200,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" publicly\""
+    },
+    {
+      "at_ms": 4200,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" reach\""
+    },
+    {
+      "at_ms": 4209,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"able\""
+    },
+    {
+      "at_ms": 4209,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" informational\""
+    },
+    {
+      "at_ms": 4223,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" web\""
+    },
+    {
+      "at_ms": 4225,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" paths\""
+    },
+    {
+      "at_ms": 4225,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" —\""
+    },
+    {
+      "at_ms": 4230,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" /\""
+    },
+    {
+      "at_ms": 4238,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"rob\""
+    },
+    {
+      "at_ms": 4238,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"ots\""
+    },
+    {
+      "at_ms": 4247,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \".txt\""
+    },
+    {
+      "at_ms": 4247,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" (\""
+    },
+    {
+      "at_ms": 4252,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"id\""
+    },
+    {
+      "at_ms": 4256,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"=\""
+    },
+    {
+      "at_ms": 4258,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"36\""
+    },
+    {
+      "at_ms": 4260,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \")\""
+    },
+    {
+      "at_ms": 4261,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" and\""
+    },
+    {
+      "at_ms": 4261,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" /\""
+    },
+    {
+      "at_ms": 4298,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"s\""
+    },
+    {
+      "at_ms": 4301,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"item\""
+    },
+    {
+      "at_ms": 4303,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"ap\""
+    },
+    {
+      "at_ms": 4303,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \".xml\""
+    },
+    {
+      "at_ms": 4305,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" (\""
+    },
+    {
+      "at_ms": 4307,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"id\""
+    },
+    {
+      "at_ms": 4310,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"=\""
+    },
+    {
+      "at_ms": 4310,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \"37\""
+    },
+    {
+      "at_ms": 4315,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \")\""
+    },
+    {
+      "at_ms": 4315,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" —\""
+    },
+    {
+      "at_ms": 4315,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" each\""
+    },
+    {
+      "at_ms": 4315,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" verified\""
+    },
+    {
+      "at_ms": 4316,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" as\""
+    },
+    {
+      "at_ms": 4320,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" present\""
+    },
+    {
+      "at_ms": 4321,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" and\""
+    },
+    {
+      "at_ms": 4323,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" rated\""
+    },
+    {
+      "at_ms": 4325,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" low\""
+    },
+    {
+      "at_ms": 4326,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" severity\""
+    },
+    {
+      "at_ms": 4328,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \".\""
+    },
+    {
+      "at_ms": 4328,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" Their\""
+    },
+    {
+      "at_ms": 4329,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" exposure\""
+    },
+    {
+      "at_ms": 4332,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" is\""
+    },
+    {
+      "at_ms": 4336,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" limited\""
+    },
+    {
+      "at_ms": 4336,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" to\""
+    },
+    {
+      "at_ms": 4336,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" disclosure\""
+    },
+    {
+      "at_ms": 4351,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" of\""
+    },
+    {
+      "at_ms": 4351,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" crawl\""
+    },
+    {
+      "at_ms": 4360,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" directives\""
+    },
+    {
+      "at_ms": 4374,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" and\""
+    },
+    {
+      "at_ms": 4374,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" site\""
+    },
+    {
+      "at_ms": 4388,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" structure\""
+    },
+    {
+      "at_ms": 4388,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" hints\""
+    },
+    {
+      "at_ms": 4400,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \",\""
+    },
+    {
+      "at_ms": 4400,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" offering\""
+    },
+    {
+      "at_ms": 4416,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" negligible\""
+    },
+    {
+      "at_ms": 4428,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" direct\""
+    },
+    {
+      "at_ms": 4443,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" risk\""
+    },
+    {
+      "at_ms": 4446,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" but\""
+    },
+    {
+      "at_ms": 4446,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" potentially\""
+    },
+    {
+      "at_ms": 4456,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" aiding\""
+    },
+    {
+      "at_ms": 4472,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" reconnaissance\""
+    },
+    {
+      "at_ms": 4472,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" or\""
+    },
+    {
+      "at_ms": 4486,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" enumeration\""
+    },
+    {
+      "at_ms": 4487,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" of\""
+    },
+    {
+      "at_ms": 4487,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" other\""
+    },
+    {
+      "at_ms": 4504,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" paths\""
+    },
+    {
+      "at_ms": 4505,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" on\""
+    },
+    {
+      "at_ms": 4508,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" the\""
+    },
+    {
+      "at_ms": 4508,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \" host\""
+    },
+    {
+      "at_ms": 4510,
+      "label": "ai_engine assistant→deepseek",
+      "event": "delta",
+      "data": "delta: \".\""
+    },
+    {
+      "at_ms": 4512,
+      "label": "ai_engine assistant→deepseek",
+      "event": "usage",
+      "data": "{\"type\":\"usage\",\"usage\":{\"prompt_tokens\":144,\"completion_tokens\":185,\"total_tokens\":329,\"prompt_tokens_details\":{\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":102},\"prompt_cache_hit_tokens\":0,\"prompt_cache_miss_tokens\":144},\"tokens_used\":329}"
+    },
+    {
+      "at_ms": 4513,
+      "label": "ai_engine assistant→deepseek",
+      "event": "done",
+      "data": "{\"type\":\"done\",\"finish_reason\":\"stop\",\"model\":\"deepseek-flash\"}"
+    }
+  ]
+}

@@ -1,0 +1,7660 @@
+{
+ "ok": true,
+ "real": true,
+ "source": "live staging https://staging.phantix.site",
+ "org": 4,
+ "captured_at": "2026-09-30T08:51:29.506Z",
+ "span_ms": 1371614,
+ "accounts": {
+  "initiator": {
+   "email": "agi-test@phantixvulnserver.online",
+   "device": "agi-test-device-0001",
+   "user": 14
+  },
+  "authorizer": {
+   "email": "agi-authorizer@phantixvulnserver.online",
+   "device": "agi-authorizer-device-0001",
+   "user": 15
+  }
+ },
+ "phases": [
+  {
+   "id": "vapt",
+   "label": "Phase 2 — VAPT campaign against 3 assets",
+   "t0": 0,
+   "t1": 1371614,
+   "summary": "campaign #32 completed · 0 findings · 0 scan jobs · 7 step transitions"
+  }
+ ],
+ "hops": [
+  {
+   "at": 1406,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 1405,
+   "path": "/api/v1/org-users/auth/login",
+   "method": "POST",
+   "note": "initiator login"
+  },
+  {
+   "at": 2297,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 889,
+   "path": "/api/v1/org-users/auth/login",
+   "method": "POST",
+   "note": "authorizer login"
+  },
+  {
+   "at": 2616,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 318,
+   "path": "/api/v1/vapt/settings",
+   "method": "GET",
+   "note": "settings"
+  },
+  {
+   "at": 2852,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 235,
+   "path": "/api/v1/vapt/procedures",
+   "method": "GET",
+   "note": "procedures"
+  },
+  {
+   "at": 3084,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 232,
+   "path": "/api/v1/vapt/campaigns/quota",
+   "method": "GET",
+   "note": "quota"
+  },
+  {
+   "at": 4665,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 1581,
+   "path": "/api/v1/vapt/plan",
+   "method": "POST",
+   "note": "intelligent plan"
+  },
+  {
+   "at": 5022,
+   "phase": "vapt",
+   "status": 201,
+   "ms": 355,
+   "path": "/api/v1/vapt/campaigns",
+   "method": "POST",
+   "note": "create campaign on 1,2,3"
+  },
+  {
+   "at": 5242,
+   "phase": "vapt",
+   "status": 202,
+   "ms": 219,
+   "path": "/api/v1/vapt/campaigns/32/start",
+   "method": "POST",
+   "note": "start campaign"
+  },
+  {
+   "at": 13950,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 700,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 14272,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 322,
+   "path": "/api/v1/audit/pending/40/authorize",
+   "method": "POST",
+   "note": "authorizer approves audit #40"
+  },
+  {
+   "at": 14512,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 239,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 14713,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 200,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 14942,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 15151,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 208,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 23759,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 602,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 24025,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 266,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 24253,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 228,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 24515,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 262,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 24761,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 246,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 33273,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 507,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 33518,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 244,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 33765,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 247,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 34014,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 34393,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 378,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 42992,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 596,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 43202,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 210,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 43392,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 190,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 43613,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 220,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 43829,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 216,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 52327,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 490,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 52574,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 247,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 52783,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 209,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 53010,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 53298,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 288,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 61811,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 504,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 62038,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 62330,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 292,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 62684,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 354,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 62889,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 204,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 71442,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 539,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 71656,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 213,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 71881,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 224,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 72108,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 72332,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 224,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 80959,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 620,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 81192,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 233,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 81404,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 211,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 81661,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 257,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 81946,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 284,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 90586,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 636,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 90899,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 313,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 91139,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 240,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 91389,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 250,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 91607,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 100166,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 558,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 100377,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 211,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 100591,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 214,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 100806,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 215,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 101032,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 225,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 109546,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 499,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 109774,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 110036,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 261,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 110283,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 246,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 110505,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 222,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 119113,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 601,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 119339,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 119551,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 212,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 119776,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 225,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 119993,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 217,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 128508,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 507,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 128725,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 217,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 128925,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 199,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 129161,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 236,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 129402,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 241,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 138005,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 601,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 138288,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 283,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 138527,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 239,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 138758,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 139027,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 269,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 147602,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 564,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 147852,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 148072,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 220,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 148303,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 148521,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 217,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 157065,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 542,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 157294,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 157512,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 217,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 157756,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 244,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 157985,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 228,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 166575,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 580,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 166878,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 303,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 167135,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 256,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 167345,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 210,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 167566,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 221,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 176247,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 680,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 176582,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 333,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 176799,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 217,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 177031,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 232,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 177246,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 215,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 185804,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 554,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 186031,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 186204,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 173,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 186434,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 186855,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 420,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 195448,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 580,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 195682,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 234,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 195920,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 238,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 196312,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 392,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 196596,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 284,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 205154,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 549,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 205453,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 299,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 205691,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 238,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 206002,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 311,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 206341,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 339,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 214845,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 492,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 215350,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 505,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 215558,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 208,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 215811,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 253,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 216031,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 220,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 224534,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 488,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 224761,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 224973,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 212,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 225189,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 215,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 225392,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 202,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 233881,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 486,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 234110,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 235100,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 990,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 235342,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 241,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 235565,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 223,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 244052,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 487,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 244285,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 232,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 244518,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 233,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 244732,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 214,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 244981,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 253631,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 640,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 253940,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 309,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 254186,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 246,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 254433,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 247,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 254676,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 242,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 263444,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 766,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 264067,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 623,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 264436,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 369,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 264877,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 441,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 265145,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 268,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 273791,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 636,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 274000,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 209,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 274195,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 195,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 274425,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 274620,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 195,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 283121,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 496,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 283330,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 209,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 283516,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 186,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 283713,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 196,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 283916,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 203,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 292466,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 539,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 292682,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 216,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 292871,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 188,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 293072,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 201,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 293271,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 199,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 301967,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 687,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 302182,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 215,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 302387,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 205,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 302631,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 243,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 302952,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 321,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 311457,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 487,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 311665,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 208,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 311846,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 180,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 312051,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 204,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 312281,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 320899,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 617,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 321337,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 438,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 321623,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 285,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 321919,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 296,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 322382,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 462,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 330970,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 584,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 331240,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 268,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 331444,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 204,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 331700,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 256,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 331941,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 241,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 340762,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 808,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 341056,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 293,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 341256,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 200,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 341475,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 219,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 341706,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 231,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 350258,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 541,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 350516,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 257,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 350744,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 228,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 351007,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 263,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 351221,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 214,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 359698,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 468,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 359905,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 207,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 360103,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 198,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 360405,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 302,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 360625,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 220,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 369101,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 475,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 369298,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 197,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 369522,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 224,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 369716,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 194,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 369928,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 211,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 378477,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 535,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 378717,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 240,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 378912,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 195,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 379122,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 210,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 379381,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 259,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 388021,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 635,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 388313,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 292,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 388596,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 283,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 388862,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 266,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 389128,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 266,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 397846,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 713,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 398063,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 216,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 398262,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 199,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 398547,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 285,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 398801,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 253,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 407382,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 567,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 407785,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 403,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 408002,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 217,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 408251,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 248,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 408562,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 311,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 417175,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 606,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 417413,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 237,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 417631,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 218,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 417848,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 217,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 418071,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 223,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 426589,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 516,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 426802,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 213,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 427066,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 262,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 427321,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 255,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 428008,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 687,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 436530,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 511,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 436770,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 240,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 436988,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 218,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 437233,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 244,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 437463,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 446071,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 608,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 446330,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 259,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 446566,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 235,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 446815,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 447045,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 455558,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 505,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 455797,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 239,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 456018,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 221,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 456244,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 456479,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 235,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 465020,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 532,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 465249,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 465488,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 238,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 465732,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 244,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 466010,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 278,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 474560,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 539,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 474888,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 327,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 475099,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 211,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 475350,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 251,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 475594,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 244,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 484249,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 643,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 484493,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 243,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 484720,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 227,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 484955,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 235,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 485177,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 222,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 493715,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 524,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 493976,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 261,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 494186,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 210,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 494398,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 212,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 494617,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 503168,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 537,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 503490,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 322,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 503815,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 325,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 504100,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 285,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 504369,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 269,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 513020,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 650,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 513264,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 244,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 513483,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 219,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 513721,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 238,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 513960,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 239,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 522611,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 646,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 522858,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 246,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 523104,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 245,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 523404,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 299,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 523678,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 274,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 532313,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 626,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 532592,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 279,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 532793,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 201,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 533011,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 217,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 533240,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 542148,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 905,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 542366,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 542597,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 231,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 542916,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 319,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 543145,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 228,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 551672,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 510,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 551886,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 213,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 552098,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 212,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 552330,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 232,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 552569,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 239,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 561100,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 529,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 561321,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 221,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 561528,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 207,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 561781,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 253,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 562007,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 225,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 570708,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 701,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 571121,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 412,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 571441,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 320,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 571671,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 571925,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 254,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 580453,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 522,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 580705,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 252,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 580992,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 286,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 581233,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 240,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 581466,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 233,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 590053,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 575,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 590270,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 217,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 590495,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 225,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 590709,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 214,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 590935,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 599510,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 562,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 599731,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 221,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 599963,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 232,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 600232,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 269,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 600460,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 609149,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 687,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 609382,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 233,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 609806,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 423,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 610078,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 271,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 610348,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 270,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 620293,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 1944,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 620529,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 236,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 620796,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 266,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 621045,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 621279,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 233,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 629939,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 650,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 630167,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 228,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 630375,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 207,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 630592,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 217,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 630812,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 219,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 639367,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 544,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 639628,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 261,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 639840,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 211,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 640041,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 200,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 640271,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 648832,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 555,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 649040,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 208,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 649229,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 189,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 649454,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 225,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 649660,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 206,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 658418,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 745,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 658627,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 209,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 658826,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 199,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 659051,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 225,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 659269,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 667825,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 545,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 668095,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 270,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 668354,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 259,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 668580,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 668793,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 213,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 677346,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 546,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 677567,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 221,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 677773,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 206,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 678004,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 231,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 678246,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 242,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 686861,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 602,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 687333,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 471,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 687557,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 224,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 687828,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 270,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 688050,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 222,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 696544,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 481,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 696805,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 261,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 696997,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 192,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 697218,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 221,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 697428,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 210,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 705959,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 531,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 706177,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 706367,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 190,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 706606,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 239,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 706824,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 715381,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 552,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 715604,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 223,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 715818,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 214,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 716072,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 254,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 716294,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 222,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 724806,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 501,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 725071,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 265,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 725292,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 221,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 725516,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 224,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 725750,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 234,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 734245,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 488,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 734457,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 212,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 734657,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 200,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 734871,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 214,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 735082,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 210,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 744112,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 1022,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 744407,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 295,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 744631,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 224,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 744977,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 346,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 745210,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 232,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 753706,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 491,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 753926,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 220,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 754121,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 195,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 754355,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 233,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 754565,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 210,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 763106,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 531,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 763372,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 266,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 763560,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 188,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 763812,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 252,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 764035,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 222,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 772556,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 516,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 772783,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 772996,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 213,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 773217,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 221,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 773428,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 211,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 781957,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 521,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 782279,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 322,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 782548,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 269,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 782753,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 205,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 782961,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 208,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 791674,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 708,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 792001,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 327,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 792199,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 198,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 792428,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 792637,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 209,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 801177,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 538,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 801544,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 366,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 801807,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 263,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 802026,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 802252,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 810763,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 505,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 810979,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 216,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 811165,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 186,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 811380,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 215,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 811611,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 231,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 820112,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 488,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 820336,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 224,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 820564,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 227,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 820788,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 223,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 821013,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 225,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 829594,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 575,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 829889,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 295,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 830127,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 238,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 830374,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 247,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 830605,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 839103,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 486,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 839333,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 839520,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 187,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 839729,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 208,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 839924,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 195,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 848731,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 805,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 849146,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 415,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 849650,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 503,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 854519,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 4869,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 854765,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 246,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 863716,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 936,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 863957,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 241,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 864209,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 252,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 864444,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 234,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 864686,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 242,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 873306,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 613,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 873547,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 241,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 873788,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 241,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 874026,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 237,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 874256,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 882836,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 579,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 883082,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 246,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 883318,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 235,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 883556,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 237,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 883769,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 213,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 892290,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 514,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 892556,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 266,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 892763,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 207,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 892979,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 215,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 893208,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 229,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 901749,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 530,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 901986,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 237,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 902192,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 206,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 902415,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 223,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 902668,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 253,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 911331,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 652,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 911568,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 236,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 911786,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 218,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 912002,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 215,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 912214,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 212,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 920888,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 660,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 921134,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 246,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 921354,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 220,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 921603,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 921971,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 368,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 930520,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 544,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 930778,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 258,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 931062,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 284,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 931299,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 237,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 931543,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 243,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 940231,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 681,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 940484,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 252,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 940688,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 204,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 940939,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 251,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 941185,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 246,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 949747,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 557,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 949974,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 950169,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 195,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 950430,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 261,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 950648,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 959174,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 526,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 959426,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 252,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 959644,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 218,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 959870,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 960121,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 250,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 968667,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 533,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 968895,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 969138,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 243,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 969376,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 238,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 969649,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 272,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 979049,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 1387,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 979307,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 258,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 979512,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 205,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 979731,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 218,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 979966,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 234,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 988538,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 558,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 988788,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 250,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 989039,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 250,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 989337,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 298,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 989569,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 232,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 998169,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 590,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 998431,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 262,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 998778,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 347,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 999035,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 257,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 999280,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 245,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1007852,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 559,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1008137,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 284,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1008341,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 204,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1008614,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 272,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1008835,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 221,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1017409,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 562,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1017663,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 254,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1017911,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 247,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1018209,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 298,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1018428,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 219,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1027023,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 590,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1027253,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1027485,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 232,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1027728,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 243,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1027958,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 230,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1036479,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 519,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1036737,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 258,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1036955,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 217,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1037217,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 262,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1037508,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 291,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1046243,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 729,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1046557,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 314,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1046802,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 245,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1047222,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 420,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1047624,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 402,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1056225,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 594,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1056553,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 327,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1056777,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 224,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1057086,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 309,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1057326,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 239,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1065844,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 508,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1066089,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 244,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1066323,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 233,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1066551,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 228,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1066785,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 233,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1075567,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 781,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1075809,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 242,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1076099,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 290,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1077559,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 1459,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1077796,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 237,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1086428,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 628,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1086678,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1086890,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 212,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1087167,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 276,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1087431,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 264,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1096200,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 766,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1096421,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 221,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1096644,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 223,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1096882,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 238,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1097138,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 256,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1105695,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 550,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1105917,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 222,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1106172,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 254,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1106429,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 257,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1106663,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 234,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1115363,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 685,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1115624,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 260,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1115900,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 276,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1116421,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 521,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1117023,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 602,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1125584,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 557,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1125811,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1126037,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 225,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1126257,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 220,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1126489,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 232,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1135039,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 545,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1135265,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 226,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1135484,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 219,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1135724,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 240,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1135988,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 264,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1144598,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 605,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1144847,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1145087,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 240,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1145329,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 242,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1145565,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 235,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1154152,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 572,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1154414,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 262,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1154675,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 261,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1154912,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 237,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1155117,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 205,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1163879,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 727,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1164120,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 240,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1164361,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 241,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1164602,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 240,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1164852,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 249,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1173442,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 584,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1173690,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 248,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1173924,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 234,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1174151,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1174402,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 251,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1183065,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 643,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1183288,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 223,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1183489,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 201,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1183727,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 238,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1183950,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 223,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1192486,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 522,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1192698,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 212,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1192944,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 246,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1193180,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 236,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1193432,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 251,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1202045,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 609,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1202306,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 261,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1202540,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 233,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1202816,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 275,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1203054,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 238,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1211656,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 587,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1211911,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 255,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1212136,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 224,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1212348,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 212,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1212618,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 270,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1221147,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 528,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1221373,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 225,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1221587,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 214,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1221921,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 334,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1222182,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 260,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1230761,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 578,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1231119,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 358,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1231346,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 226,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1231580,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 234,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1231842,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 261,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1240387,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 529,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1240604,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 217,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1240829,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 225,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1241098,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 268,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1241341,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 243,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1250087,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 735,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1250534,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 447,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1250779,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 245,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1251132,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 352,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1251405,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 273,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1261211,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 1795,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1262146,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 934,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1262718,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 572,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1262987,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 269,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1263996,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 1008,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1272588,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 578,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1272845,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 256,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1273079,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 234,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1273303,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 224,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1273547,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 244,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1282078,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 526,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1282325,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 247,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1282582,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 257,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1282857,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 275,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1283291,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 433,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1291818,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 521,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1292045,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 227,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1292251,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 206,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1292533,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 282,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1292757,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 223,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1301538,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 767,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1301866,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 328,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1302123,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 256,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1302447,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 324,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1302690,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 243,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1311249,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 550,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1311526,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 277,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1311752,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 226,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1312004,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 252,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1312256,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 252,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1320812,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 547,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1321058,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 246,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1321289,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 231,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1321537,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 247,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1321785,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 247,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1330323,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 536,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1330577,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 254,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1330801,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 224,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1331065,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 264,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1331296,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 231,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1339857,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 556,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1340138,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 281,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1340360,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 222,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1340625,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 265,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1340877,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 251,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1349457,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 568,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1349732,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 275,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1349960,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 228,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1350208,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 248,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1350515,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 307,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1359056,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 536,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1359309,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 252,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1359574,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 265,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1359810,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 236,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1360591,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 780,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1369151,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 553,
+   "path": "/api/v1/audit/pending",
+   "method": "GET",
+   "note": "audit pending",
+   "quiet": true
+  },
+  {
+   "at": 1369428,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 277,
+   "path": "/api/v1/vapt/campaigns/32/approvals",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1369657,
+   "phase": "vapt",
+   "status": 403,
+   "ms": 229,
+   "path": "/api/v1/authorizer/inbox",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1370050,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 393,
+   "path": "/api/v1/vapt/campaigns/32",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1370343,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 292,
+   "path": "/api/v1/scans/jobs?limit=20",
+   "method": "GET",
+   "quiet": true
+  },
+  {
+   "at": 1370645,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 302,
+   "path": "/api/v1/vapt/campaigns/32/findings",
+   "method": "GET",
+   "note": "campaign findings"
+  },
+  {
+   "at": 1370939,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 293,
+   "path": "/api/v1/findings/intake",
+   "method": "GET",
+   "note": "finding tracker intake"
+  },
+  {
+   "at": 1371256,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 317,
+   "path": "/api/v1/scans/results?limit=50",
+   "method": "GET",
+   "note": "scan results"
+  },
+  {
+   "at": 1371613,
+   "phase": "vapt",
+   "status": 200,
+   "ms": 356,
+   "path": "/api/v1/risks",
+   "method": "GET",
+   "note": "risks"
+  }
+ ],
+ "events": [
+  {
+   "at": 0,
+   "phase": "vapt",
+   "kind": "phase",
+   "text": "▶ Phase 2 — VAPT campaign against 3 assets"
+  },
+  {
+   "at": 14273,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "authorizer approved audit pending #40",
+   "node": "mw-dualcontrol"
+  },
+  {
+   "at": 14943,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "campaign #32 status → draft",
+   "node": "eng-vapt"
+  },
+  {
+   "at": 14943,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "step 0 web_scan → pending",
+   "node": "worker-vapt"
+  },
+  {
+   "at": 14943,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "step 1 correlate → pending",
+   "node": "worker-vapt"
+  },
+  {
+   "at": 14943,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "step 2 analyze → pending",
+   "node": "worker-vapt"
+  },
+  {
+   "at": 1370050,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "campaign #32 status → completed",
+   "node": "eng-vapt"
+  },
+  {
+   "at": 1370051,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "step 0 web_scan → completed",
+   "node": "worker-vapt"
+  },
+  {
+   "at": 1370051,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "step 1 correlate → completed",
+   "node": "worker-vapt"
+  },
+  {
+   "at": 1370051,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "step 2 analyze → completed",
+   "node": "worker-vapt"
+  },
+  {
+   "at": 1370051,
+   "phase": "vapt",
+   "kind": "claim",
+   "text": "step 3 web_scan → completed",
+   "node": "worker-vapt"
+  },
+  {
+   "at": 1371614,
+   "phase": "vapt",
+   "kind": "phase",
+   "text": "■ campaign #32 completed · 0 findings · 0 scan jobs · 7 step transitions"
+  }
+ ],
+ "sse": [],
+ "notes": {
+  "targets": [
+   {
+    "id": 1,
+    "value": "https://juice.phantixvulnserver.online",
+    "name": "OWASP Juice Shop (lab)",
+    "criticality": "high",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   },
+   {
+    "id": 2,
+    "value": "https://dvwa.phantixvulnserver.online",
+    "name": "DVWA (lab)",
+    "criticality": "high",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   },
+   {
+    "id": 3,
+    "value": "https://bwapp.phantixvulnserver.online",
+    "name": "bWAPP (lab)",
+    "criticality": "medium",
+    "readback_status": 200,
+    "type": "web_app",
+    "verified": true
+   }
+  ],
+  "accounts": {
+   "initiator": 14,
+   "authorizer": 15
+  },
+  "plan_status": 200,
+  "campaign_id": 32,
+  "campaign_name": "Org4 lifecycle VAPT 2026-09-30T08:28",
+  "start_status": 202,
+  "steps": [
+   {
+    "id": 202,
+    "campaign_id": 32,
+    "step_index": 0,
+    "step_type": "web_scan",
+    "step_name": "Full Web App Security Assessment",
+    "step_description": null,
+    "config": {
+     "tools": [
+      "web"
+     ],
+     "include_subdomains": true,
+     "run_discovery": true,
+     "run_recon": true,
+     "run_fingerprint": true,
+     "run_param_discovery": true,
+     "run_vuln_scan": true,
+     "run_xss": true,
+     "run_sqli": true,
+     "run_api_deep": true,
+     "run_bola": true,
+     "run_priv_esc": true,
+     "run_screenshots": true,
+     "severity_filter": "critical,high,medium",
+     "max_pages_to_crawl": 200
+    },
+    "status": "pending",
+    "started_at": null,
+    "completed_at": null,
+    "error_message": null,
+    "scan_job_ids": null,
+    "finding_count": 0,
+    "output_summary": null
+   },
+   {
+    "id": 203,
+    "campaign_id": 32,
+    "step_index": 1,
+    "step_type": "correlate",
+    "step_name": "Web Attack Path Analysis",
+    "step_description": null,
+    "config": {
+     "rule_ids": [
+      "default_port_exposure",
+      "api_without_auth",
+      "api_authentication_bypass"
+     ]
+    },
+    "status": "pending",
+    "started_at": null,
+    "completed_at": null,
+    "error_message": null,
+    "scan_job_ids": null,
+    "finding_count": 0,
+    "output_summary": null
+   },
+   {
+    "id": 204,
+    "campaign_id": 32,
+    "step_index": 2,
+    "step_type": "analyze",
+    "step_name": "Complexity Analysis",
+    "step_description": null,
+    "config": {
+     "ai_threshold": "high"
+    },
+    "status": "pending",
+    "started_at": null,
+    "completed_at": null,
+    "error_message": null,
+    "scan_job_ids": null,
+    "finding_count": 0,
+    "output_summary": null
+   },
+   {
+    "id": 202,
+    "campaign_id": 32,
+    "step_index": 0,
+    "step_type": "web_scan",
+    "step_name": "Full Web App Security Assessment",
+    "step_description": null,
+    "config": {
+     "tools": [
+      "web"
+     ],
+     "include_subdomains": true,
+     "run_discovery": true,
+     "run_recon": true,
+     "run_fingerprint": true,
+     "run_param_discovery": true,
+     "run_vuln_scan": true,
+     "run_xss": true,
+     "run_sqli": true,
+     "run_api_deep": true,
+     "run_bola": true,
+     "run_priv_esc": true,
+     "run_screenshots": true,
+     "severity_filter": "critical,high,medium",
+     "max_pages_to_crawl": 200
+    },
+    "status": "completed",
+    "started_at": "2026-09-30T08:51:24.591021",
+    "completed_at": "2026-09-30T08:51:25.563505",
+    "error_message": null,
+    "scan_job_ids": null,
+    "finding_count": 0,
+    "output_summary": {
+     "scan_type": "web",
+     "pipeline": "web_scanner",
+     "intelligence": {
+      "targets_briefed": 0,
+      "targets_with_priors": 0,
+      "prior_findings_used": 0,
+      "accepted_dispositions": [],
+      "regression_watch": []
+     },
+     "counts": {
+      "assets_discovered": 0,
+      "live_endpoints": 0,
+      "crawled_urls": 0,
+      "vulnerabilities": 0,
+      "screenshots": 0,
+      "proxy_hosts": 0,
+      "consensus_groups": 0,
+      "findings_total": 0,
+      "verified": 0,
+      "awaiting_verification": 0,
+      "rejected": 0
+     },
+     "verification": {
+      "found": 0,
+      "verified": 0,
+      "awaiting_verification": 0,
+      "rejected": 0
+     },
+     "scan_metadata": {
+      "organization_id": 4,
+      "root_domains": [],
+      "started_at": "2026-09-30T08:51:24.906231Z",
+      "elapsed_seconds": 0.455401,
+      "errors": [],
+      "ai": {},
+      "proxy_summary": [],
+      "dns_enrichment": [],
+      "tools_run": [
+       "subfinder",
+       "httpx",
+       "dalfox",
+       "sqlmap",
+       "bola_harness",
+       "priv_esc_harness",
+       "gowitness"
+      ],
+      "research_plan_jobs": 11,
+      "prior_findings_used": 0,
+      "correlation_stats": {
+       "input": 0,
+       "groups": 0,
+       "consensus_groups": 0,
+       "tools_run": [
+        "bola_harness",
+        "dalfox",
+        "gowitness",
+        "httpx",
+        "priv_esc_harness",
+        "sqlmap",
+        "subfinder"
+       ],
+       "singleton_groups": 0
+      },
+      "counts": {
+       "assets_discovered": 0,
+       "live_endpoints": 0,
+       "crawled_urls": 0,
+       "vulnerabilities": 0,
+       "screenshots": 0,
+       "proxy_hosts": 0,
+       "consensus_groups": 0
+      },
+      "normalized_findings": 0
+     },
+     "assets_discovered": 0,
+     "live_endpoints": 0,
+     "crawled_urls": 0,
+     "screenshots": 0,
+     "findings": [],
+     "correlation_ready_results": [],
+     "tech_stack_keys": [],
+     "research_plan": {
+      "matches": [
+       {
+        "playbook_id": "server_fingerprint",
+        "score": 3,
+        "reasons": [
+         "asset:api",
+         "asset:domain",
+         "asset:web_app",
+         "web_surface"
+        ],
+        "targets": [],
+        "parent_finding_ids": []
+       },
+       {
+        "playbook_id": "param_discovery",
+        "score": 3,
+        "reasons": [
+         "asset:api",
+         "asset:domain",
+         "asset:web_app",
+         "web_surface"
+        ],
+        "targets": [],
+        "parent_finding_ids": []
+       },
+       {
+        "playbook_id": "api_surface",
+        "score": 2,
+        "reasons": [
+         "asset:api",
+         "asset:web_app"
+        ],
+        "targets": [],
+        "parent_finding_ids": []
+       },
+       {
+        "playbook_id": "recon_enrichment",
+        "score": 1,
+        "reasons": [
+         "asset:domain"
+        ],
+        "targets": [],
+        "parent_finding_ids": []
+       }
+      ],
+      "jobs": [
+       {
+        "technique_id": "server_fingerprint",
+        "tool": "whatweb",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:domain",
+          "asset:web_app",
+          "web_surface"
+         ],
+         "score": 3,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "server_fingerprint",
+        "tool": "httpx",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:domain",
+          "asset:web_app",
+          "web_surface"
+         ],
+         "score": 3,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "param_discovery",
+        "tool": "arjun",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:domain",
+          "asset:web_app",
+          "web_surface"
+         ],
+         "score": 3,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "param_discovery",
+        "tool": "x8",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:domain",
+          "asset:web_app",
+          "web_surface"
+         ],
+         "score": 3,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "api_surface",
+        "tool": "kiterunner",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:web_app"
+         ],
+         "score": 2,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "api_surface",
+        "tool": "schemathesis",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:web_app"
+         ],
+         "score": 2,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "api_surface",
+        "tool": "jwt_tool",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:web_app"
+         ],
+         "score": 2,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "api_surface",
+        "tool": "nuclei:api",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:web_app"
+         ],
+         "score": 2,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "recon_enrichment",
+        "tool": "recon-ng",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:domain"
+         ],
+         "score": 1,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "recon_enrichment",
+        "tool": "subfinder",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:domain"
+         ],
+         "score": 1,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "recon_enrichment",
+        "tool": "amass",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:domain"
+         ],
+         "score": 1,
+         "provided_credentials": false
+        }
+       }
+      ]
+     },
+     "multi_tool_correlation": {
+      "groups": [],
+      "stats": {
+       "input": 0,
+       "groups": 0,
+       "consensus_groups": 0,
+       "tools_run": [
+        "bola_harness",
+        "dalfox",
+        "gowitness",
+        "httpx",
+        "priv_esc_harness",
+        "sqlmap",
+        "subfinder"
+       ],
+       "singleton_groups": 0
+      }
+     },
+     "follow_on": {
+      "enqueued": [
+       {
+        "step_index": 3,
+        "technique_id": "api_surface",
+        "tool": "kiterunner",
+        "target": "*",
+        "step_name": "API recon and security testing"
+       }
+      ],
+      "awaiting_poc_ack": []
+     },
+     "roe": {
+      "allow_poc": false,
+      "acknowledge_bruteforce": false,
+      "credentials_provided": false,
+      "credentials_alt_provided": false
+     }
+    }
+   },
+   {
+    "id": 203,
+    "campaign_id": 32,
+    "step_index": 1,
+    "step_type": "correlate",
+    "step_name": "Web Attack Path Analysis",
+    "step_description": null,
+    "config": {
+     "rule_ids": [
+      "default_port_exposure",
+      "api_without_auth",
+      "api_authentication_bypass"
+     ]
+    },
+    "status": "completed",
+    "started_at": "2026-09-30T08:51:25.613969",
+    "completed_at": "2026-09-30T08:51:25.745044",
+    "error_message": null,
+    "scan_job_ids": null,
+    "finding_count": 0,
+    "output_summary": {
+     "correlated_count": 0,
+     "scan_results_considered": 0,
+     "scan_job_ids": [],
+     "rule_ids": [
+      "default_port_exposure",
+      "api_without_auth",
+      "api_authentication_bypass"
+     ],
+     "mining": {
+      "anomalies": [],
+      "cross_org_patterns_written": 0,
+      "consent": false
+     }
+    }
+   },
+   {
+    "id": 204,
+    "campaign_id": 32,
+    "step_index": 2,
+    "step_type": "analyze",
+    "step_name": "Complexity Analysis",
+    "step_description": null,
+    "config": {
+     "ai_threshold": "high"
+    },
+    "status": "completed",
+    "started_at": "2026-09-30T08:51:25.787999",
+    "completed_at": "2026-09-30T08:51:26.258893",
+    "error_message": null,
+    "scan_job_ids": null,
+    "finding_count": 0,
+    "output_summary": {
+     "complexity_score": 0,
+     "complexity_level": "low",
+     "ai_should_run": false,
+     "complexity_ai_eligible": false,
+     "deepseek_ready": true,
+     "threshold": "high",
+     "signals": {
+      "finding_count": 0,
+      "finding_count_score": 0,
+      "severity_score": 0,
+      "attack_paths": 0,
+      "attack_path_score": 0,
+      "ambiguous_count": 0,
+      "ambiguous_score": 0,
+      "fp_rate": 0,
+      "fp_score": 0
+     },
+     "enrichment": {
+      "total_raw": 0,
+      "after_dedupe": 0,
+      "signal_count": 0,
+      "noise_count": 0,
+      "correlated_count": 0,
+      "top_signals": [],
+      "attack_paths": []
+     },
+     "multi_tool_agreement": []
+    }
+   },
+   {
+    "id": 205,
+    "campaign_id": 32,
+    "step_index": 3,
+    "step_type": "web_scan",
+    "step_name": "API recon and security testing",
+    "step_description": "Auto-enqueued from research plan (api_surface / kiterunner). Target hint: *",
+    "config": {
+     "tools": [
+      "web"
+     ],
+     "root_domains": [],
+     "follow_on_of": "api_surface",
+     "parent_finding_id": null,
+     "run_discovery": false,
+     "run_recon": false,
+     "run_fingerprint": false,
+     "run_param_discovery": true,
+     "run_vuln_scan": true,
+     "run_xss": false,
+     "run_sqli": true,
+     "run_api_deep": true,
+     "run_bola": true,
+     "run_priv_esc": false,
+     "run_jwt": true,
+     "run_schemathesis": true,
+     "run_screenshots": false,
+     "run_follow_on": false
+    },
+    "status": "completed",
+    "started_at": "2026-09-30T08:51:26.308741",
+    "completed_at": "2026-09-30T08:51:26.471215",
+    "error_message": null,
+    "scan_job_ids": null,
+    "finding_count": 0,
+    "output_summary": {
+     "scan_type": "web",
+     "pipeline": "web_scanner",
+     "intelligence": {
+      "targets_briefed": 0,
+      "targets_with_priors": 0,
+      "prior_findings_used": 0,
+      "accepted_dispositions": [],
+      "regression_watch": []
+     },
+     "counts": {
+      "assets_discovered": 0,
+      "live_endpoints": 0,
+      "crawled_urls": 0,
+      "vulnerabilities": 0,
+      "screenshots": 0,
+      "proxy_hosts": 0,
+      "consensus_groups": 0,
+      "findings_total": 0,
+      "verified": 0,
+      "awaiting_verification": 0,
+      "rejected": 0
+     },
+     "verification": {
+      "found": 0,
+      "verified": 0,
+      "awaiting_verification": 0,
+      "rejected": 0
+     },
+     "scan_metadata": {
+      "organization_id": 4,
+      "root_domains": [],
+      "started_at": "2026-09-30T08:51:26.370141Z",
+      "elapsed_seconds": 0.002332,
+      "errors": [],
+      "ai": {},
+      "proxy_summary": [],
+      "dns_enrichment": [],
+      "tools_run": [
+       "sqlmap",
+       "bola_harness"
+      ],
+      "research_plan_jobs": 11,
+      "prior_findings_used": 0,
+      "correlation_stats": {
+       "input": 0,
+       "groups": 0,
+       "consensus_groups": 0,
+       "tools_run": [
+        "bola_harness",
+        "sqlmap"
+       ],
+       "singleton_groups": 0
+      },
+      "counts": {
+       "assets_discovered": 0,
+       "live_endpoints": 0,
+       "crawled_urls": 0,
+       "vulnerabilities": 0,
+       "screenshots": 0,
+       "proxy_hosts": 0,
+       "consensus_groups": 0
+      },
+      "normalized_findings": 0
+     },
+     "assets_discovered": 0,
+     "live_endpoints": 0,
+     "crawled_urls": 0,
+     "screenshots": 0,
+     "findings": [],
+     "correlation_ready_results": [],
+     "tech_stack_keys": [],
+     "research_plan": {
+      "matches": [
+       {
+        "playbook_id": "server_fingerprint",
+        "score": 3,
+        "reasons": [
+         "asset:api",
+         "asset:domain",
+         "asset:web_app",
+         "web_surface"
+        ],
+        "targets": [],
+        "parent_finding_ids": []
+       },
+       {
+        "playbook_id": "param_discovery",
+        "score": 3,
+        "reasons": [
+         "asset:api",
+         "asset:domain",
+         "asset:web_app",
+         "web_surface"
+        ],
+        "targets": [],
+        "parent_finding_ids": []
+       },
+       {
+        "playbook_id": "api_surface",
+        "score": 2,
+        "reasons": [
+         "asset:api",
+         "asset:web_app"
+        ],
+        "targets": [],
+        "parent_finding_ids": []
+       },
+       {
+        "playbook_id": "recon_enrichment",
+        "score": 1,
+        "reasons": [
+         "asset:domain"
+        ],
+        "targets": [],
+        "parent_finding_ids": []
+       }
+      ],
+      "jobs": [
+       {
+        "technique_id": "server_fingerprint",
+        "tool": "whatweb",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:domain",
+          "asset:web_app",
+          "web_surface"
+         ],
+         "score": 3,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "server_fingerprint",
+        "tool": "httpx",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:domain",
+          "asset:web_app",
+          "web_surface"
+         ],
+         "score": 3,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "param_discovery",
+        "tool": "arjun",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:domain",
+          "asset:web_app",
+          "web_surface"
+         ],
+         "score": 3,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "param_discovery",
+        "tool": "x8",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:domain",
+          "asset:web_app",
+          "web_surface"
+         ],
+         "score": 3,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "api_surface",
+        "tool": "kiterunner",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:web_app"
+         ],
+         "score": 2,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "api_surface",
+        "tool": "schemathesis",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:web_app"
+         ],
+         "score": 2,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "api_surface",
+        "tool": "jwt_tool",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:web_app"
+         ],
+         "score": 2,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "api_surface",
+        "tool": "nuclei:api",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:api",
+          "asset:web_app"
+         ],
+         "score": 2,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "recon_enrichment",
+        "tool": "recon-ng",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:domain"
+         ],
+         "score": 1,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "recon_enrichment",
+        "tool": "subfinder",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:domain"
+         ],
+         "score": 1,
+         "provided_credentials": false
+        }
+       },
+       {
+        "technique_id": "recon_enrichment",
+        "tool": "amass",
+        "target": "*",
+        "roe_level": "safe",
+        "parent_finding_id": null,
+        "budget_seconds": 300,
+        "meta": {
+         "reasons": [
+          "asset:domain"
+         ],
+         "score": 1,
+         "provided_credentials": false
+        }
+       }
+      ]
+     },
+     "multi_tool_correlation": {
+      "groups": [],
+      "stats": {
+       "input": 0,
+       "groups": 0,
+       "consensus_groups": 0,
+       "tools_run": [
+        "bola_harness",
+        "sqlmap"
+       ],
+       "singleton_groups": 0
+      }
+     },
+     "follow_on": {},
+     "roe": {
+      "allow_poc": false,
+      "acknowledge_bruteforce": false,
+      "credentials_provided": false,
+      "credentials_alt_provided": false
+     }
+    }
+   }
+  ],
+  "campaign_final": "completed",
+  "findings_count": 0,
+  "findings": []
+ }
+}

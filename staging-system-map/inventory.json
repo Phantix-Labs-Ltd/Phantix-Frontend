@@ -1,0 +1,3076 @@
+{
+  "meta": {
+    "title": "Phantix / SecureGraph — Staging Deployment, As Discovered",
+    "subject": "multi-agent RAG backend on staging",
+    "generated": "2026-09-30",
+    "environment": "staging",
+    "app_version": "0.1.0",
+    "image_tag": "a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69",
+    "architecture": "modular_monolith_13_engines",
+    "discovery_sources": [
+      "GET https://staging.phantix.site/health (200)",
+      "GET https://staging.phantix.site/status (200, 200,053 bytes — live service/engine/endpoint inventory)",
+      "read-only ssh root@phantix-backend (169.58.140.217): docker ps -a, docker network inspect, docker inspect config/env names, celery inspect ping/active_queues, systemctl list-units, ss -ltnp",
+      "read-only psql on platform db and phantix_security",
+      "repo: ~/Phantix Backend (WSL Ubuntu-24.04), branch feature/securegraph-weekly",
+      "repo: services/phantix-agi (AGI runner, v0.4.0)",
+      "deploy/docker-compose.coolify.yml, deploy/docker-compose.coolify.ghcr.yml, services/phantix-agi/docker-compose.agi.yml",
+      "deploy/coolify.env.staging.paste, .env.example, app/core/config.py"
+    ],
+    "discovery_gaps": [
+      "No OpenAPI document: ENABLE_API_DOCS=false; /openapi.json, /docs, /redoc all 404. Route inventory reconstructed from the live /status payload (974 endpoints).",
+      "No OpenTelemetry / Jaeger / Sentry. 'Traces' are SSE event logs + ai_audit_logs + platform_events in Postgres.",
+      "Staging container stdout was not captured; runtime log lines come from the local dev run (~/Phantix Backend/.run/logs) and are labelled as such.",
+      "169.58.162.46 (ssh alias phantix-vuln-lab) is unreachable on 22 and 443.",
+      "Mobile/Appium listener (:4723) not observed even though MOBILE_UI_ENABLED=true."
+    ]
+  },
+  "boundaries": [
+    {
+      "id": "edge",
+      "label": "Public edge / ingress",
+      "kind": "cloud",
+      "note": "Cloudflare (orange) in front of the origin IP — no Cloudflare Tunnel is running on the host"
+    },
+    {
+      "id": "coolify",
+      "label": "Coolify control plane (host)",
+      "kind": "host",
+      "note": "coollabsio/coolify 4.3.23 + its own db/redis/realtime/sentinel"
+    },
+    {
+      "id": "core",
+      "label": "compose project vtm5vs1bjkltpx3atda799cv_phantix",
+      "kind": "docker",
+      "note": "Coolify-managed. 12 containers. One image tag for api + all 7 workers + beat + alert-daemon"
+    },
+    {
+      "id": "queues",
+      "label": "Redis broker / 10 celery queues",
+      "kind": "logical",
+      "note": "Queues are Redis lists inside the single redis container — logical, not separate processes"
+    },
+    {
+      "id": "agi",
+      "label": "compose project phantix-agi (phantix-agi_default)",
+      "kind": "docker",
+      "note": "Separate stack, systemd-attached to the Coolify networks. Own host network for the agent loop"
+    },
+    {
+      "id": "sandbox",
+      "label": "phantix-sandbox network",
+      "kind": "docker",
+      "note": "cap_drop ALL, NET_RAW only, pids 512, isolated network mode — tool containers live here, cut off from db/redis"
+    },
+    {
+      "id": "mcp",
+      "label": "MCP surface",
+      "kind": "logical",
+      "note": "NO MCP SERVER IS DEPLOYED. Only client adapters, both currently inert"
+    },
+    {
+      "id": "hostsvc",
+      "label": "Host-level systemd services (not containers)",
+      "kind": "host",
+      "note": "opencode, Burp Suite Pro + Xvfb/VNC, adb"
+    },
+    {
+      "id": "strays",
+      "label": "Unmanaged / stray containers",
+      "kind": "docker",
+      "note": "Not part of either compose project. Found running on the host"
+    },
+    {
+      "id": "providers",
+      "label": "Model endpoints (external)",
+      "kind": "cloud",
+      "note": "Keys verified SET/EMPTY on staging; reachability probed from the api container"
+    },
+    {
+      "id": "egress",
+      "label": "Egress / SaaS",
+      "kind": "cloud",
+      "note": "Outbound integrations actually called by engine code"
+    },
+    {
+      "id": "targets",
+      "label": "Targets & tenants",
+      "kind": "cloud",
+      "note": "What the scanners and agents are pointed at while running"
+    }
+  ],
+  "units": [
+    {
+      "id": "cloudflare",
+      "label": "Cloudflare edge",
+      "kind": "gateway",
+      "boundary": "edge",
+      "replicas": "global anycast",
+      "note": "Server: cloudflare; CF-RAY seen from LHR/CDG. DYNAMIC, h3 advertised",
+      "verified": true
+    },
+    {
+      "id": "traefik",
+      "label": "coolify-proxy (Traefik v3.6)",
+      "kind": "gateway",
+      "boundary": "edge",
+      "replicas": 1,
+      "ports": [
+        "80",
+        "443",
+        "8080"
+      ],
+      "note": "Router Host(staging.phantix.site) -> api:8000, tls letsencrypt, gzip + redirect-to-https middleware",
+      "verified": true
+    },
+    {
+      "id": "coolify",
+      "label": "coolify 4.3.23",
+      "kind": "supervisor",
+      "boundary": "coolify",
+      "replicas": 1,
+      "note": "Deploys and watches the compose project; read-only API reachable with ~/.coolify_token",
+      "verified": true
+    },
+    {
+      "id": "coolify-db",
+      "label": "coolify-db (postgres:15)",
+      "kind": "memory-store",
+      "boundary": "coolify",
+      "replicas": 1,
+      "note": "Coolify's own metadata DB — not the product DB",
+      "verified": true
+    },
+    {
+      "id": "coolify-redis",
+      "label": "coolify-redis",
+      "kind": "cache",
+      "boundary": "coolify",
+      "replicas": 1,
+      "verified": true
+    },
+    {
+      "id": "coolify-realtime",
+      "label": "coolify-realtime 1.0.19",
+      "kind": "observer",
+      "boundary": "coolify",
+      "replicas": 1,
+      "verified": true
+    },
+    {
+      "id": "coolify-sentinel",
+      "label": "coolify-sentinel 1.0.1",
+      "kind": "observer",
+      "boundary": "coolify",
+      "replicas": 1,
+      "verified": true
+    },
+    {
+      "id": "api",
+      "label": "api (uvicorn)",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": 1,
+      "concurrency": 2,
+      "image": "vtm5vs1bjkltpx3atda799cv_api:a3c8e25c",
+      "ports": [
+        "8000"
+      ],
+      "note": "UVICORN_WORKERS=2. Hosts ALL 13 engines in-process plus the middleware chain, the engine bus and the engine registry. Holds /var/run/docker.sock.",
+      "verified": true
+    },
+    {
+      "id": "mw-ratelimit",
+      "label": "slowapi rate limit",
+      "kind": "supervisor",
+      "boundary": "core",
+      "colocated_in": "api",
+      "note": "RATE_LIMIT_ENABLED=true, RATE_LIMIT_DEFAULT=500/min, service key 120/min — Redis-backed, 429 + Retry-After",
+      "verified": true
+    },
+    {
+      "id": "mw-timeout",
+      "label": "RequestTimeout 10s",
+      "kind": "supervisor",
+      "boundary": "core",
+      "colocated_in": "api",
+      "note": "API_REQUEST_TIMEOUT_SECONDS=10 — hard ceiling on any request-path work",
+      "verified": true
+    },
+    {
+      "id": "mw-session",
+      "label": "app-session + device token",
+      "kind": "supervisor",
+      "boundary": "core",
+      "colocated_in": "api",
+      "note": "APP_SESSION_ENFORCE=true, 30 min absolute / 20 min inactivity, silent renewal",
+      "verified": true
+    },
+    {
+      "id": "mw-dualcontrol",
+      "label": "OrgOperate + dual control",
+      "kind": "supervisor",
+      "boundary": "core",
+      "colocated_in": "api",
+      "note": "Blocks state-changing operations until an authorizer approves; Redis dual_control:{id}",
+      "verified": true
+    },
+    {
+      "id": "mw-audit",
+      "label": "audit + 5xx event middleware",
+      "kind": "observer",
+      "boundary": "core",
+      "colocated_in": "api",
+      "note": "AUDIT_MIDDLEWARE_ASYNC=true; writes platform_events; injects X-Correlation-Id into every response",
+      "verified": true
+    },
+    {
+      "id": "eng-control",
+      "label": "control_plane",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.1.0",
+      "note": "411 endpoints — auth, orgs, billing, staff, support, integrations",
+      "verified": true
+    },
+    {
+      "id": "eng-soc",
+      "label": "soc_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.8.0",
+      "note": "121 endpoints — detections, cases, rules, war-room, availability, endpoint monitoring",
+      "verified": true
+    },
+    {
+      "id": "eng-asset",
+      "label": "asset_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.3.0",
+      "note": "70 endpoints — inventory, discovery, tags, GitHub/GitLab/Gitea, asset graph",
+      "verified": true
+    },
+    {
+      "id": "eng-compliance",
+      "label": "compliance_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "1.1.0",
+      "note": "52 endpoints — NDPR/ISO/SOC2/PCI/GDPR mapping, questionnaires",
+      "verified": true
+    },
+    {
+      "id": "eng-reporting",
+      "label": "reporting_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "1.0.0",
+      "note": "45 endpoints — report assembly, CVSS enrichment, finding tracker, funnel",
+      "verified": true
+    },
+    {
+      "id": "eng-vapt",
+      "label": "vapt_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.1.0",
+      "note": "40 endpoints — campaigns, procedures, approvals, schedules, correlation",
+      "verified": true
+    },
+    {
+      "id": "eng-ops",
+      "label": "operations_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.2.0",
+      "note": "34 endpoints — monitoring, /status, developer logs, superadmin terminal",
+      "verified": true
+    },
+    {
+      "id": "eng-scanner",
+      "label": "scanner_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.1.0",
+      "note": "30 endpoints — scan orchestration, tool adapters, cloud security",
+      "verified": true
+    },
+    {
+      "id": "eng-ai",
+      "label": "ai_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "1.1.0",
+      "note": "Chief Security Agent, verification, autofix, AGI service (owns the AGI session cap of 4)",
+      "verified": true
+    },
+    {
+      "id": "eng-threat",
+      "label": "threat_model_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "1.0.0",
+      "status": "beta",
+      "note": "18 endpoints — /context, threat models, document + diagram ingestion",
+      "verified": true
+    },
+    {
+      "id": "eng-risk",
+      "label": "risk_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.1.0",
+      "note": "14 endpoints — scoring, treatments, residual risk",
+      "verified": true
+    },
+    {
+      "id": "eng-audit",
+      "label": "audit_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.2.0",
+      "note": "14 endpoints — immutable audit trail",
+      "verified": true
+    },
+    {
+      "id": "eng-alert",
+      "label": "alert_engine",
+      "kind": "engine",
+      "boundary": "core",
+      "colocated_in": "api",
+      "version": "0.1.0",
+      "note": "13 endpoints — severity-routed notifications",
+      "verified": true
+    },
+    {
+      "id": "engine-bus",
+      "label": "engine bus",
+      "kind": "bus",
+      "boundary": "core",
+      "colocated_in": "api",
+      "note": "IN-PROCESS subscriber registry (not Redis pub/sub, not LISTEN/NOTIFY). ~90 event contracts. Non-local subscribers fan out through celery as one message per event.",
+      "verified": true
+    },
+    {
+      "id": "engine-registry",
+      "label": "engine registry",
+      "kind": "registry",
+      "boundary": "core",
+      "colocated_in": "api",
+      "note": "Manifest-driven: 13/13 registered, 0 missing. Builds the /status engine + endpoint inventory.",
+      "verified": true
+    },
+    {
+      "id": "superadmin-term",
+      "label": "superadmin terminal (local PTY)",
+      "kind": "supervisor",
+      "boundary": "core",
+      "colocated_in": "api",
+      "note": "SUPERADMIN_TERMINAL_ENABLED=true, MODE=local, shell /bin/bash — a shell inside the api container, reachable from the admin API",
+      "verified": true
+    },
+    {
+      "id": "worker-scans",
+      "label": "worker-scans",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": 1,
+      "concurrency": 3,
+      "queues": [
+        "scans"
+      ],
+      "note": "celery -Q scans -c 3. Mounts docker.sock (foreground `docker run` for tool containers).",
+      "verified": true
+    },
+    {
+      "id": "worker-vapt",
+      "label": "worker-vapt",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": 1,
+      "concurrency": 2,
+      "queues": [
+        "vapt"
+      ],
+      "note": "celery -Q vapt -c 2. max_retries=0 on run_campaign by design.",
+      "verified": true
+    },
+    {
+      "id": "worker-ai",
+      "label": "worker-ai",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": 1,
+      "concurrency": 1,
+      "queues": [
+        "ai"
+      ],
+      "note": "celery -Q ai -c 1. Single slot for every LLM task.",
+      "verified": true
+    },
+    {
+      "id": "worker-alerts",
+      "label": "worker-alerts",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": 1,
+      "concurrency": 2,
+      "queues": [
+        "alerts"
+      ],
+      "verified": true
+    },
+    {
+      "id": "worker-reports",
+      "label": "worker-reports",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": 1,
+      "concurrency": 1,
+      "queues": [
+        "reports"
+      ],
+      "note": "--max-memory-per-child=500000",
+      "verified": true
+    },
+    {
+      "id": "worker-bus",
+      "label": "worker-bus",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": 1,
+      "concurrency": 2,
+      "queues": [
+        "bus",
+        "celery"
+      ],
+      "note": "Also drains the default `celery` queue: staff alerts, funnel, ops, soc, agi.semantica_ingest",
+      "verified": true
+    },
+    {
+      "id": "worker-programme",
+      "label": "worker-programme",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": 1,
+      "concurrency": 2,
+      "queues": [
+        "autofix",
+        "continuous",
+        "integrations"
+      ],
+      "verified": true
+    },
+    {
+      "id": "beat",
+      "label": "beat (RedBeat)",
+      "kind": "supervisor",
+      "boundary": "core",
+      "replicas": 1,
+      "note": "Single leader holding securegraph:redbeat:lock (TTL 47s at sample). 26 scheduled entries. No beat-standby in staging.",
+      "verified": true
+    },
+    {
+      "id": "alert-daemon",
+      "label": "alert-daemon",
+      "kind": "supervisor",
+      "boundary": "core",
+      "replicas": 1,
+      "note": "Non-Celery asyncio loop, --interval 5, batch 50. Heartbeat fresh (age 2.2s at sample). The liveness path that does not go through Celery.",
+      "verified": true
+    },
+    {
+      "id": "job-reaper",
+      "label": "job_reaper",
+      "kind": "supervisor",
+      "boundary": "core",
+      "colocated_in": "worker-bus",
+      "note": "Every 300s: reaps stalled ai_agent_runs, repo jobs, reports, vapt campaigns, scan_jobs (-> interrupted + resumable, celery revoke SIGTERM), discovery_jobs",
+      "verified": true
+    },
+    {
+      "id": "sandbox-image-oneshot",
+      "label": "sandbox-image (one-shot)",
+      "kind": "runner",
+      "boundary": "core",
+      "replicas": "run-once per deploy",
+      "note": "docker:27-cli; builds phantix-agi-sandbox:latest and creates the keeper container. Last run Exited(0) 3 days ago.",
+      "verified": true
+    },
+    {
+      "id": "db",
+      "label": "db (postgres:16-alpine)",
+      "kind": "memory-store",
+      "boundary": "core",
+      "replicas": 1,
+      "note": "Platform DB `phantix`. max_connections 150, shared_buffers 1GB, work_mem 8MB, mem_limit 3g. Pool per process 10 + 10 overflow.",
+      "verified": true
+    },
+    {
+      "id": "security-db",
+      "label": "bench-security-db (postgres:16-alpine)",
+      "kind": "memory-store",
+      "boundary": "strays",
+      "replicas": 1,
+      "note": "DB `phantix_security`, schemas: public + phantix. Reached per-org through the SECURITY DB POOL (1 live pool, org 4, size 1 free 1, min 1 max 5, expire 90s). Credentials live encrypted in platform `customer_db_connections`.",
+      "verified": true
+    },
+    {
+      "id": "redis",
+      "label": "redis (redis:7-alpine)",
+      "kind": "cache",
+      "boundary": "core",
+      "replicas": 1,
+      "note": "One container, at least 9 distinct jobs: celery broker, celery result backend, redbeat, slowapi rate limit, per-org tool locks + global scan slots, security-db cred cache, leader election, scan result spool, agent authorization. maxmemory 768mb allkeys-lru + AOF. REDIS_FAIL_OPEN=false → tool locks fail closed.",
+      "verified": true
+    },
+    {
+      "id": "object-store",
+      "label": "phantix_storage volume",
+      "kind": "object-store",
+      "boundary": "core",
+      "replicas": 1,
+      "note": "OBJECT_STORAGE_BACKEND=local. Mounted /app/data. Buckets used by code: securegraph-apk-uploads, phantix-reports, securegraph-storage, securegraph-screenshots, securegraph-code-graphs. S3 endpoint/keys EMPTY.",
+      "verified": true
+    },
+    {
+      "id": "q-scans",
+      "label": "scans",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-scans"
+      ],
+      "note": "Concurrency 3; also carries scan.orchestrate/run_work_item fan-out loop",
+      "verified": true
+    },
+    {
+      "id": "q-vapt",
+      "label": "vapt",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-vapt"
+      ],
+      "note": "Concurrency 2; poll_schedules every 60s",
+      "verified": true
+    },
+    {
+      "id": "q-ai",
+      "label": "ai",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-ai"
+      ],
+      "note": "Concurrency 1 — the LLM choke point for the whole platform",
+      "verified": true
+    },
+    {
+      "id": "q-alerts",
+      "label": "alerts",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-alerts"
+      ],
+      "note": "process_pending every 30s + staff alerts + billing lifecycle",
+      "verified": true
+    },
+    {
+      "id": "q-reports",
+      "label": "reports",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-reports"
+      ],
+      "verified": true
+    },
+    {
+      "id": "q-bus",
+      "label": "bus",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-bus"
+      ],
+      "note": "Cross-process engine event fan-out + dead-letter retry (max 5, 60s)",
+      "verified": true
+    },
+    {
+      "id": "q-celery",
+      "label": "celery (default)",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-bus"
+      ],
+      "note": "Catch-all: ops, soc, staff_alerts, funnel, agi.semantica_ingest have no task_routes glob",
+      "verified": true
+    },
+    {
+      "id": "q-autofix",
+      "label": "autofix",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-programme"
+      ],
+      "verified": true
+    },
+    {
+      "id": "q-continuous",
+      "label": "continuous",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-programme"
+      ],
+      "note": "continuous.reassess every 3600s, accepted_risk_review / context_drift_sweep / learning_feed daily",
+      "verified": true
+    },
+    {
+      "id": "q-integrations",
+      "label": "integrations",
+      "kind": "queue",
+      "boundary": "queues",
+      "consumers": [
+        "worker-programme"
+      ],
+      "note": "health_checks 900s, refresh_tokens 3600s",
+      "verified": true
+    },
+    {
+      "id": "agi-runner",
+      "label": "phantix-agi-runner",
+      "kind": "runner",
+      "boundary": "agi",
+      "replicas": 1,
+      "concurrency": 4,
+      "image": "phantix-agi-phantix-agi",
+      "ports": [
+        "8095"
+      ],
+      "version": "0.4.0",
+      "note": "FastAPI, single uvicorn worker, 0 sessions at sample. ALL session state in process memory — a restart loses every live session. Sessions capped at 4 by the API (PHANTIX_AGI_MAX_CONCURRENT_SESSIONS), not by the runner. Holds docker.sock.",
+      "verified": true
+    },
+    {
+      "id": "agi-loop",
+      "label": "_agent_loop (orchestrator)",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "concurrency": "1 per session",
+      "note": "Turn loop: rebuild prompt (system prompt + last 8 history entries), stream model, dispatch tools, evaluate stop. MAX_TURNS_PER_PHASE=40, MAX_AUTONOMOUS_TURNS=3000, MAX_TOOLS=8000. Can sit in clarification wait for 24h by default.",
+      "verified": true
+    },
+    {
+      "id": "agi-oversight",
+      "label": "oversight / mission control",
+      "kind": "supervisor",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "note": "VERDICTS allow|gate|require_confirmation|steer|deny + DriftMonitor (window 10, threshold 4). Wired at _oversight_gate, but NOTHING sets oversight_enforced=True anywhere in the repo → in this deployment it observes and does not block.",
+      "verified": true
+    },
+    {
+      "id": "agi-finding-mgr",
+      "label": "finding_manager",
+      "kind": "supervisor",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "concurrency": 8,
+      "note": "Concurrency 8, batch 32, poll 6s, max 500. Concurrently verifies and promotes findings for the life of the session.",
+      "verified": true
+    },
+    {
+      "id": "agi-verifier",
+      "label": "candidate_verifier",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "concurrency": 12,
+      "note": "Skeptical triager, 3 turns / 45s deadline. Verify-all fan-out concurrency 12, budget 900s. Die -> inconclusive, never dropped.",
+      "verified": true
+    },
+    {
+      "id": "agi-exploit-verifier",
+      "label": "exploit_subagent",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "concurrency": 12,
+      "note": "Adversarial exploit auditor, 4 turns / 60s",
+      "verified": true
+    },
+    {
+      "id": "agi-recon",
+      "label": "recon_subagent",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "note": "Read-only recon, 5 turns / 90s. Tools http_get, dns_lookup, nmap_top.",
+      "verified": true
+    },
+    {
+      "id": "agi-autofix",
+      "label": "autofix_subagent",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "note": "Advisory remediation, sequential per finding, 45s deadline, loops up to 20 findings",
+      "verified": true
+    },
+    {
+      "id": "agi-pi",
+      "label": "pi_subagent",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "concurrency": 2,
+      "note": "Spawns the `pi` CLI headless as a subprocess. Provider zai, model glm-5.3-flash, tools read,grep,find,ls,bash, timeout 120s, max 2 concurrent.",
+      "verified": true
+    },
+    {
+      "id": "agi-sweepers",
+      "label": "specialist sweepers (15)",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "concurrency": "sequential",
+      "members": [
+        "class_sweeper",
+        "injection",
+        "authz",
+        "upload",
+        "rce",
+        "probe",
+        "js",
+        "supply_chain",
+        "rate",
+        "crypto",
+        "integrity",
+        "bopla",
+        "bfla",
+        "business_flow",
+        "inventory"
+      ],
+      "note": "One pool, sequential, max_assignments=1, 180s budget each. Triggered ONLY by the JOB_DONE coverage gate and only when autonomy=high (model_led_prompt). The idle path does NOT call them.",
+      "verified": true
+    },
+    {
+      "id": "agi-knowledge",
+      "label": "knowledge_keeper",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "note": "The only thing resembling retrieval: injects prior session summaries + a static 12-category gap playbook into the prompt. Writes agi_knowledge_summaries via the API. NOTE: there is no vector store, no embedding call and no reranker in this service.",
+      "verified": true
+    },
+    {
+      "id": "agi-artifacts",
+      "label": "/data/agi-artifacts",
+      "kind": "object-store",
+      "boundary": "agi",
+      "replicas": 1,
+      "note": "Filesystem volume, token_urlsafe(24) dirs, 168h retention, purge at boot + every 6h + on teardown. Not S3.",
+      "verified": true
+    },
+    {
+      "id": "agi-guards",
+      "label": "scope_guard + prompt_guard",
+      "kind": "supervisor",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "note": "scope_guard FAILS CLOSED (empty allowlist -> block). prompt_guard enforces forbidden.md. Second scope check inside oversight is inactive (called without scope_ok).",
+      "verified": true
+    },
+    {
+      "id": "agi-toolcatalog",
+      "label": "tool catalogue (47 sandbox + 34 advanced + 16 probes)",
+      "kind": "specialist-agent",
+      "boundary": "agi",
+      "colocated_in": "agi-runner",
+      "note": "Plain in-process Python functions. 47 named sandbox binaries, 34 advanced tool names, 16 probe classes. NOT an MCP server, NOT a tool microservice, no JSON-RPC.",
+      "verified": true
+    },
+    {
+      "id": "sandbox-pool",
+      "label": "sandbox pool",
+      "kind": "sandbox",
+      "boundary": "agi",
+      "replicas": "warm 2 / max 8",
+      "note": "asyncio.Semaphore(max). Acquire timeout 900s -> 503 on provision. Pooled and scrubbed between leases, NOT container-per-call. Each container: --memory 1g --cpus 1, 512 pids, cap_drop ALL + NET_RAW, ro scope mount, label phantix.agi.pool=1.",
+      "verified": true
+    },
+    {
+      "id": "sandbox-a",
+      "label": "phantix-agi-0f78afd24ab0",
+      "kind": "sandbox",
+      "boundary": "sandbox",
+      "replicas": 1,
+      "image": "phantix-agi-sandbox:latest",
+      "note": "Live, up 10 hours, leased/idle",
+      "verified": true
+    },
+    {
+      "id": "sandbox-b",
+      "label": "phantix-agi-3e9be8219a34",
+      "kind": "sandbox",
+      "boundary": "sandbox",
+      "replicas": 1,
+      "image": "phantix-agi-sandbox:latest",
+      "note": "Live, up 10 hours, leased/idle",
+      "verified": true
+    },
+    {
+      "id": "sandbox-keeper",
+      "label": "phantix-agi-sandbox-keeper",
+      "kind": "sandbox",
+      "boundary": "sandbox",
+      "replicas": 1,
+      "note": "Created (stopped) on purpose: pins the image against `docker image prune -a`",
+      "verified": true
+    },
+    {
+      "id": "mcp-none",
+      "label": "NO MCP SERVER DEPLOYED",
+      "kind": "mcp-server",
+      "boundary": "mcp",
+      "replicas": 0,
+      "note": "Verified: no mcp service in any compose file, no systemd unit, no .mcp.json, ~/.claude.json mcpServers == {}. grep -l mcp over services/phantix-agi returns 0 files. The agent tool layer is in-process Python + docker exec.",
+      "verified": true
+    },
+    {
+      "id": "mcp-burp",
+      "label": "BurpMCPAdapter",
+      "kind": "mcp-client",
+      "boundary": "mcp",
+      "state": "inert",
+      "note": "BURP_MCP_ENDPOINT and BURP_API_URL are both EMPTY on staging -> the adapter returns stubbed results. Burp Suite Pro IS running on the host, but nothing on the request path reaches it (PROXY_FAILOVER_ENABLED=false).",
+      "verified": true
+    },
+    {
+      "id": "mcp-caido",
+      "label": "CaidoMCPAdapter",
+      "kind": "mcp-client",
+      "boundary": "mcp",
+      "state": "disabled",
+      "note": "CAIDO_MCP_ENABLED=false and CAIDO_SUSPENDED=true. CAIDO_GRAPHQL_URL is EMPTY on the api container. stdio launch configured (caido-mcp-server) but never invoked.",
+      "verified": true
+    },
+    {
+      "id": "mcp-customer",
+      "label": "customer MCP introspection",
+      "kind": "mcp-client",
+      "boundary": "mcp",
+      "state": "on-demand",
+      "note": "mcp_surface.py POSTs JSON-RPC tools/list to a CUSTOMER-supplied endpoint, SSRF-guarded, <=50 tools, reads name+description only. This is the only live MCP code path, and it points outbound at tenants, not inward.",
+      "verified": true
+    },
+    {
+      "id": "opencode",
+      "label": "opencode serve",
+      "kind": "runner",
+      "boundary": "hostsvc",
+      "replicas": 1,
+      "ports": [
+        "4096"
+      ],
+      "note": "Host systemd unit phantix-opencode.service, WorkingDirectory /opt/phantix-opencode/workspace, OPENCODE_CONFIG config/opencode.json. The 'contractor' that the AGI skill_handoff routes work to.",
+      "verified": true
+    },
+    {
+      "id": "opencode-proxy",
+      "label": "phantix-opencode-proxy (socat)",
+      "kind": "gateway",
+      "boundary": "hostsvc",
+      "replicas": 1,
+      "note": "alpine/socat: TCP-LISTEN:4096,fork,reuseaddr -> host.docker.internal:4096. On the Coolify network, so containers reach it as http://phantix-opencode-proxy:4096. Up 7 weeks.",
+      "verified": true
+    },
+    {
+      "id": "burp",
+      "label": "Burp Suite Professional",
+      "kind": "runner",
+      "boundary": "hostsvc",
+      "replicas": 1,
+      "note": "Host systemd, Xvfb DISPLAY=:99, JAVA_HOME /opt/BurpSuitePro/jre. Headless but GUI-shaped. Not addressed by any live config.",
+      "verified": true
+    },
+    {
+      "id": "burp-vnc",
+      "label": "x11vnc :5901 + noVNC :6080",
+      "kind": "observer",
+      "boundary": "hostsvc",
+      "replicas": 1,
+      "note": "Interactive view of the Burp desktop",
+      "verified": true
+    },
+    {
+      "id": "adb",
+      "label": "adb server :5037",
+      "kind": "runner",
+      "boundary": "hostsvc",
+      "replicas": 1,
+      "note": "MOBILE_UI_ENABLED=true, MOBILE_APPIUM_URL=http://127.0.0.1:4723 — but no process is listening on 4723. UNVERIFIED whether the mobile path functions.",
+      "verified": false
+    },
+    {
+      "id": "whtbin",
+      "label": "whtbin :18082",
+      "kind": "observer",
+      "boundary": "hostsvc",
+      "replicas": 1,
+      "note": "UNIDENTIFIED. Listening on 127.0.0.1 only. Not referenced by any config we found.",
+      "verified": false
+    },
+    {
+      "id": "stray-cohen",
+      "label": "amazing_cohen",
+      "kind": "stray",
+      "boundary": "strays",
+      "replicas": 1,
+      "note": "UNMANAGED, up 9 days. Runs a shell loop probing katana / dalfox / kr / dirsearch / nuclei availability and hitting example.com. Not in any compose file.",
+      "verified": true
+    },
+    {
+      "id": "stray-others",
+      "label": "trusting_solomon, relaxed_banzai, phantix-api-src-sandbox-image-1",
+      "kind": "stray",
+      "boundary": "strays",
+      "replicas": 3,
+      "note": "Exited containers left on the host (6d, 7d, 3d). No labels tying them to a live stack.",
+      "verified": true
+    },
+    {
+      "id": "m-deepseek",
+      "label": "DeepSeek api.deepseek.com",
+      "kind": "model-endpoint",
+      "boundary": "providers",
+      "state": "primary",
+      "model": "deepseek-v4-flash",
+      "note": "Key SET. Probed from the api container: HTTP 401 (reachable). Primary for the platform ai_engine AND the AGI runner's stream.",
+      "verified": true
+    },
+    {
+      "id": "m-zai",
+      "label": "Z.AI api.z.ai/paas/v4",
+      "kind": "model-endpoint",
+      "boundary": "providers",
+      "state": "fallback",
+      "model": "glm-5.3-flash",
+      "note": "Key SET. HTTP 301 (reachable). Two roles: AGI GLM fallback on 401/402/408/429/5xx, and the provider for pi_subagent.",
+      "verified": true
+    },
+    {
+      "id": "m-agentrouter",
+      "label": "AgentRouter agentrouter.org",
+      "kind": "model-endpoint",
+      "boundary": "providers",
+      "state": "configured",
+      "model": "claude-opus-4-8",
+      "note": "Key SET, HTTP 200. AI_ALLOW_AGENTROUTER_IN_PROD=false but ENVIRONMENT=staging. Real historical calls succeeded: 'AI audit agent=executive_summary model=agentrouter/claude-opus-4-8'.",
+      "verified": true
+    },
+    {
+      "id": "m-moonshot",
+      "label": "Moonshot api.moonshot.cn",
+      "kind": "model-endpoint",
+      "boundary": "providers",
+      "state": "configured",
+      "model": "moonshot-v1-32k",
+      "note": "KIMI_API_KEY SET, HTTP 200. No live call sites observed in logs.",
+      "verified": true
+    },
+    {
+      "id": "m-nvidia",
+      "label": "NVIDIA NIM integrate.api.nvidia.com",
+      "kind": "model-endpoint",
+      "boundary": "providers",
+      "state": "configured",
+      "model": "nemotron-3-nano-omni-30b-a3b-reasoning",
+      "note": "NVIDIA_API_KEY SET (70 chars), NVIDIA_BASE_URL SET. No live call sites observed.",
+      "verified": true
+    },
+    {
+      "id": "m-typesafe",
+      "label": "TypeSafe System One api.typesafe.ai",
+      "kind": "model-endpoint",
+      "boundary": "providers",
+      "state": "configured",
+      "model": "jev-latest",
+      "note": "TYPESAFE_API_KEY SET (107 chars) on BOTH api and AGI runner. POST /v1/systemone. Used as a fast typed gate for routing and finding verdicts (real finding / expected access control / inconclusive). Max 80 gates per session.",
+      "verified": true
+    },
+    {
+      "id": "m-darkcluster",
+      "label": "unconfigured providers",
+      "kind": "model-endpoint",
+      "boundary": "providers",
+      "state": "disabled",
+      "replicas": 10,
+      "members": [
+        "openai (gpt-4o-mini)",
+        "anthropic (claude-3-haiku)",
+        "xai (grok-3-mini)",
+        "qwen (qwen-plus)",
+        "openrouter",
+        "gemini",
+        "mistral",
+        "groq",
+        "together",
+        "fireworks",
+        "cerebras",
+        "perplexity",
+        "azure_openai",
+        "local AI_COMPAT",
+        "ollama"
+      ],
+      "note": "All keys EMPTY or vars absent. The provider catalogue implements them; staging does not. Shown so multiplicity is not hidden.",
+      "verified": true
+    },
+    {
+      "id": "e-brevo",
+      "label": "Brevo SMTP relay",
+      "kind": "observer",
+      "boundary": "egress",
+      "note": "smtp-relay.brevo.com:587, from=noreply@phantix.site. Live: /status confirms configured. Alert engine email channel + staff alerts.",
+      "verified": true
+    },
+    {
+      "id": "e-github",
+      "label": "GitHub App (phantix-security-solutions)",
+      "kind": "observer",
+      "boundary": "egress",
+      "note": "GITHUB_APP_ID + private key SET, slug phantix-security-solutions. Asset engine + branch review + autofix PRs.",
+      "verified": true
+    },
+    {
+      "id": "e-paystack",
+      "label": "Paystack api.paystack.co",
+      "kind": "observer",
+      "boundary": "egress",
+      "note": "Key SET. Billing + HMAC webhook ingress.",
+      "verified": true
+    },
+    {
+      "id": "e-nvd",
+      "label": "NVD CVE API",
+      "kind": "observer",
+      "boundary": "egress",
+      "note": "NVD_API_KEY SET. reporting_engine cvss_enricher. Beat: refresh-cve-cache-weekly.",
+      "verified": true
+    },
+    {
+      "id": "e-vt",
+      "label": "VirusTotal",
+      "kind": "observer",
+      "boundary": "egress",
+      "note": "Key SET (64 chars). yaml_scan_executor IP reputation.",
+      "verified": true
+    },
+    {
+      "id": "e-ddg",
+      "label": "DuckDuckGo HTML",
+      "kind": "observer",
+      "boundary": "egress",
+      "note": "PHANTIX_AGI_WEB_SEARCH_PROVIDER=duckduckgo. The AGI research path. TAVILY_API_KEY is EMPTY.",
+      "verified": true
+    },
+    {
+      "id": "e-dead-channels",
+      "label": "Telegram / WhatsApp / Tavily / Mailinator / OTX / urlscan / Mnemonic",
+      "kind": "observer",
+      "boundary": "egress",
+      "state": "empty-keys",
+      "note": "Channels exist in code and are advertised in the alert policy (critical -> email + WhatsApp + Telegram), but every token is EMPTY on staging. Critical alerts therefore degrade to email only. Flagged rather than dropped.",
+      "verified": true
+    },
+    {
+      "id": "e-es",
+      "label": "Elasticsearch",
+      "kind": "observer",
+      "boundary": "egress",
+      "state": "disabled",
+      "note": "ELASTICSEARCH_ENABLED=false, no container running. /status reports it as ok+disabled.",
+      "verified": true
+    },
+    {
+      "id": "e-slack",
+      "label": "Slack / Teams / Jira / Linear / PagerDuty / SARIF",
+      "kind": "observer",
+      "boundary": "egress",
+      "state": "per-tenant",
+      "note": "INTEGRATIONS_HUB_ENABLED=true. OAuth/webhook targets are per-org, so activity depends on tenant configuration, not on staging env.",
+      "verified": true
+    },
+    {
+      "id": "t-lab",
+      "label": "phantixvulnserver.online (169.58.110.182)",
+      "kind": "target",
+      "boundary": "targets",
+      "note": "Live target host: 22 and 443 both open from the origin. Where the AGI and VAPT runs are pointed. The second host 169.58.162.46 (phantix-vuln-lab) is unreachable.",
+      "verified": true
+    },
+    {
+      "id": "t-tenants",
+      "label": "tenant orgs",
+      "kind": "target",
+      "boundary": "targets",
+      "note": "Live org rows: 1 NexaPay, 3 QA Test Company, 4 Phantix Vulnerable Organization, 11 Phantix Funnel, 12 Bifoluwa. Org 4 is the one with an active security DB pool.",
+      "verified": true
+    },
+    {
+      "id": "t-embeddings",
+      "label": "pgvector halfvec(384)",
+      "kind": "vector-store",
+      "boundary": "targets",
+      "state": "inactive",
+      "note": "threat_model_engine embeddings + product_documents.embedding, HNSW. AI_EMBEDDING_ENABLED is not set (default false) and QDRANT_URL is absent. Present in schema, not running. This is why the map is not a RAG pipeline.",
+      "verified": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "cloudflare",
+      "to": "traefik",
+      "kind": "http",
+      "sync": true,
+      "semantics": "proxy",
+      "p50_ms": 18,
+      "verified": true,
+      "label": "orange-cloud origin pull"
+    },
+    {
+      "id": "e2",
+      "from": "traefik",
+      "to": "api",
+      "kind": "http",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "Host() -> api:8000"
+    },
+    {
+      "id": "e3",
+      "from": "api",
+      "to": "mw-ratelimit",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "middleware chain"
+    },
+    {
+      "id": "e4",
+      "from": "mw-ratelimit",
+      "to": "mw-timeout",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 0,
+      "verified": true
+    },
+    {
+      "id": "e5",
+      "from": "mw-timeout",
+      "to": "mw-dualcontrol",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 0,
+      "verified": true,
+      "note": "can block and wait for a second human approver"
+    },
+    {
+      "id": "e6",
+      "from": "mw-dualcontrol",
+      "to": "mw-session",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 1,
+      "verified": true
+    },
+    {
+      "id": "e7",
+      "from": "mw-session",
+      "to": "eng-control",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 4,
+      "verified": true,
+      "label": "routed to the owning engine"
+    },
+    {
+      "id": "e8",
+      "from": "mw-ratelimit",
+      "to": "redis",
+      "kind": "redis",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 1,
+      "verified": true,
+      "label": "limit counters"
+    },
+    {
+      "id": "e9",
+      "from": "mw-dualcontrol",
+      "to": "redis",
+      "kind": "redis",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 1,
+      "verified": true,
+      "label": "dual_control:{id}"
+    },
+    {
+      "id": "e10",
+      "from": "mw-audit",
+      "to": "db",
+      "kind": "sql",
+      "sync": false,
+      "semantics": "append",
+      "p50_ms": 12,
+      "verified": true,
+      "label": "platform_events, async"
+    },
+    {
+      "id": "e11",
+      "from": "api",
+      "to": "engine-bus",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 1,
+      "verified": true,
+      "label": "publish(event_type)"
+    },
+    {
+      "id": "e12",
+      "from": "engine-bus",
+      "to": "eng-risk",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "ScanCompleted -> risk"
+    },
+    {
+      "id": "e13",
+      "from": "engine-bus",
+      "to": "eng-alert",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "ScanCompleted / RiskCritical -> alert"
+    },
+    {
+      "id": "e14",
+      "from": "engine-bus",
+      "to": "eng-ai",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "FindingCreated -> ai"
+    },
+    {
+      "id": "e15",
+      "from": "engine-bus",
+      "to": "eng-asset",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 2,
+      "verified": true
+    },
+    {
+      "id": "e16",
+      "from": "engine-bus",
+      "to": "eng-reporting",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "CampaignCompleted -> reporting"
+    },
+    {
+      "id": "e17",
+      "from": "engine-bus",
+      "to": "eng-soc",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 2,
+      "verified": true
+    },
+    {
+      "id": "e18",
+      "from": "engine-bus",
+      "to": "eng-compliance",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 2,
+      "verified": true
+    },
+    {
+      "id": "e19",
+      "from": "engine-bus",
+      "to": "eng-audit",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "AuditRecorded -> audit"
+    },
+    {
+      "id": "e20",
+      "from": "engine-bus",
+      "to": "q-bus",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "fanout",
+      "p50_ms": 25,
+      "verified": true,
+      "label": "non-local subscriber -> one celery message"
+    },
+    {
+      "id": "e21",
+      "from": "api",
+      "to": "q-scans",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "scan.orchestrate"
+    },
+    {
+      "id": "e22",
+      "from": "api",
+      "to": "q-vapt",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "vapt.run_campaign"
+    },
+    {
+      "id": "e23",
+      "from": "api",
+      "to": "q-ai",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "ai.process_request / agent.run"
+    },
+    {
+      "id": "e24",
+      "from": "api",
+      "to": "q-alerts",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true
+    },
+    {
+      "id": "e25",
+      "from": "api",
+      "to": "q-reports",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true
+    },
+    {
+      "id": "e26",
+      "from": "api",
+      "to": "q-celery",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "agi.semantica_ingest, staff_alerts, funnel"
+    },
+    {
+      "id": "e27",
+      "from": "api",
+      "to": "q-autofix",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true
+    },
+    {
+      "id": "e28",
+      "from": "api",
+      "to": "q-continuous",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true
+    },
+    {
+      "id": "e29",
+      "from": "api",
+      "to": "q-integrations",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 20,
+      "verified": true
+    },
+    {
+      "id": "e30",
+      "from": "q-scans",
+      "to": "worker-scans",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true,
+      "note": "3 prefork slots compete"
+    },
+    {
+      "id": "e31",
+      "from": "q-vapt",
+      "to": "worker-vapt",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true
+    },
+    {
+      "id": "e32",
+      "from": "q-ai",
+      "to": "worker-ai",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true,
+      "note": "single slot — this is where AI work queues up"
+    },
+    {
+      "id": "e33",
+      "from": "q-alerts",
+      "to": "worker-alerts",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true
+    },
+    {
+      "id": "e34",
+      "from": "q-reports",
+      "to": "worker-reports",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true
+    },
+    {
+      "id": "e35",
+      "from": "q-bus",
+      "to": "worker-bus",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true,
+      "note": "re-publishes into that worker's local registry"
+    },
+    {
+      "id": "e36",
+      "from": "q-celery",
+      "to": "worker-bus",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true
+    },
+    {
+      "id": "e37",
+      "from": "q-autofix",
+      "to": "worker-programme",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true
+    },
+    {
+      "id": "e38",
+      "from": "q-continuous",
+      "to": "worker-programme",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true
+    },
+    {
+      "id": "e39",
+      "from": "q-integrations",
+      "to": "worker-programme",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 30,
+      "verified": true
+    },
+    {
+      "id": "e40",
+      "from": "beat",
+      "to": "redis",
+      "kind": "redis",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "redbeat lock + schedule"
+    },
+    {
+      "id": "e41",
+      "from": "beat",
+      "to": "q-alerts",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "26 entries; 30s/60s/300s/daily"
+    },
+    {
+      "id": "e42",
+      "from": "beat",
+      "to": "q-vapt",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "poll_schedules 60s"
+    },
+    {
+      "id": "e43",
+      "from": "beat",
+      "to": "q-celery",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "reap_stalled_jobs 300s, expire pools 120s"
+    },
+    {
+      "id": "e44",
+      "from": "beat",
+      "to": "q-continuous",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "reassess 3600s"
+    },
+    {
+      "id": "e45",
+      "from": "beat",
+      "to": "q-ai",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "verify_findings_daily 17:30, remediation_sweep 18:15, kb_research 19:15"
+    },
+    {
+      "id": "e46",
+      "from": "beat",
+      "to": "q-scans",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "flush_scan_result_spool 60s"
+    },
+    {
+      "id": "e47",
+      "from": "beat",
+      "to": "q-reports",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 15,
+      "verified": true
+    },
+    {
+      "id": "e48",
+      "from": "beat",
+      "to": "q-integrations",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 15,
+      "verified": true
+    },
+    {
+      "id": "e49",
+      "from": "alert-daemon",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "poll",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "process_pending_batch limit 50, every 5s"
+    },
+    {
+      "id": "e50",
+      "from": "alert-daemon",
+      "to": "redis",
+      "kind": "redis",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "heartbeat"
+    },
+    {
+      "id": "e51",
+      "from": "worker-scans",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 15,
+      "verified": true
+    },
+    {
+      "id": "e52",
+      "from": "worker-scans",
+      "to": "security-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "compete",
+      "p50_ms": 22,
+      "verified": true,
+      "label": "per-org pool, max 5 conns, 30s statement timeout"
+    },
+    {
+      "id": "e53",
+      "from": "worker-scans",
+      "to": "sandbox-a",
+      "kind": "exec",
+      "sync": true,
+      "semantics": "compete",
+      "p50_ms": 900,
+      "verified": true,
+      "label": "foreground docker run, host-binary fallback allowed"
+    },
+    {
+      "id": "e54",
+      "from": "worker-scans",
+      "to": "sandbox-b",
+      "kind": "exec",
+      "sync": true,
+      "semantics": "compete",
+      "p50_ms": 900,
+      "verified": true
+    },
+    {
+      "id": "e55",
+      "from": "worker-scans",
+      "to": "redis",
+      "kind": "redis",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "tool_lock:org:{id} + global_scan_slots (GLOBAL_SCAN_CONCURRENCY=8). Fails closed."
+    },
+    {
+      "id": "e56",
+      "from": "worker-scans",
+      "to": "object-store",
+      "kind": "file",
+      "sync": true,
+      "semantics": "append",
+      "p50_ms": 8,
+      "verified": true
+    },
+    {
+      "id": "e57",
+      "from": "worker-scans",
+      "to": "q-bus",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "fanout",
+      "p50_ms": 25,
+      "verified": true,
+      "label": "ScanCompleted / FindingCreated"
+    },
+    {
+      "id": "e58",
+      "from": "worker-scans",
+      "to": "e-github",
+      "kind": "https",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 420,
+      "verified": true,
+      "label": "branch review, repo clone + analyze"
+    },
+    {
+      "id": "e59",
+      "from": "worker-vapt",
+      "to": "worker-scans",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "rpc",
+      "p50_ms": 60,
+      "verified": true,
+      "label": "scanner_adapter creates a scan for the step — vapt never runs tools itself"
+    },
+    {
+      "id": "e60",
+      "from": "worker-vapt",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "vapt_campaigns / steps / approvals"
+    },
+    {
+      "id": "e61",
+      "from": "worker-vapt",
+      "to": "security-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "append",
+      "p50_ms": 22,
+      "verified": true,
+      "label": "vapt_correlated_findings"
+    },
+    {
+      "id": "e62",
+      "from": "worker-vapt",
+      "to": "mw-dualcontrol",
+      "kind": "http",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 500,
+      "verified": true,
+      "label": "wait_for_approval step parks the campaign until a human approves"
+    },
+    {
+      "id": "e63",
+      "from": "worker-vapt",
+      "to": "opencode-proxy",
+      "kind": "http",
+      "sync": true,
+      "semantics": "fallback",
+      "p50_ms": 300,
+      "verified": true,
+      "label": "PROXY_MCP_PROVIDER=auto, mitmproxy fallback=true, failover=false"
+    },
+    {
+      "id": "e64",
+      "from": "worker-ai",
+      "to": "m-deepseek",
+      "kind": "https",
+      "sync": true,
+      "semantics": "fallback",
+      "p50_ms": 2400,
+      "verified": true,
+      "label": "deepseek-v4-flash, streaming, reasoning_effort=high"
+    },
+    {
+      "id": "e65",
+      "from": "worker-ai",
+      "to": "m-zai",
+      "kind": "https",
+      "sync": true,
+      "semantics": "fallback",
+      "p50_ms": 2600,
+      "verified": true,
+      "label": "on 402/429/5xx"
+    },
+    {
+      "id": "e66",
+      "from": "worker-ai",
+      "to": "m-agentrouter",
+      "kind": "https",
+      "sync": true,
+      "semantics": "fallback",
+      "p50_ms": 3200,
+      "verified": true,
+      "label": "claude-opus-4-8 — observed in real audit logs"
+    },
+    {
+      "id": "e67",
+      "from": "worker-ai",
+      "to": "m-typesafe",
+      "kind": "https",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 600,
+      "verified": true,
+      "label": "typed routing + finding gates"
+    },
+    {
+      "id": "e68",
+      "from": "worker-ai",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "ai_audit_logs, ai_agent_runs, ai_usage_monthly"
+    },
+    {
+      "id": "e69",
+      "from": "worker-ai",
+      "to": "agi-runner",
+      "kind": "http",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 40,
+      "verified": true,
+      "label": "PHANTIX_AGI_SERVICE_URL=http://phantix-agi:8095, Bearer PHANTIX_AGI_SERVICE_TOKEN"
+    },
+    {
+      "id": "e70",
+      "from": "worker-alerts",
+      "to": "e-brevo",
+      "kind": "smtp",
+      "sync": true,
+      "semantics": "broadcast",
+      "p50_ms": 1500,
+      "verified": true
+    },
+    {
+      "id": "e71",
+      "from": "worker-alerts",
+      "to": "e-dead-channels",
+      "kind": "https",
+      "sync": true,
+      "semantics": "broadcast",
+      "p50_ms": 900,
+      "verified": true,
+      "note": "policy says critical -> email + WhatsApp + Telegram; every token is EMPTY, so this hop is a no-op today"
+    },
+    {
+      "id": "e72",
+      "from": "worker-alerts",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "append",
+      "p50_ms": 12,
+      "verified": true,
+      "label": "alert_events, alert_deliveries"
+    },
+    {
+      "id": "e73",
+      "from": "worker-reports",
+      "to": "object-store",
+      "kind": "file",
+      "sync": true,
+      "semantics": "append",
+      "p50_ms": 900,
+      "verified": true,
+      "label": "phantix-reports bucket"
+    },
+    {
+      "id": "e74",
+      "from": "worker-reports",
+      "to": "e-nvd",
+      "kind": "https",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 800,
+      "verified": true,
+      "label": "refresh-cve-cache-weekly"
+    },
+    {
+      "id": "e75",
+      "from": "worker-reports",
+      "to": "q-ai",
+      "kind": "celery",
+      "sync": false,
+      "semantics": "rpc",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "AIRequested -> narrative sections"
+    },
+    {
+      "id": "e76",
+      "from": "worker-reports",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 15,
+      "verified": true
+    },
+    {
+      "id": "e77",
+      "from": "worker-bus",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "fanout",
+      "p50_ms": 15,
+      "verified": true,
+      "label": "re-publishes to local subscribers"
+    },
+    {
+      "id": "e78",
+      "from": "worker-programme",
+      "to": "m-deepseek",
+      "kind": "https",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 2600,
+      "verified": true,
+      "label": "autofix generate + continuous_pr"
+    },
+    {
+      "id": "e79",
+      "from": "worker-programme",
+      "to": "e-github",
+      "kind": "https",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 700,
+      "verified": true,
+      "label": "signed autofix PRs (AUTOFIX_SIGNING_KEY)"
+    },
+    {
+      "id": "e80",
+      "from": "worker-programme",
+      "to": "security-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "append",
+      "p50_ms": 22,
+      "verified": true
+    },
+    {
+      "id": "e81",
+      "from": "job-reaper",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 40,
+      "verified": true,
+      "label": "marks stalled rows, revokes celery tasks"
+    },
+    {
+      "id": "e82",
+      "from": "job-reaper",
+      "to": "security-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 45,
+      "verified": true,
+      "label": "scan_jobs -> interrupted + resumable"
+    },
+    {
+      "id": "e83",
+      "from": "api",
+      "to": "agi-runner",
+      "kind": "http",
+      "sync": false,
+      "semantics": "rpc",
+      "p50_ms": 45,
+      "verified": true,
+      "label": "POST session provision — 429 agi_global_concurrency above 4, 409 one session per org"
+    },
+    {
+      "id": "e84",
+      "from": "agi-runner",
+      "to": "agi-loop",
+      "kind": "inproc",
+      "sync": false,
+      "semantics": "spawn",
+      "p50_ms": 5,
+      "verified": true,
+      "label": "one asyncio task per session"
+    },
+    {
+      "id": "e85",
+      "from": "agi-loop",
+      "to": "m-deepseek",
+      "kind": "https",
+      "sync": true,
+      "semantics": "stream",
+      "p50_ms": 2400,
+      "verified": true,
+      "label": "SSE stream, reasoning_content"
+    },
+    {
+      "id": "e86",
+      "from": "agi-loop",
+      "to": "m-zai",
+      "kind": "https",
+      "sync": true,
+      "semantics": "fallback",
+      "p50_ms": 2600,
+      "verified": true,
+      "label": "GLM fallback on 401/402/403/408/429/500/502/503/504/520/524"
+    },
+    {
+      "id": "e87",
+      "from": "agi-loop",
+      "to": "sandbox-pool",
+      "kind": "inproc",
+      "sync": false,
+      "semantics": "compete",
+      "p50_ms": 1200,
+      "verified": true,
+      "label": "lease, semaphore(max 8), 900s queue timeout -> PoolTimeout -> 503"
+    },
+    {
+      "id": "e88",
+      "from": "sandbox-pool",
+      "to": "sandbox-a",
+      "kind": "exec",
+      "sync": true,
+      "semantics": "lease",
+      "p50_ms": 60,
+      "verified": true
+    },
+    {
+      "id": "e89",
+      "from": "sandbox-pool",
+      "to": "sandbox-b",
+      "kind": "exec",
+      "sync": true,
+      "semantics": "lease",
+      "p50_ms": 60,
+      "verified": true
+    },
+    {
+      "id": "e90",
+      "from": "sandbox-a",
+      "to": "t-lab",
+      "kind": "tcp",
+      "sync": true,
+      "semantics": "attempt",
+      "p50_ms": 300,
+      "verified": true,
+      "label": "tools hit the target; cap_drop ALL + NET_RAW; cannot reach db/redis"
+    },
+    {
+      "id": "e91",
+      "from": "sandbox-b",
+      "to": "t-lab",
+      "kind": "tcp",
+      "sync": true,
+      "semantics": "attempt",
+      "p50_ms": 300,
+      "verified": true
+    },
+    {
+      "id": "e92",
+      "from": "agi-loop",
+      "to": "agi-toolcatalog",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 4,
+      "verified": true
+    },
+    {
+      "id": "e93",
+      "from": "agi-toolcatalog",
+      "to": "agi-guards",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 2,
+      "verified": true,
+      "label": "scope + forbidden check before every command"
+    },
+    {
+      "id": "e94",
+      "from": "agi-loop",
+      "to": "agi-sweepers",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "compete",
+      "p50_ms": 60000,
+      "verified": true,
+      "label": "ONLY from the JOB_DONE coverage gate, only when autonomy=high, sequential"
+    },
+    {
+      "id": "e95",
+      "from": "agi-loop",
+      "to": "agi-recon",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 90000,
+      "verified": true
+    },
+    {
+      "id": "e96",
+      "from": "agi-loop",
+      "to": "agi-autofix",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 45000,
+      "verified": true
+    },
+    {
+      "id": "e97",
+      "from": "agi-loop",
+      "to": "agi-pi",
+      "kind": "subprocess",
+      "sync": true,
+      "semantics": "compete",
+      "p50_ms": 120000,
+      "verified": true,
+      "label": "pi CLI, max 2 concurrent, provider zai"
+    },
+    {
+      "id": "e98",
+      "from": "agi-loop",
+      "to": "opencode-proxy",
+      "kind": "http",
+      "sync": true,
+      "semantics": "fallback",
+      "p50_ms": 300,
+      "verified": true,
+      "label": "skill_handoff -> install | opencode contract"
+    },
+    {
+      "id": "e99",
+      "from": "opencode-proxy",
+      "to": "opencode",
+      "kind": "tcp",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 5,
+      "verified": true,
+      "label": "socat -> host.docker.internal:4096"
+    },
+    {
+      "id": "e100",
+      "from": "agi-finding-mgr",
+      "to": "agi-verifier",
+      "kind": "inproc",
+      "sync": false,
+      "semantics": "fanout",
+      "p50_ms": 45000,
+      "verified": true,
+      "label": "concurrency 8, batch 32"
+    },
+    {
+      "id": "e101",
+      "from": "agi-finding-mgr",
+      "to": "agi-exploit-verifier",
+      "kind": "inproc",
+      "sync": false,
+      "semantics": "fanout",
+      "p50_ms": 60000,
+      "verified": true
+    },
+    {
+      "id": "e102",
+      "from": "agi-verifier",
+      "to": "m-typesafe",
+      "kind": "https",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 600,
+      "verified": true,
+      "label": "typed verdict: real finding | expected access control | inconclusive"
+    },
+    {
+      "id": "e103",
+      "from": "agi-finding-mgr",
+      "to": "m-typesafe",
+      "kind": "https",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 600,
+      "verified": true,
+      "label": "max 80 gates per session"
+    },
+    {
+      "id": "e104",
+      "from": "agi-loop",
+      "to": "agi-oversight",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 800,
+      "verified": true,
+      "label": "ADVISORY ONLY in this deployment: nothing sets oversight_enforced"
+    },
+    {
+      "id": "e105",
+      "from": "agi-loop",
+      "to": "agi-knowledge",
+      "kind": "inproc",
+      "sync": false,
+      "semantics": "rpc",
+      "p50_ms": 30,
+      "verified": true,
+      "label": "the 'R' in RAG here = prior session summaries + a static gap playbook, not vector retrieval"
+    },
+    {
+      "id": "e106",
+      "from": "agi-knowledge",
+      "to": "api",
+      "kind": "http",
+      "sync": false,
+      "semantics": "rpc",
+      "p50_ms": 35,
+      "verified": true,
+      "label": "POST /api/v1/admin/agi/internal/sessions/{sid}/knowledge"
+    },
+    {
+      "id": "e107",
+      "from": "agi-loop",
+      "to": "api",
+      "kind": "http",
+      "sync": false,
+      "semantics": "fanout",
+      "p50_ms": 35,
+      "verified": true,
+      "label": "findings, activity, engine_call, transcripts — all callbacks"
+    },
+    {
+      "id": "e108",
+      "from": "agi-loop",
+      "to": "agi-artifacts",
+      "kind": "file",
+      "sync": true,
+      "semantics": "append",
+      "p50_ms": 6,
+      "verified": true
+    },
+    {
+      "id": "e109",
+      "from": "agi-loop",
+      "to": "e-ddg",
+      "kind": "https",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 900,
+      "verified": true,
+      "label": "SSRF-guarded web research; Tavily key is EMPTY"
+    },
+    {
+      "id": "e110",
+      "from": "agi-loop",
+      "to": "mcp-customer",
+      "kind": "https",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 400,
+      "verified": true,
+      "label": "agent_platform.mcp_surface tools/list against a tenant- supplied endpoint"
+    },
+    {
+      "id": "e111",
+      "from": "traefik",
+      "to": "coolify",
+      "kind": "http",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "Coolify dashboard on :8000"
+    },
+    {
+      "id": "e112",
+      "from": "coolify",
+      "to": "coolify-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 6,
+      "verified": true
+    },
+    {
+      "id": "e113",
+      "from": "coolify",
+      "to": "coolify-redis",
+      "kind": "redis",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 2,
+      "verified": true
+    },
+    {
+      "id": "e114",
+      "from": "coolify",
+      "to": "api",
+      "kind": "docker",
+      "sync": false,
+      "semantics": "deploy",
+      "p50_ms": 30000,
+      "verified": true,
+      "label": "compose up -d; recreates all 12 containers on deploy"
+    },
+    {
+      "id": "e115",
+      "from": "api",
+      "to": "object-store",
+      "kind": "file",
+      "sync": true,
+      "semantics": "append",
+      "p50_ms": 8,
+      "verified": true
+    },
+    {
+      "id": "e116",
+      "from": "eng-threat",
+      "to": "t-embeddings",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 30,
+      "verified": false,
+      "note": "UNVERIFIED / INACTIVE. Path exists but AI_EMBEDDING_ENABLED is unset and QDRANT_URL is absent."
+    },
+    {
+      "id": "e117",
+      "from": "mcp-burp",
+      "to": "burp",
+      "kind": "http",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 0,
+      "verified": false,
+      "note": "UNVERIFIED. Endpoint is EMPTY; Burp is running but unreachable from the request path."
+    },
+    {
+      "id": "e118",
+      "from": "mcp-caido",
+      "to": "redis",
+      "kind": "stdio",
+      "sync": false,
+      "semantics": "rpc",
+      "p50_ms": 0,
+      "verified": false,
+      "note": "UNVERIFIED. Disabled by CAIDO_SUSPENDED."
+    },
+    {
+      "id": "e119",
+      "from": "worker-scans",
+      "to": "mcp-customer",
+      "kind": "https",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 350,
+      "verified": false,
+      "note": "UNVERIFIED. Only if a tenant supplied an MCP endpoint."
+    },
+    {
+      "id": "e120",
+      "from": "sandbox-image-oneshot",
+      "to": "sandbox-keeper",
+      "kind": "docker",
+      "sync": false,
+      "semantics": "rpc",
+      "p50_ms": 60000,
+      "verified": true,
+      "label": "docker build + docker create keeper"
+    },
+    {
+      "id": "e121",
+      "from": "cloudflare",
+      "to": "t-tenants",
+      "kind": "http",
+      "sync": true,
+      "semantics": "proxy",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "platform.phantix.site / app.phantix.site / staff / attack / defend / code"
+    },
+    {
+      "id": "e122",
+      "from": "e-ddg",
+      "to": "t-tenants",
+      "kind": "https",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 400,
+      "verified": false,
+      "note": "UNVERIFIED outbound research corpus (OWASP, PortSwigger, HackTricks, MITRE, CISA)"
+    },
+    {
+      "id": "e200",
+      "from": "api",
+      "to": "eng-control",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e201",
+      "from": "api",
+      "to": "eng-asset",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e202",
+      "from": "api",
+      "to": "eng-scanner",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e203",
+      "from": "api",
+      "to": "eng-vapt",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e204",
+      "from": "api",
+      "to": "eng-risk",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e205",
+      "from": "api",
+      "to": "eng-reporting",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e206",
+      "from": "api",
+      "to": "eng-compliance",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e207",
+      "from": "api",
+      "to": "eng-soc",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e208",
+      "from": "api",
+      "to": "eng-threat",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e209",
+      "from": "api",
+      "to": "eng-audit",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e210",
+      "from": "api",
+      "to": "eng-alert",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e211",
+      "from": "api",
+      "to": "eng-ops",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e212",
+      "from": "api",
+      "to": "eng-ai",
+      "kind": "inproc",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 3,
+      "verified": true,
+      "label": "in-process route dispatch",
+      "note": "manifest-mounted routers; the request never leaves the api container"
+    },
+    {
+      "id": "e213",
+      "from": "eng-control",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e214",
+      "from": "eng-asset",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e215",
+      "from": "eng-vapt",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e216",
+      "from": "eng-reporting",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e217",
+      "from": "eng-compliance",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e218",
+      "from": "eng-ai",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e219",
+      "from": "eng-audit",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e220",
+      "from": "eng-alert",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e221",
+      "from": "eng-ops",
+      "to": "db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 14,
+      "verified": true,
+      "label": "platform tables",
+      "note": "engine owns its tables in the platform DB"
+    },
+    {
+      "id": "e222",
+      "from": "eng-scanner",
+      "to": "security-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "per-org security schema",
+      "note": "security DB via the per-org pool"
+    },
+    {
+      "id": "e223",
+      "from": "eng-risk",
+      "to": "security-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "per-org security schema",
+      "note": "security DB via the per-org pool"
+    },
+    {
+      "id": "e224",
+      "from": "eng-soc",
+      "to": "security-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "per-org security schema",
+      "note": "security DB via the per-org pool"
+    },
+    {
+      "id": "e225",
+      "from": "eng-threat",
+      "to": "security-db",
+      "kind": "sql",
+      "sync": true,
+      "semantics": "rpc",
+      "p50_ms": 20,
+      "verified": true,
+      "label": "per-org security schema",
+      "note": "security DB via the per-org pool"
+    },
+    {
+      "id": "e226",
+      "from": "eng-ai",
+      "to": "m-deepseek",
+      "kind": "https",
+      "sync": true,
+      "semantics": "stream",
+      "p50_ms": 2400,
+      "verified": true,
+      "label": "POST /ai/agent/chat/stream",
+      "note": "streamed in-request; this is the only AI path the api does not queue"
+    },
+    {
+      "id": "e227",
+      "from": "eng-ai",
+      "to": "m-zai",
+      "kind": "https",
+      "sync": true,
+      "semantics": "fallback",
+      "p50_ms": 2600,
+      "verified": true,
+      "label": "GLM fallback",
+      "note": "on 401/402/408/429/5xx"
+    },
+    {
+      "id": "e228",
+      "from": "eng-ai",
+      "to": "m-typesafe",
+      "kind": "https",
+      "sync": true,
+      "semantics": "gate",
+      "p50_ms": 600,
+      "verified": true,
+      "label": "typed gate",
+      "note": "routing + finding gates, in-process"
+    }
+  ],
+  "workloads": [
+    {
+      "id": "w-ingress",
+      "label": "authenticated API request",
+      "entry": "cloudflare",
+      "goal": [
+        "db"
+      ],
+      "arrival_ms": 1400,
+      "route": [
+        "cloudflare",
+        "traefik",
+        "api",
+        "mw-ratelimit",
+        "mw-timeout",
+        "mw-dualcontrol",
+        "mw-session",
+        "eng-control",
+        "engine-bus",
+        "eng-risk",
+        "eng-alert",
+        "eng-reporting",
+        "q-bus",
+        "worker-bus",
+        "db"
+      ],
+      "note": "Everything the platform does starts here: edge -> traefik -> api -> middleware gates -> owning engine -> bus -> celery -> worker -> store"
+    },
+    {
+      "id": "w-scan",
+      "label": "scan job (fan-out into work items)",
+      "entry": "api",
+      "goal": [
+        "db",
+        "security-db"
+      ],
+      "arrival_ms": 5200,
+      "route": [
+        "api",
+        "q-scans",
+        "worker-scans",
+        "redis",
+        "sandbox-a",
+        "sandbox-b",
+        "security-db",
+        "q-bus",
+        "eng-risk",
+        "eng-alert",
+        "eng-reporting",
+        "eng-ai",
+        "q-ai",
+        "worker-ai",
+        "m-deepseek"
+      ],
+      "note": "one parent job -> N bounded work items -> re-orchestrate -> finalize -> one ScanCompleted fan-out"
+    },
+    {
+      "id": "w-agi",
+      "label": "AGI engagement (agent loop + tools)",
+      "entry": "api",
+      "goal": [
+        "db",
+        "security-db"
+      ],
+      "arrival_ms": 9000,
+      "route": [
+        "api",
+        "agi-runner",
+        "agi-loop",
+        "m-deepseek",
+        "agi-toolcatalog",
+        "agi-guards",
+        "sandbox-pool",
+        "sandbox-a",
+        "t-lab",
+        "agi-verifier",
+        "m-typesafe",
+        "agi-finding-mgr",
+        "agi-knowledge",
+        "api"
+      ],
+      "note": "api -> runner (cap 4) -> model stream -> sandbox lease -> tools -> verify -> TypeSafe gate -> callback"
+    },
+    {
+      "id": "w-vapt",
+      "label": "VAPT campaign (approval-gated)",
+      "entry": "api",
+      "goal": [
+        "security-db"
+      ],
+      "arrival_ms": 16000,
+      "route": [
+        "api",
+        "q-vapt",
+        "worker-vapt",
+        "mw-dualcontrol",
+        "worker-scans",
+        "sandbox-a",
+        "security-db",
+        "q-bus",
+        "eng-risk"
+      ],
+      "note": "parks on dual-control approval, then drives the scanner engine rather than running tools itself"
+    },
+    {
+      "id": "w-report",
+      "label": "report assembly",
+      "entry": "worker-bus",
+      "goal": [
+        "object-store"
+      ],
+      "arrival_ms": 21000,
+      "route": [
+        "worker-bus",
+        "q-reports",
+        "worker-reports",
+        "e-nvd",
+        "object-store"
+      ]
+    },
+    {
+      "id": "w-alert",
+      "label": "alert delivery",
+      "entry": "alert-daemon",
+      "goal": [
+        "e-brevo"
+      ],
+      "arrival_ms": 3000,
+      "route": [
+        "alert-daemon",
+        "db",
+        "worker-alerts",
+        "e-brevo"
+      ]
+    }
+  ],
+  "schedules": {
+    "note": "26 RedBeat entries. All times UTC. Listed so the ambient animation can be honest about periodicity.",
+    "entries": [
+      {
+        "task": "process-pending-alerts-every-30s",
+        "every_s": 30,
+        "queue": "alerts"
+      },
+      {
+        "task": "process-pending-staff-alerts",
+        "every_s": 60,
+        "queue": "alerts"
+      },
+      {
+        "task": "staff-alert-milestones",
+        "every_s": 3600,
+        "queue": "alerts"
+      },
+      {
+        "task": "poll-vapt-schedules",
+        "every_s": 60,
+        "queue": "vapt"
+      },
+      {
+        "task": "expire-security-db-pools",
+        "every_s": 120,
+        "queue": "celery"
+      },
+      {
+        "task": "reap-stalled-jobs",
+        "every_s": 300,
+        "queue": "celery"
+      },
+      {
+        "task": "flush-scan-result-spool",
+        "every_s": 60,
+        "queue": "scans"
+      },
+      {
+        "task": "availability-run-due-checks",
+        "every_s": 60,
+        "queue": "celery"
+      },
+      {
+        "task": "endpoint-monitoring-run-due",
+        "every_s": 60,
+        "queue": "celery"
+      },
+      {
+        "task": "rebootstrap-stale-security-schemas",
+        "every_s": 900,
+        "queue": "celery"
+      },
+      {
+        "task": "integrations-health-checks",
+        "every_s": 900,
+        "queue": "integrations"
+      },
+      {
+        "task": "integrations-refresh-tokens",
+        "every_s": 3600,
+        "queue": "integrations"
+      },
+      {
+        "task": "continuous-context-reassess",
+        "every_s": 3600,
+        "queue": "continuous"
+      },
+      {
+        "task": "refresh-cve-cache-weekly",
+        "every_s": 604800,
+        "queue": "reports"
+      },
+      {
+        "task": "purge-archived-reports-daily",
+        "every_s": 86400,
+        "queue": "reports"
+      },
+      {
+        "task": "purge-expired-platform-data-daily",
+        "every_s": 86400,
+        "queue": "celery"
+      },
+      {
+        "task": "billing-subscription-lifecycle-daily",
+        "every_s": 86400,
+        "queue": "alerts"
+      },
+      {
+        "task": "continuous-accepted-risk-review",
+        "every_s": 86400,
+        "queue": "continuous"
+      },
+      {
+        "task": "continuous-context-drift-sweep",
+        "every_s": 86400,
+        "queue": "continuous"
+      },
+      {
+        "task": "continuous-learning-feed",
+        "every_s": 86400,
+        "queue": "continuous"
+      },
+      {
+        "task": "funnel-store-purge",
+        "every_s": 3600,
+        "queue": "continuous"
+      },
+      {
+        "task": "ai-verify-findings-daily",
+        "cron": "17:30",
+        "queue": "ai"
+      },
+      {
+        "task": "ai-remediation-sweep-daily",
+        "cron": "18:15",
+        "queue": "ai"
+      },
+      {
+        "task": "kb-research-daily",
+        "cron": "19:15",
+        "queue": "ai"
+      },
+      {
+        "task": "funnel-scan-drain",
+        "cron": "16:45",
+        "queue": "continuous"
+      },
+      {
+        "task": "funnel-scan-drain-late",
+        "cron": "22:30",
+        "queue": "continuous"
+      }
+    ]
+  }
+}

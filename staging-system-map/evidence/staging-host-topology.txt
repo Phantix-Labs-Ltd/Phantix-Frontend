@@ -1,0 +1,91 @@
+===PSA===
+worker-reports-vtm5vs1bjkltpx3atda799cv-214641104802|vtm5vs1bjkltpx3atda799cv_worker-reports:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours
+worker-scans-vtm5vs1bjkltpx3atda799cv-214640811280|vtm5vs1bjkltpx3atda799cv_worker-scans:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours
+worker-vapt-vtm5vs1bjkltpx3atda799cv-214640923495|vtm5vs1bjkltpx3atda799cv_worker-vapt:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours
+api-vtm5vs1bjkltpx3atda799cv-214640706655|vtm5vs1bjkltpx3atda799cv_api:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours (healthy)
+worker-alerts-vtm5vs1bjkltpx3atda799cv-214641001610|vtm5vs1bjkltpx3atda799cv_worker-alerts:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours
+worker-bus-vtm5vs1bjkltpx3atda799cv-214641151473|vtm5vs1bjkltpx3atda799cv_worker-bus:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours
+alert-daemon-vtm5vs1bjkltpx3atda799cv-214641382881|vtm5vs1bjkltpx3atda799cv_alert-daemon:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours
+beat-vtm5vs1bjkltpx3atda799cv-214641319195|vtm5vs1bjkltpx3atda799cv_beat:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 57 minutes
+worker-programme-vtm5vs1bjkltpx3atda799cv-214641247982|vtm5vs1bjkltpx3atda799cv_worker-programme:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours
+worker-ai-vtm5vs1bjkltpx3atda799cv-214641191178|vtm5vs1bjkltpx3atda799cv_worker-ai:a3c8e25c09a64af626c8a5f35f2df3a5dfb24b69|Up 9 hours
+db-vtm5vs1bjkltpx3atda799cv-214640649641|postgres:16-alpine|Up 9 hours (healthy)
+redis-vtm5vs1bjkltpx3atda799cv-214640685173|redis:7-alpine|Up 9 hours (healthy)
+phantix-agi-sandbox-keeper|phantix-agi-sandbox:latest|Created
+phantix-agi-0f78afd24ab0|phantix-agi-sandbox:latest|Up 10 hours
+phantix-agi-3e9be8219a34|phantix-agi-sandbox:latest|Up 10 hours
+phantix-agi-runner|phantix-agi-phantix-agi|Up 10 hours (healthy)
+phantix-api-src-sandbox-image-1|docker:27-cli|Exited (0) 3 days ago
+trusting_solomon|1648efe56962|Exited (0) 6 days ago
+relaxed_banzai|1babef0a7ae1|Exited (0) 7 days ago
+amazing_cohen|077d9e8dea0c|Up 9 days
+coolify|coollabsio/coolify:4.3.23|Up 11 days (healthy)
+coolify-db|postgres:15-alpine|Up 11 days (healthy)
+coolify-redis|520775a41a63|Up 11 days (healthy)
+coolify-realtime|coollabsio/coolify-realtime:1.0.19|Up 11 days (healthy)
+bench-security-db|cf78e76683b9|Up 13 days
+coolify-sentinel|coollabsio/sentinel:1.0.1|Up 2 weeks (healthy)
+phantix-opencode-proxy|alpine/socat:latest|Up 7 weeks
+coolify-proxy|traefik:v3.6|Up 7 weeks (healthy)
+===AGIHEALTH===
+{"ok":true,"service":"phantix-agi-runner","version":"0.4.0","docker":true,"deepseek_configured":true,"sessions":0,"auto_recon":true,"container_network":"phantix-sandbox","sandbox_policy":{"profile":"standard","cap_drop_all":true,"cap_add":["NET_RAW"],"user":null,"read_only":false,"pids_limit":512,"network_mode":"isolated","network":"phantix-sandbox","nsjail":false},"default_image":"phantix-agi-sandbox:latest","sandbox_image_present":true,"max_autonomous_turns":40,"features":["org_assets","medium_autonomy","container_shell","bg_jobs","otp_wait","auth_login","job_completion","observe_loop","job_done_verifier","multi_phase","skill_search","skill_load","skills_selected","tools_to_provision","skill_prioritization","loop_progress","loop_status","lab_exploit_pack","authenticated_get","skill_handoff","deepseek_v1","pi_subagent"],"pi_available":true,"pi_max_concurrent":2,"pi_default_tools":"read,grep,find,ls,bash"}
+===SYSTEMD===
+  phantix-agi-network.service                    loaded    active   exited  Attach phantix-agi-runner to Phantix Coolify networks
+  phantix-agi.service                            loaded    active   exited  PHANTIX AGI Runner
+  phantix-burp-novnc.service                     loaded    active   running Phantix Burp noVNC (license UI)
+  phantix-burp-vnc.service                       loaded    active   running Phantix Burp x11vnc
+  phantix-burp-wm.service                        loaded    active   running Phantix Burp window manager (fluxbox)
+  phantix-burp-xvfb.service                      loaded    active   running Phantix Burp Xvfb display :99
+  phantix-burp.service                           loaded    active   running Phantix Burp Suite Professional
+  phantix-opencode-proxy.service                 loaded    active   exited  Phantix OpenCode Docker network proxy (socat)
+  phantix-opencode.service                       loaded    active   running Phantix OpenCode contractor (headless serve for PHANTIX AGI)
+===TIMERS===
+===NETMEMBERS===
+-- 
+docker: 'docker network inspect' requires at least 1 argument
+
+Usage:  docker network inspect [OPTIONS] NETWORK [NETWORK...]
+
+See 'docker network inspect --help' for more information
+-- 
+docker: 'docker network inspect' requires at least 1 argument
+
+Usage:  docker network inspect [OPTIONS] NETWORK [NETWORK...]
+
+See 'docker network inspect --help' for more information
+-- 
+docker: 'docker network inspect' requires at least 1 argument
+
+Usage:  docker network inspect [OPTIONS] NETWORK [NETWORK...]
+
+See 'docker network inspect --help' for more information
+===OPENCODE===
+[TCP-LISTEN:4096,fork,reuseaddr TCP:host.docker.internal:4096] | map[]
+===LISTEN===
+State  Recv-Q Send-Q      Local Address:Port  Peer Address:PortProcess                                                   
+LISTEN 0      4096        127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=138161,fd=15))             
+LISTEN 0      4096              0.0.0.0:443        0.0.0.0:*    users:(("docker-proxy",pid=12346,fd=8))                  
+LISTEN 0      4096              0.0.0.0:80         0.0.0.0:*    users:(("docker-proxy",pid=12319,fd=8))                  
+LISTEN 0      4096              0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=138144,fd=3),("systemd",pid=1,fd=212))
+LISTEN 0      128             127.0.0.1:5037       0.0.0.0:*    users:(("adb",pid=409384,fd=13))                         
+LISTEN 0      4096           127.0.0.54:53         0.0.0.0:*    users:(("systemd-resolve",pid=138161,fd=17))             
+LISTEN 0      32              127.0.0.1:5901       0.0.0.0:*    users:(("x11vnc",pid=2026808,fd=8))                      
+LISTEN 0      100               0.0.0.0:6080       0.0.0.0:*    users:(("websockify",pid=2026809,fd=3))                  
+LISTEN 0      4096              0.0.0.0:6001       0.0.0.0:*    users:(("docker-proxy",pid=4060822,fd=8))                
+LISTEN 0      4096              0.0.0.0:6002       0.0.0.0:*    users:(("docker-proxy",pid=4060866,fd=8))                
+LISTEN 0      512               0.0.0.0:4096       0.0.0.0:*    users:(("opencode",pid=138160,fd=17))                    
+LISTEN 0      4096              0.0.0.0:8095       0.0.0.0:*    users:(("docker-proxy",pid=588649,fd=8))                 
+LISTEN 0      4096              0.0.0.0:8080       0.0.0.0:*    users:(("docker-proxy",pid=12400,fd=8))                  
+LISTEN 0      4096              0.0.0.0:8000       0.0.0.0:*    users:(("docker-proxy",pid=4061200,fd=8))                
+LISTEN 0      4096            127.0.0.1:18082      0.0.0.0:*    users:(("whtbin",pid=3629186,fd=4))                      
+LISTEN 0      4096                 [::]:443           [::]:*    users:(("docker-proxy",pid=12352,fd=8))                  
+LISTEN 0      4096                 [::]:80            [::]:*    users:(("docker-proxy",pid=12326,fd=8))                  
+LISTEN 0      4096                 [::]:22            [::]:*    users:(("sshd",pid=138144,fd=4),("systemd",pid=1,fd=214))
+LISTEN 0      32                  [::1]:5901          [::]:*    users:(("x11vnc",pid=2026808,fd=10))                     
+LISTEN 0      32                  [::1]:5900          [::]:*    users:(("x11vnc",pid=2026808,fd=9))                      
+LISTEN 0      50     [::ffff:127.0.0.1]:37155            *:*    users:(("java",pid=2026811,fd=36))                       
+LISTEN 0      4096                 [::]:6001          [::]:*    users:(("docker-proxy",pid=4060834,fd=8))                
+LISTEN 0      4096                 [::]:6002          [::]:*    users:(("docker-proxy",pid=4060874,fd=8))                
+LISTEN 0      4096                 [::]:8095          [::]:*    users:(("docker-proxy",pid=588655,fd=8))                 
+LISTEN 0      4096                 [::]:8080          [::]:*    users:(("docker-proxy",pid=12407,fd=8))                  
+LISTEN 0      4096                 [::]:8000          [::]:*    users:(("docker-proxy",pid=4061207,fd=8))                

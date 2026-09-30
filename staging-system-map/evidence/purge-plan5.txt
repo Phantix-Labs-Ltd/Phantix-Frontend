@@ -1,0 +1,47 @@
+mode=plan  db=db-vtm5vs1bjkltpx3atda799cv-214640649641  sec=bench-security-db
+──────── platform ────────
+NOTICE:    [child] agi_transcripts                    0
+NOTICE:    [child] agi_actions                        0
+NOTICE:    [child] agi_sessions                       0
+NOTICE:    [child] subtotal 0
+Pager usage is off.
+SET
+*** PLAN (rolls back) ***
+BEGIN
+DO
+NOTICE:    [rows ] reports                            1
+NOTICE:    [rows ] vapt_campaigns                     2
+NOTICE:    [rows ] vapt_org_settings                  1
+NOTICE:    [rows ] agi_engagements                    10
+NOTICE:    [rows ] agi_engine_capabilities            28
+NOTICE:    [rows ] agi_skills                         60
+NOTICE:    [rows ] agi_org_context_packs              1
+NOTICE:    [rows ] agi_org_test_accounts              10
+NOTICE:    [skip ] agi_usage_policies                 (no organization_id)
+NOTICE:    [rows ] ai_agent_runs                      3
+NOTICE:    [rows ] alert_events                       282
+NOTICE:    [rows ] alert_deliveries                   3321
+NOTICE:    [rows ] notifications                      337
+NOTICE:    [rows ] audit_events                       17918
+NOTICE:    [rows ] audit_pending_actions              3
+NOTICE:    [rows ] integration_installations          1
+NOTICE:    [rows ] github_installations               1
+NOTICE:    [rows ] github_repository_review_settings  2
+NOTICE:    [rows ] scm_credential_targets             1
+NOTICE:    [rows ] cloud_connectors                   1
+NOTICE:    [rows ] otp_challenges                     469
+NOTICE:    [rows ] organization_user_login_links      8
+NOTICE:    [rows ] app_sessions                       32
+NOTICE:    [rows ] organization_user_sessions         484
+NOTICE:    [platform] listed=102 absent=33 no_org_col=1 tables_with_rows=23 rows=22976
+DO
+ROLLBACK
+──────── security ────────
+Pager usage is off.
+SET
+*** PLAN (rolls back) ***
+BEGIN
+NOTICE:    [rows ] server_logs                        274
+DO
+ROLLBACK
+NOTICE:    [security] tables=64 rows=274
