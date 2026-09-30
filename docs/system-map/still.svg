@@ -1,0 +1,860 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2375.75 2045" width="2375.75" height="2045" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+<rect x="0" y="0" width="2375.75" height="2045" fill="#07090c"/>
+<text x="34" y="34" fill="#e2e8f0" font-size="17" font-weight="600" letter-spacing="0.5">Phantix / SecureGraph — staging deployment, as discovered</text>
+<text x="34" y="54" fill="#64748b" font-size="11">live https://staging.phantix.site · environment staging · v0.1.0 · modular_monolith_13_engines · image a3c8e25c</text>
+<text x="34" y="72" fill="#64748b" font-size="11">103 deployed units · 151 edges · 974 live routes · 13 engines · - celery workers · 10 queues · smtp-relay.brevo.com · docker host 169.58.140.217</text>
+<text x="2341.75" y="34" fill="#fbbf24" font-size="11" text-anchor="end">3 unverified units · 5 unverified edges (dashed red)</text>
+<text x="2341.75" y="54" fill="#f87171" font-size="11" text-anchor="end">no MCP server deployed — only outbound MCP client adapters</text>
+<text x="2341.75" y="72" fill="#22d3ee" font-size="11" text-anchor="end">no vector retrieval in the agent loop (pgvector inactive, no Qdrant)</text>
+<line x1="34" y1="82" x2="2341.75" y2="82" stroke="#1b2430"/>
+<g transform="translate(34 92)">
+<rect x="40" y="40" width="308.304" height="165" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="52" y="59" fill="#64748b" font-size="11" letter-spacing="1.4">PUBLIC EDGE / INGRESS</text>
+<rect x="380.304" y="40" width="277.862" height="330" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="392.304" y="59" fill="#64748b" font-size="11" letter-spacing="1.4">COOLIFY CONTROL PLANE (HOST)</text>
+<rect x="690.1659999999999" y="40" width="426" height="1137" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="702.1659999999999" y="59" fill="#64748b" font-size="11" letter-spacing="1.4">COMPOSE PROJECT VTM5VS1BJKLTPX3ATDA799CV_PHANTIX</text>
+<rect x="1148.166" y="40" width="212.32799999999997" height="605" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="1160.166" y="59" fill="#64748b" font-size="11" letter-spacing="1.4">REDIS BROKER / 10 CELERY QUEUES</text>
+<rect x="1392.494" y="40" width="244" height="532" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="1404.494" y="59" fill="#64748b" font-size="11" letter-spacing="1.4">COMPOSE PROJECT PHANTIX-AGI (PHANTIX-AGI_DEFAULT)</text>
+<rect x="1668.494" y="40" width="299.252" height="220" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="1680.494" y="59" fill="#64748b" font-size="11" letter-spacing="1.4">PHANTIX-SANDBOX NETWORK</text>
+<rect x="1999.7459999999999" y="40" width="268.004" height="275" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="2011.7459999999999" y="59" fill="#64748b" font-size="11" letter-spacing="1.4">MCP SURFACE</text>
+<rect x="40" y="1209" width="322.564" height="385" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="52" y="1228" fill="#64748b" font-size="11" letter-spacing="1.4">HOST-LEVEL SYSTEMD SERVICES (NOT CONTAINERS)</text>
+<rect x="394.564" y="1209" width="319.278" height="228" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="406.564" y="1228" fill="#64748b" font-size="11" letter-spacing="1.4">UNMANAGED / STRAY CONTAINERS</text>
+<rect x="745.8420000000001" y="1209" width="290.758" height="448" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="757.8420000000001" y="1228" fill="#64748b" font-size="11" letter-spacing="1.4">MODEL ENDPOINTS (EXTERNAL)</text>
+<rect x="1068.6000000000001" y="1209" width="327.772" height="558" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="1080.6000000000001" y="1228" fill="#64748b" font-size="11" letter-spacing="1.4">EGRESS / SAAS</text>
+<rect x="1428.372" y="1209" width="274.576" height="220" rx="10" fill="#0b0f14" stroke="#1f2937" stroke-width="1"/>
+<text x="1440.372" y="1228" fill="#64748b" font-size="11" letter-spacing="1.4">TARGETS &amp; TENANTS</text>
+<path d="M 147.80700000000002 145 C 185.80700000000002 145 156.152 130 194.152 130" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 328.304 110 C 496.32327999999995 110 542.14672 418 710.1659999999999 418" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 903.1659999999999 255 C 861.366 255 849.9659999999999 308 808.1659999999999 308" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 897.1659999999999 297 C 935.1659999999999 297 863.1659999999999 297 901.1659999999999 297" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 990.1659999999999 308 C 990.1659999999999 346 990.1659999999999 274 990.1659999999999 312" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 901.1659999999999 323 C 863.1659999999999 323 935.1659999999999 323 897.1659999999999 323" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 897.1659999999999 323 C 897.1659999999999 361 901.1659999999999 311 901.1659999999999 349" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 808.1659999999999 308 C 808.1659999999999 434.72 817.7199999999999 469.28 817.7199999999999 596" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 990.1659999999999 334 C 990.1659999999999 449.28 817.7199999999999 480.72 817.7199999999999 596" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 338 C 808.1659999999999 270.68 821.285 252.32 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 903.1659999999999 581 C 861.366 581 849.9659999999999 520 808.1659999999999 520" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 897.1659999999999 531 C 897.1659999999999 493 901.1659999999999 517 901.1659999999999 479" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 897.1659999999999 531 C 897.1659999999999 493 901.1659999999999 543 901.1659999999999 505" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 897.1659999999999 531 C 897.1659999999999 493 901.1659999999999 491 901.1659999999999 453" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 897.1659999999999 531 C 897.1659999999999 462.36 901.1659999999999 443.64 901.1659999999999 375" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 897.1659999999999 531 C 897.1659999999999 473.8 901.1659999999999 458.2 901.1659999999999 401" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 808.1659999999999 520 C 808.1659999999999 461.04 808.1659999999999 444.96 808.1659999999999 386" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 808.1659999999999 520 C 808.1659999999999 472.48 808.1659999999999 459.52 808.1659999999999 412" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 808.1659999999999 520 C 808.1659999999999 482 808.1659999999999 554 808.1659999999999 516" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 897.1659999999999 531 C 1016.406 531 1048.926 275 1168.166 275" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1096.166 476.08 1168.166 491.92 1168.166 550" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1096.166 500.28 1168.166 522.72 1168.166 605" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1096.166 282.48 1168.166 245.52 1168.166 110" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1096.166 306.68 1168.166 276.32 1168.166 165" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1096.166 456 1168.166 457 1168.166 495" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1096.166 379.28 1168.166 368.72 1168.166 330" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1096.166 330.88 1168.166 307.12 1168.166 220" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1134.166 418 1130.166 385 1168.166 385" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1096.166 418 C 1134.166 418 1130.166 440 1168.166 440" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1168.166 550 C 1168.166 711.48 859.182 755.52 859.182 917" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1168.166 605 C 1029.07584 605 991.1421599999999 862 852.0519999999999 862" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1237.166 130 C 1237.166 564.28 779.1659999999999 682.72 779.1659999999999 1117" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1237.166 185 C 1237.166 570.88 788.2389999999999 676.12 788.2389999999999 1062" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1168.166 495 C 1168.166 632.28 873.442 669.72 873.442 807" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1168.166 275 C 1168.166 454.96000000000004 914.1659999999999 504.03999999999996 914.1659999999999 684" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1168.166 330 C 1168.166 485.76 914.1659999999999 528.24 914.1659999999999 684" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1237.166 240 C 1237.166 577.48 798.934 669.52 798.934 1007" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1237.166 405 C 1237.166 669.88 798.934 742.12 798.934 1007" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1240.07 460 C 1240.07 700.6800000000001 798.934 766.3199999999999 798.934 1007" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 802.2199999999999 732 C 802.2199999999999 689.76 817.7199999999999 678.24 817.7199999999999 636" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 802.2199999999999 732 C 802.2199999999999 491.32 1237.166 425.68 1237.166 185" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 894.2739999999999 752 C 1014.7864799999999 752 1047.6535199999998 605 1168.166 605" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 894.2739999999999 752 C 894.2739999999999 566.3199999999999 1168.166 515.6800000000001 1168.166 330" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 894.2739999999999 752 C 894.2739999999999 590.52 1168.166 546.48 1168.166 385" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 802.2199999999999 732 C 802.2199999999999 467.12 1237.166 394.88 1237.166 130" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 894.2739999999999 752 C 1014.7864799999999 752 1047.6535199999998 550 1168.166 550" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 894.2739999999999 752 C 1014.7864799999999 752 1047.6535199999998 495 1168.166 495" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 894.2739999999999 752 C 894.2739999999999 614.72 1168.166 577.28 1168.166 440" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 795.0899999999999 130 C 833.0899999999999 130 783.285 145 821.285 145" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 795.0899999999999 130 C 795.0899999999999 335.03999999999996 817.7199999999999 390.96000000000004 817.7199999999999 596" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 784.674 897 C 784.674 583.72 821.285 498.28000000000003 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 784.674 937 C 784.674 1078.68 514.988 1117.32 514.988 1259" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 859.182 917 C 1224.07928 917 1323.59672 165 1688.494 165" fill="none" stroke="#facc15" stroke-width="1.9" opacity="0.8"/>
+<path d="M 859.182 917 C 1224.07928 917 1323.59672 220 1688.494 220" fill="none" stroke="#facc15" stroke-width="1.9" opacity="0.8"/>
+<path d="M 784.674 897 C 784.674 782.16 817.7199999999999 750.84 817.7199999999999 636" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 784.674 897 C 784.674 607.9200000000001 817.7199999999999 529.0799999999999 817.7199999999999 240" fill="none" stroke="#38bdf8" stroke-width="1.6" opacity="0.8"/>
+<path d="M 784.674 897 C 784.674 632.12 1237.166 559.88 1237.166 295" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 859.182 917 C 859.182 1100.48 1088.6000000000001 1150.52 1088.6000000000001 1334" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 781.1089999999999 882 C 781.1089999999999 920 784.674 859 784.674 897" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 781.1089999999999 842 C 781.1089999999999 552.9200000000001 821.285 474.08 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 781.1089999999999 882 C 781.1089999999999 1047.88 514.988 1093.12 514.988 1259" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 781.1089999999999 842 C 781.1089999999999 618.48 990.1659999999999 557.52 990.1659999999999 334" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 710.1659999999999 862 C 710.1659999999999 1045.48 342.564 1095.52 342.564 1279" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 779.1659999999999 1157 C 779.1659999999999 1226.08 884.0910000000001 1244.92 884.0910000000001 1314" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 779.1659999999999 1157 C 779.1659999999999 1250.28 869.8310000000001 1275.72 869.8310000000001 1369" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 779.1659999999999 1157 C 828.4702 1157 841.9168000000001 1259 891.2210000000001 1259" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 779.1659999999999 1157 C 779.1659999999999 1274.48 862.7010000000001 1306.52 862.7010000000001 1424" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 779.1659999999999 1117 C 779.1659999999999 706.9200000000001 821.285 595.0799999999999 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 779.1659999999999 1117 C 1102.71032 1117 1190.94968 442 1514.494 442" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 866.3119999999999 1082 C 964.11872 1082 990.79328 1279 1088.6000000000001 1279" fill="none" stroke="#f0abfc" stroke-width="1.6" opacity="0.8"/>
+<path d="M 866.3119999999999 1082 C 866.3119999999999 1243.04 1088.6000000000001 1286.96 1088.6000000000001 1448" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 788.2389999999999 1062 C 788.2389999999999 676.12 821.285 570.88 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 791.804 787 C 791.804 546.3199999999999 817.7199999999999 480.68 817.7199999999999 240" fill="none" stroke="#38bdf8" stroke-width="1.6" opacity="0.8"/>
+<path d="M 791.804 827 C 791.804 1065.48 1164.7510000000002 1130.52 1164.7510000000002 1369" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 791.804 787 C 791.804 497.92 1237.166 419.08 1237.166 130" fill="none" stroke="#c084fc" stroke-width="1.9" opacity="0.8"/>
+<path d="M 791.804 787 C 791.804 522.12 821.285 449.88 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 812.1659999999999 651 C 812.1659999999999 445.96000000000004 821.285 390.03999999999996 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 798.934 1047 C 798.934 1164.48 884.0910000000001 1196.52 884.0910000000001 1314" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 887.702 1027 C 887.702 1162.08 1088.6000000000001 1198.92 1088.6000000000001 1334" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 710.1659999999999 1027 C 710.1659999999999 1137.88 615.412 1168.12 615.412 1279" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 682 C 808.1659999999999 463.32 821.285 403.68 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 704 C 808.1659999999999 948.2 514.988 1014.8 514.988 1259" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 1096.166 418 C 1235.35032 418 1273.3096799999998 266 1412.494 266" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1514.494 90 C 1514.494 128 1510.494 105 1510.494 143" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 658.24 884.0910000000001 798.76 884.0910000000001 1314" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 682.44 869.8310000000001 829.56 869.8310000000001 1369" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 305.36 1492.21 349.64 1492.21 512" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1492.21 512 C 1492.21 368.12 1810.99 328.88 1810.99 185" fill="none" stroke="#facc15" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1571.926 532 C 1571.926 394.72 1688.494 357.28 1688.494 220" fill="none" stroke="#facc15" stroke-width="1.9" opacity="0.8"/>
+<path d="M 1810.99 185 C 1810.99 681.76 1565.66 817.24 1565.66 1314" fill="none" stroke="#fb923c" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1810.99 240 C 1810.99 712.56 1565.66 841.44 1565.66 1314" fill="none" stroke="#fb923c" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 259.15999999999997 1510.494 290.84000000000003 1510.494 407" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 407 C 1510.494 369 1510.494 441 1510.494 403" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 224.84 1510.494 247.16 1510.494 329" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 190.52 1510.494 203.48 1510.494 251" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 201.96 1510.494 218.04 1510.494 277" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 213.4 1510.494 232.6 1510.494 303" fill="none" stroke="#fbbf24" stroke-width="1.7" opacity="0.8"/>
+<path d="M 1421.494 132 C 1421.494 636.6800000000001 342.564 774.3199999999999 342.564 1279" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 201.282 1299 C 201.282 1354 141.638 1369 141.638 1424" fill="none" stroke="#fb923c" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1510.494 195 C 1510.494 233 1510.494 161 1510.494 199" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 195 C 1510.494 233 1510.494 187 1510.494 225" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 221 C 1510.494 750.32 862.7010000000001 894.68 862.7010000000001 1424" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1510.494 195 C 1510.494 735.76 862.7010000000001 883.24 862.7010000000001 1424" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 181 1510.494 109 1510.494 147" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 236.28 1510.494 261.72 1510.494 355" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1421.494 366 C 1278.3496799999998 366 1239.31032 418 1096.166 418" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1421.494 132 C 1278.3496799999998 132 1239.31032 418 1096.166 418" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 281.15999999999997 1509.3529999999998 318.84000000000003 1509.3529999999998 457" fill="none" stroke="#38bdf8" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1510.494 143 C 1510.494 734.36 1179.0110000000002 895.64 1179.0110000000002 1487" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1599.494 132 C 1784.4048799999998 132 1834.83512 165 2019.7459999999999 165" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 328.304 110 C 366.304 110 362.304 110 400.304 110" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 492.35799999999995 130 C 530.358 130 476.98799999999994 145 514.9879999999999 145" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 492.35799999999995 130 C 492.35799999999995 185 475.77299999999997 200 475.77299999999997 255" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 584.412 110 C 584.412 245.52 710.1659999999999 282.48 710.1659999999999 418" fill="none" stroke="#94a3b8" stroke-width="1.6" opacity="0.8"/>
+<path d="M 903.1659999999999 255 C 865.1659999999999 255 855.7199999999999 240 817.7199999999999 240" fill="none" stroke="#38bdf8" stroke-width="1.6" opacity="0.8"/>
+<path d="M 897.1659999999999 479 C 897.1659999999999 831 1448.372 927 1448.372 1279" fill="none" stroke="#f87171" stroke-width="1.7" opacity="0.5" stroke-dasharray="5 4"/>
+<path d="M 2019.7459999999999 275 C 1257.534 275 1049.658 1334 287.446 1334" fill="none" stroke="#f87171" stroke-width="1.6" opacity="0.5" stroke-dasharray="5 4"/>
+<path d="M 2019.7459999999999 110 C 1538.17832 110 1406.84168 616 925.2739999999999 616" fill="none" stroke="#f87171" stroke-width="1.4" opacity="0.5" stroke-dasharray="5 4"/>
+<path d="M 859.182 917 C 1369.83016 917 1509.09784 165 2019.7459999999999 165" fill="none" stroke="#f87171" stroke-width="1.6" opacity="0.5" stroke-dasharray="5 4"/>
+<path d="M 944.742 972 C 944.742 592.72 1688.494 489.28000000000003 1688.494 110" fill="none" stroke="#94a3b8" stroke-width="1.6" opacity="0.8"/>
+<path d="M 235.614 165 C 235.614 703.5600000000001 1448.372 850.4399999999999 1448.372 1389" fill="none" stroke="#64748b" stroke-width="1.6" opacity="0.8"/>
+<path d="M 1269.422 1507 C 1348.16 1507 1369.634 1389 1448.372 1389" fill="none" stroke="#f87171" stroke-width="1.6" opacity="0.5" stroke-dasharray="5 4"/>
+<path d="M 1096.166 418 C 1010.366 418 986.9659999999999 349 901.1659999999999 349" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1096.166 418 C 1010.366 418 986.9659999999999 375 901.1659999999999 375" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 710.1659999999999 418 C 792.4459999999999 418 814.886 453 897.1659999999999 453" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 710.1659999999999 418 C 792.4459999999999 418 814.886 427 897.1659999999999 427" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1096.166 418 C 1010.366 418 986.9659999999999 479 901.1659999999999 479" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1096.166 418 C 1010.366 418 986.9659999999999 401 901.1659999999999 401" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 710.1659999999999 418 C 792.4459999999999 418 814.886 401 897.1659999999999 401" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 710.1659999999999 418 C 792.4459999999999 418 814.886 375 897.1659999999999 375" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 710.1659999999999 418 C 792.4459999999999 418 814.886 479 897.1659999999999 479" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 710.1659999999999 418 C 792.4459999999999 418 814.886 505 897.1659999999999 505" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1096.166 418 C 1010.366 418 986.9659999999999 505 901.1659999999999 505" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1096.166 418 C 1010.366 418 986.9659999999999 427 901.1659999999999 427" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 1096.166 418 C 1010.366 418 986.9659999999999 453 901.1659999999999 453" fill="none" stroke="#4b5563" stroke-width="1.2" opacity="0.8"/>
+<path d="M 901.1659999999999 349 C 901.1659999999999 268.04 932.404 245.95999999999998 932.404 165" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 990.1659999999999 364 C 990.1659999999999 285.24 821.285 263.76 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 416 C 808.1659999999999 314.36 821.285 286.64 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 990.1659999999999 390 C 990.1659999999999 299.8 821.285 275.2 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 390 C 808.1659999999999 299.8 821.285 275.2 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 990.1659999999999 442 C 990.1659999999999 328.92 821.285 298.08 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 494 C 808.1659999999999 358.03999999999996 821.285 320.96000000000004 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 990.1659999999999 494 C 990.1659999999999 358.03999999999996 821.285 320.96000000000004 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 990.1659999999999 416 C 990.1659999999999 314.36 821.285 286.64 821.285 185" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 464 C 808.1659999999999 813.8 514.988 909.2 514.988 1259" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 990.1659999999999 490 C 990.1659999999999 828.36 514.988 920.64 514.988 1259" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 386 C 808.1659999999999 770.12 514.988 874.88 514.988 1259" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 808.1659999999999 490 C 808.1659999999999 828.36 514.988 920.64 514.988 1259" fill="none" stroke="#34d399" stroke-width="1.7" opacity="0.8"/>
+<path d="M 990.1659999999999 464 C 990.1659999999999 838 884.0910000000001 940 884.0910000000001 1314" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 990.1659999999999 464 C 990.1659999999999 862.2 869.8310000000001 970.8 869.8310000000001 1369" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<path d="M 990.1659999999999 464 C 990.1659999999999 886.4 862.7010000000001 1001.6 862.7010000000001 1424" fill="none" stroke="#22d3ee" stroke-width="1.6" opacity="0.8"/>
+<g>
+<rect x="60" y="90" width="268.304" height="40" rx="6" fill="#0e1319" stroke="#94a3b8" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="60" y="90" width="3" height="40" rx="1.5" fill="#94a3b8"/>
+<text x="70" y="105" fill="#e2e8f0" font-size="11.5" font-weight="600">coolify-proxy (Traefik v3.6)</text>
+<text x="318.304" y="105" fill="#94a3b8" font-size="9" text-anchor="end">GATEWAYS</text>
+</g>
+<g>
+<rect x="60" y="145" width="175.614" height="40" rx="6" fill="#0e1319" stroke="#94a3b8" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="60" y="145" width="3" height="40" rx="1.5" fill="#94a3b8"/>
+<text x="70" y="160" fill="#e2e8f0" font-size="11.5" font-weight="600">Cloudflare edge</text>
+<text x="225.614" y="160" fill="#94a3b8" font-size="9" text-anchor="end">GATEWAYS</text>
+</g>
+<g>
+<rect x="400.304" y="90" width="184.108" height="40" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="400.304" y="90" width="3" height="40" rx="1.5" fill="#f0abfc"/>
+<text x="410.304" y="105" fill="#e2e8f0" font-size="11.5" font-weight="600">coolify 4.3.23</text>
+<text x="574.412" y="105" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="400.304" y="145" width="229.368" height="40" rx="6" fill="#0e1319" stroke="#34d399" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="400.304" y="145" width="3" height="40" rx="1.5" fill="#34d399"/>
+<text x="410.304" y="160" fill="#e2e8f0" font-size="11.5" font-weight="600">coolify-db (postgres:15)</text>
+<text x="619.672" y="160" fill="#34d399" font-size="9" text-anchor="end">STORES</text>
+</g>
+<g>
+<rect x="400.304" y="200" width="237.86200000000002" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="400.304" y="200" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="410.304" y="215" fill="#e2e8f0" font-size="11.5" font-weight="600">coolify-realtime 1.0.19</text>
+<text x="628.1659999999999" y="215" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="400.304" y="255" width="150.938" height="40" rx="6" fill="#0e1319" stroke="#34d399" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="400.304" y="255" width="3" height="40" rx="1.5" fill="#34d399"/>
+<text x="410.304" y="270" fill="#e2e8f0" font-size="11.5" font-weight="600">coolify-redis</text>
+<text x="541.242" y="270" fill="#34d399" font-size="9" text-anchor="end">STORES</text>
+</g>
+<g>
+<rect x="400.304" y="310" width="230.732" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="400.304" y="310" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="410.304" y="325" fill="#e2e8f0" font-size="11.5" font-weight="600">coolify-sentinel 1.0.1</text>
+<text x="621.036" y="325" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="90" width="169.848" height="40" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="90" width="3" height="40" rx="1.5" fill="#f0abfc"/>
+<text x="720.1659999999999" y="105" fill="#e2e8f0" font-size="11.5" font-weight="600">alert-daemon</text>
+<text x="870.0139999999999" y="105" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="145" width="222.238" height="40" rx="6" fill="#0e1319" stroke="#34d399" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="145" width="3" height="40" rx="1.5" fill="#34d399"/>
+<text x="720.1659999999999" y="160" fill="#e2e8f0" font-size="11.5" font-weight="600">db (postgres:16-alpine)</text>
+<text x="922.404" y="160" fill="#34d399" font-size="9" text-anchor="end">STORES</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="200" width="215.108" height="40" rx="6" fill="#0e1319" stroke="#38bdf8" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="200" width="3" height="40" rx="1.5" fill="#38bdf8"/>
+<text x="720.1659999999999" y="215" fill="#e2e8f0" font-size="11.5" font-weight="600">phantix_storage volume</text>
+<text x="915.2739999999999" y="215" fill="#38bdf8" font-size="9" text-anchor="end">STORES</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="255" width="386" height="326" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="255" width="3" height="326" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="270" fill="#e2e8f0" font-size="11.5" font-weight="600">api (uvicorn)</text>
+<text x="1086.166" y="270" fill="#4ade80" font-size="9.5" text-anchor="end">RUNNERS · 21 INSIDE</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="596" width="215.108" height="40" rx="6" fill="#0e1319" stroke="#34d399" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="596" width="3" height="40" rx="1.5" fill="#34d399"/>
+<text x="720.1659999999999" y="611" fill="#e2e8f0" font-size="11.5" font-weight="600">redis (redis:7-alpine)</text>
+<text x="915.2739999999999" y="611" fill="#34d399" font-size="9" text-anchor="end">STORES</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="651" width="204" height="66" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="651" width="3" height="66" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="666" fill="#e2e8f0" font-size="11.5" font-weight="600">worker-bus</text>
+<text x="904.1659999999999" y="666" fill="#4ade80" font-size="9.5" text-anchor="end">RUNNERS · 1 INSIDE</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="732" width="184.108" height="40" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="732" width="3" height="40" rx="1.5" fill="#f0abfc"/>
+<text x="720.1659999999999" y="747" fill="#e2e8f0" font-size="11.5" font-weight="600">beat (RedBeat)</text>
+<text x="884.2739999999999" y="747" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="787" width="163.276" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="787" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="802" fill="#e2e8f0" font-size="11.5" font-weight="600">worker-reports</text>
+<text x="863.442" y="802" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="842" width="141.886" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="842" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="857" fill="#e2e8f0" font-size="11.5" font-weight="600">worker-vapt</text>
+<text x="842.0519999999999" y="857" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="897" width="149.01600000000002" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="897" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="912" fill="#e2e8f0" font-size="11.5" font-weight="600">worker-scans</text>
+<text x="849.182" y="912" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="952" width="234.57600000000002" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="952" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="967" fill="#e2e8f0" font-size="11.5" font-weight="600">sandbox-image (one-shot)</text>
+<text x="934.742" y="967" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="1007" width="177.536" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="1007" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="1022" fill="#e2e8f0" font-size="11.5" font-weight="600">worker-programme</text>
+<text x="877.702" y="1022" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="1062" width="156.14600000000002" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="1062" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="1077" fill="#e2e8f0" font-size="11.5" font-weight="600">worker-alerts</text>
+<text x="856.3119999999999" y="1077" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="710.1659999999999" y="1117" width="138" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="710.1659999999999" y="1117" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="720.1659999999999" y="1132" fill="#e2e8f0" font-size="11.5" font-weight="600">worker-ai</text>
+<text x="838.1659999999999" y="1132" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="1168.166" y="90" width="138" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="90" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="105" fill="#e2e8f0" font-size="11.5" font-weight="600">ai</text>
+<text x="1296.166" y="105" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="145" width="138" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="145" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="160" fill="#e2e8f0" font-size="11.5" font-weight="600">alerts</text>
+<text x="1296.166" y="160" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="200" width="138" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="200" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="215" fill="#e2e8f0" font-size="11.5" font-weight="600">autofix</text>
+<text x="1296.166" y="215" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="255" width="138" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="255" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="270" fill="#e2e8f0" font-size="11.5" font-weight="600">bus</text>
+<text x="1296.166" y="270" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="310" width="172.32799999999997" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="310" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="325" fill="#e2e8f0" font-size="11.5" font-weight="600">celery (default)</text>
+<text x="1330.494" y="325" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="365" width="138" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="365" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="380" fill="#e2e8f0" font-size="11.5" font-weight="600">continuous</text>
+<text x="1296.166" y="380" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="420" width="143.808" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="420" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="435" fill="#e2e8f0" font-size="11.5" font-weight="600">integrations</text>
+<text x="1301.974" y="435" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="475" width="138" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="475" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="490" fill="#e2e8f0" font-size="11.5" font-weight="600">reports</text>
+<text x="1296.166" y="490" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="530" width="138" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="530" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="545" fill="#e2e8f0" font-size="11.5" font-weight="600">scans</text>
+<text x="1296.166" y="545" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1168.166" y="585" width="138" height="40" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1168.166" y="585" width="3" height="40" rx="1.5" fill="#c084fc"/>
+<text x="1178.166" y="600" fill="#e2e8f0" font-size="11.5" font-weight="600">vapt</text>
+<text x="1296.166" y="600" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="1412.494" y="90" width="204" height="352" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1412.494" y="90" width="3" height="352" rx="1.5" fill="#4ade80"/>
+<text x="1422.494" y="105" fill="#e2e8f0" font-size="11.5" font-weight="600">phantix-agi-runner</text>
+<text x="1606.494" y="105" fill="#4ade80" font-size="9.5" text-anchor="end">RUNNERS · 12 INSIDE</text>
+</g>
+<g>
+<rect x="1412.494" y="457" width="193.71800000000002" height="40" rx="6" fill="#0e1319" stroke="#38bdf8" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1412.494" y="457" width="3" height="40" rx="1.5" fill="#38bdf8"/>
+<text x="1422.494" y="472" fill="#e2e8f0" font-size="11.5" font-weight="600">/data/agi-artifacts</text>
+<text x="1596.212" y="472" fill="#38bdf8" font-size="9" text-anchor="end">STORES</text>
+</g>
+<g>
+<rect x="1412.494" y="512" width="159.43200000000002" height="40" rx="6" fill="#0e1319" stroke="#facc15" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1412.494" y="512" width="3" height="40" rx="1.5" fill="#facc15"/>
+<text x="1422.494" y="527" fill="#e2e8f0" font-size="11.5" font-weight="600">sandbox pool</text>
+<text x="1561.926" y="527" fill="#facc15" font-size="9" text-anchor="end">SANDBOXES</text>
+</g>
+<g>
+<rect x="1688.494" y="90" width="259.252" height="40" rx="6" fill="#0e1319" stroke="#facc15" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1688.494" y="90" width="3" height="40" rx="1.5" fill="#facc15"/>
+<text x="1698.494" y="105" fill="#e2e8f0" font-size="11.5" font-weight="600">phantix-agi-sandbox-keeper</text>
+<text x="1937.7459999999999" y="105" fill="#facc15" font-size="9" text-anchor="end">SANDBOXES</text>
+</g>
+<g>
+<rect x="1688.494" y="145" width="244.99200000000002" height="40" rx="6" fill="#0e1319" stroke="#facc15" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1688.494" y="145" width="3" height="40" rx="1.5" fill="#facc15"/>
+<text x="1698.494" y="160" fill="#e2e8f0" font-size="11.5" font-weight="600">phantix-agi-0f78afd24ab0</text>
+<text x="1923.4859999999999" y="160" fill="#facc15" font-size="9" text-anchor="end">SANDBOXES</text>
+</g>
+<g>
+<rect x="1688.494" y="200" width="244.99200000000002" height="40" rx="6" fill="#0e1319" stroke="#facc15" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1688.494" y="200" width="3" height="40" rx="1.5" fill="#facc15"/>
+<text x="1698.494" y="215" fill="#e2e8f0" font-size="11.5" font-weight="600">phantix-agi-3e9be8219a34</text>
+<text x="1923.4859999999999" y="215" fill="#facc15" font-size="9" text-anchor="end">SANDBOXES</text>
+</g>
+<g>
+<rect x="2019.7459999999999" y="90" width="149.574" height="40" rx="6" fill="#0e1319" stroke="#f87171" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="2019.7459999999999" y="90" width="3" height="40" rx="1.5" fill="#f87171"/>
+<text x="2029.7459999999999" y="105" fill="#e2e8f0" font-size="11.5" font-weight="600">CaidoMCPAdapter</text>
+<text x="2159.3199999999997" y="105" fill="#f87171" font-size="9" text-anchor="end">MCP</text>
+<text x="2159.3199999999997" y="124" fill="#f87171" font-size="8.6" text-anchor="end">DISABLED</text>
+</g>
+<g>
+<rect x="2019.7459999999999" y="145" width="228.004" height="40" rx="6" fill="#0e1319" stroke="#f87171" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="2019.7459999999999" y="145" width="3" height="40" rx="1.5" fill="#f87171"/>
+<text x="2029.7459999999999" y="160" fill="#e2e8f0" font-size="11.5" font-weight="600">customer MCP introspection</text>
+<text x="2237.75" y="160" fill="#f87171" font-size="9" text-anchor="end">MCP</text>
+<text x="2237.75" y="179" fill="#f87171" font-size="8.6" text-anchor="end">ON-DEMAND</text>
+</g>
+<g>
+<rect x="2019.7459999999999" y="200" width="199.48399999999998" height="40" rx="6" fill="#0e1319" stroke="#f87171" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="2019.7459999999999" y="200" width="3" height="40" rx="1.5" fill="#f87171"/>
+<text x="2029.7459999999999" y="215" fill="#e2e8f0" font-size="11.5" font-weight="600">NO MCP SERVER DEPLOYED</text>
+<text x="2209.23" y="215" fill="#f87171" font-size="9" text-anchor="end">MCP</text>
+</g>
+<g>
+<rect x="2019.7459999999999" y="255" width="142.444" height="40" rx="6" fill="#0e1319" stroke="#f87171" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="2019.7459999999999" y="255" width="3" height="40" rx="1.5" fill="#f87171"/>
+<text x="2029.7459999999999" y="270" fill="#e2e8f0" font-size="11.5" font-weight="600">BurpMCPAdapter</text>
+<text x="2152.19" y="270" fill="#f87171" font-size="9" text-anchor="end">MCP</text>
+<text x="2152.19" y="289" fill="#f87171" font-size="8.6" text-anchor="end">INERT</text>
+</g>
+<g>
+<rect x="60" y="1259" width="282.564" height="40" rx="6" fill="#0e1319" stroke="#94a3b8" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="60" y="1259" width="3" height="40" rx="1.5" fill="#94a3b8"/>
+<text x="70" y="1274" fill="#e2e8f0" font-size="11.5" font-weight="600">phantix-opencode-proxy (socat)</text>
+<text x="332.564" y="1274" fill="#94a3b8" font-size="9" text-anchor="end">GATEWAYS</text>
+</g>
+<g>
+<rect x="60" y="1314" width="227.44600000000003" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="60" y="1314" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="70" y="1329" fill="#e2e8f0" font-size="11.5" font-weight="600">Burp Suite Professional</text>
+<text x="277.446" y="1329" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="60" y="1369" width="177.536" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="60" y="1369" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="70" y="1384" fill="#e2e8f0" font-size="11.5" font-weight="600">adb server :5037</text>
+<text x="227.536" y="1384" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="60" y="1424" width="163.276" height="40" rx="6" fill="#0e1319" stroke="#4ade80" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="60" y="1424" width="3" height="40" rx="1.5" fill="#4ade80"/>
+<text x="70" y="1439" fill="#e2e8f0" font-size="11.5" font-weight="600">opencode serve</text>
+<text x="213.276" y="1439" fill="#4ade80" font-size="9" text-anchor="end">RUNNERS</text>
+</g>
+<g>
+<rect x="60" y="1479" width="166.562" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="60" y="1479" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="70" y="1494" fill="#e2e8f0" font-size="11.5" font-weight="600">whtbin :18082</text>
+<text x="216.562" y="1494" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="60" y="1534" width="259.252" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="60" y="1534" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="70" y="1549" fill="#e2e8f0" font-size="11.5" font-weight="600">x11vnc :5901 + noVNC :6080</text>
+<text x="309.252" y="1549" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="414.564" y="1259" width="200.848" height="40" rx="6" fill="#0e1319" stroke="#34d399" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="414.564" y="1259" width="3" height="40" rx="1.5" fill="#34d399"/>
+<text x="424.564" y="1274" fill="#e2e8f0" font-size="11.5" font-weight="600">bench-security-db</text>
+<text x="424.564" y="1287" fill="#94a3b8" font-size="10">(postgres:16-alpine)</text>
+<text x="605.412" y="1274" fill="#34d399" font-size="9" text-anchor="end">STORES</text>
+</g>
+<g>
+<rect x="414.564" y="1314" width="150.938" height="40" rx="6" fill="#0e1319" stroke="#ef4444" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="414.564" y="1314" width="3" height="40" rx="1.5" fill="#ef4444"/>
+<text x="424.564" y="1329" fill="#e2e8f0" font-size="11.5" font-weight="600">amazing_cohen</text>
+<text x="555.502" y="1329" fill="#ef4444" font-size="9" text-anchor="end">STRAYS</text>
+</g>
+<g>
+<rect x="414.564" y="1369" width="279.278" height="48" rx="6" fill="#0e1319" stroke="#ef4444" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="414.564" y="1369" width="3" height="48" rx="1.5" fill="#ef4444"/>
+<text x="424.564" y="1384" fill="#e2e8f0" font-size="11.5" font-weight="600">trusting_solomon,</text>
+<text x="424.564" y="1397" fill="#94a3b8" font-size="10">relaxed_banzai,</text>
+<text x="683.8420000000001" y="1384" fill="#ef4444" font-size="9" text-anchor="end">STRAYS</text>
+</g>
+<g>
+<rect x="765.8420000000001" y="1259" width="250.75799999999998" height="40" rx="6" fill="#0e1319" stroke="#22d3ee" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="765.8420000000001" y="1259" width="3" height="40" rx="1.5" fill="#22d3ee"/>
+<text x="775.8420000000001" y="1274" fill="#e2e8f0" font-size="11.5" font-weight="600">AgentRouter agentrouter.org</text>
+<text x="1006.6000000000001" y="1274" fill="#22d3ee" font-size="9" text-anchor="end">MODELS</text>
+<text x="1006.6000000000001" y="1293" fill="#f87171" font-size="8.6" text-anchor="end">CONFIGURED</text>
+</g>
+<g>
+<rect x="765.8420000000001" y="1314" width="236.498" height="40" rx="6" fill="#0e1319" stroke="#22d3ee" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="765.8420000000001" y="1314" width="3" height="40" rx="1.5" fill="#22d3ee"/>
+<text x="775.8420000000001" y="1329" fill="#e2e8f0" font-size="11.5" font-weight="600">DeepSeek api.deepseek.com</text>
+<text x="992.3400000000001" y="1329" fill="#22d3ee" font-size="9" text-anchor="end">MODELS</text>
+<text x="992.3400000000001" y="1348" fill="#f87171" font-size="8.6" text-anchor="end">PRIMARY</text>
+</g>
+<g>
+<rect x="765.8420000000001" y="1369" width="207.978" height="40" rx="6" fill="#0e1319" stroke="#22d3ee" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="765.8420000000001" y="1369" width="3" height="40" rx="1.5" fill="#22d3ee"/>
+<text x="775.8420000000001" y="1384" fill="#e2e8f0" font-size="11.5" font-weight="600">Z.AI api.z.ai/paas/v4</text>
+<text x="963.8200000000002" y="1384" fill="#22d3ee" font-size="9" text-anchor="end">MODELS</text>
+<text x="963.8200000000002" y="1403" fill="#f87171" font-size="8.6" text-anchor="end">FALLBACK</text>
+</g>
+<g>
+<rect x="765.8420000000001" y="1424" width="193.71800000000002" height="40" rx="6" fill="#0e1319" stroke="#22d3ee" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="765.8420000000001" y="1424" width="3" height="40" rx="1.5" fill="#22d3ee"/>
+<text x="775.8420000000001" y="1439" fill="#e2e8f0" font-size="11.5" font-weight="600">TypeSafe System One</text>
+<text x="775.8420000000001" y="1452" fill="#94a3b8" font-size="10">api.typesafe.ai</text>
+<text x="949.5600000000002" y="1439" fill="#22d3ee" font-size="9" text-anchor="end">MODELS</text>
+<text x="949.5600000000002" y="1458" fill="#f87171" font-size="8.6" text-anchor="end">CONFIGURED</text>
+</g>
+<g>
+<rect x="765.8420000000001" y="1479" width="229.368" height="40" rx="6" fill="#0e1319" stroke="#22d3ee" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="765.8420000000001" y="1479" width="3" height="40" rx="1.5" fill="#22d3ee"/>
+<text x="775.8420000000001" y="1494" fill="#e2e8f0" font-size="11.5" font-weight="600">Moonshot api.moonshot.cn</text>
+<text x="985.21" y="1494" fill="#22d3ee" font-size="9" text-anchor="end">MODELS</text>
+<text x="985.21" y="1513" fill="#f87171" font-size="8.6" text-anchor="end">CONFIGURED</text>
+</g>
+<g>
+<rect x="765.8420000000001" y="1534" width="229.368" height="40" rx="6" fill="#0e1319" stroke="#22d3ee" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="765.8420000000001" y="1534" width="3" height="40" rx="1.5" fill="#22d3ee"/>
+<text x="775.8420000000001" y="1549" fill="#e2e8f0" font-size="11.5" font-weight="600">NVIDIA NIM</text>
+<text x="775.8420000000001" y="1562" fill="#94a3b8" font-size="10">integrate.api.nvidia.com</text>
+<text x="985.21" y="1549" fill="#22d3ee" font-size="9" text-anchor="end">MODELS</text>
+<text x="985.21" y="1568" fill="#f87171" font-size="8.6" text-anchor="end">CONFIGURED</text>
+</g>
+<g>
+<rect x="765.8420000000001" y="1589" width="215.108" height="48" rx="6" fill="#0e1319" stroke="#22d3ee" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="765.8420000000001" y="1589" width="3" height="48" rx="1.5" fill="#22d3ee"/>
+<text x="775.8420000000001" y="1604" fill="#e2e8f0" font-size="11.5" font-weight="600">unconfigured providers</text>
+<text x="970.95" y="1604" fill="#22d3ee" font-size="9" text-anchor="end">MODELS</text>
+<text x="970.95" y="1631" fill="#f87171" font-size="8.6" text-anchor="end">DISABLED</text>
+<text x="775.8420000000001" y="1622" fill="#64748b" font-size="8.6">openai (gpt-4o-mini) · anthropic (claude-3-haiku) · xai (grok-3-mini) · qwen (qwen-plus) · openrouter · gemini · mistral · groq · together · fireworks · cerebras · perplexity …+3</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1259" width="187.952" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1259" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1274" fill="#e2e8f0" font-size="11.5" font-weight="600">Brevo SMTP relay</text>
+<text x="1266.5520000000001" y="1274" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1314" width="273.512" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1314" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1329" fill="#e2e8f0" font-size="11.5" font-weight="600">GitHub App</text>
+<text x="1098.6000000000001" y="1342" fill="#94a3b8" font-size="10">(phantix-security-solutions)</text>
+<text x="1352.112" y="1329" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1369" width="152.302" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1369" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1384" fill="#e2e8f0" font-size="11.5" font-weight="600">NVD CVE API</text>
+<text x="1230.902" y="1384" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1424" width="287.772" height="48" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1424" width="3" height="48" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1439" fill="#e2e8f0" font-size="11.5" font-weight="600">Telegram / WhatsApp / Tavily /</text>
+<text x="1098.6000000000001" y="1452" fill="#94a3b8" font-size="10">Mailinator / OTX / urlscan /</text>
+<text x="1366.372" y="1439" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+<text x="1366.372" y="1466" fill="#f87171" font-size="8.6" text-anchor="end">EMPTY-KEYS</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1487" width="180.822" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1487" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1502" fill="#e2e8f0" font-size="11.5" font-weight="600">DuckDuckGo HTML</text>
+<text x="1259.422" y="1502" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1542" width="166.562" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1542" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1557" fill="#e2e8f0" font-size="11.5" font-weight="600">Elasticsearch</text>
+<text x="1245.1620000000003" y="1557" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+<text x="1245.1620000000003" y="1576" fill="#f87171" font-size="8.6" text-anchor="end">DISABLED</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1597" width="244.99200000000002" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1597" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1612" fill="#e2e8f0" font-size="11.5" font-weight="600">Paystack api.paystack.co</text>
+<text x="1323.592" y="1612" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1652" width="280.642" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1652" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1667" fill="#e2e8f0" font-size="11.5" font-weight="600">Slack / Teams / Jira / Linear</text>
+<text x="1098.6000000000001" y="1680" fill="#94a3b8" font-size="10">/ PagerDuty / SARIF</text>
+<text x="1359.2420000000002" y="1667" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+<text x="1359.2420000000002" y="1686" fill="#f87171" font-size="8.6" text-anchor="end">PER-TENANT</text>
+</g>
+<g>
+<rect x="1088.6000000000001" y="1707" width="145.172" height="40" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1088.6000000000001" y="1707" width="3" height="40" rx="1.5" fill="#a3a3a3"/>
+<text x="1098.6000000000001" y="1722" fill="#e2e8f0" font-size="11.5" font-weight="600">VirusTotal</text>
+<text x="1223.7720000000002" y="1722" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="1448.372" y="1259" width="207.978" height="40" rx="6" fill="#0e1319" stroke="#2dd4bf" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1448.372" y="1259" width="3" height="40" rx="1.5" fill="#2dd4bf"/>
+<text x="1458.372" y="1274" fill="#e2e8f0" font-size="11.5" font-weight="600">pgvector halfvec(384)</text>
+<text x="1646.3500000000001" y="1274" fill="#2dd4bf" font-size="9" text-anchor="end">STORES</text>
+<text x="1646.3500000000001" y="1293" fill="#f87171" font-size="8.6" text-anchor="end">INACTIVE</text>
+</g>
+<g>
+<rect x="1448.372" y="1314" width="234.57600000000002" height="40" rx="6" fill="#0e1319" stroke="#fb923c" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1448.372" y="1314" width="3" height="40" rx="1.5" fill="#fb923c"/>
+<text x="1458.372" y="1329" fill="#e2e8f0" font-size="11.5" font-weight="600">phantixvulnserver.online</text>
+<text x="1458.372" y="1342" fill="#94a3b8" font-size="10">(169.58.110.182)</text>
+<text x="1672.948" y="1329" fill="#fb923c" font-size="9" text-anchor="end">TARGETS</text>
+</g>
+<g>
+<rect x="1448.372" y="1369" width="141.886" height="40" rx="6" fill="#0e1319" stroke="#fb923c" stroke-opacity="0.75" stroke-width="1.3"/>
+<rect x="1448.372" y="1369" width="3" height="40" rx="1.5" fill="#fb923c"/>
+<text x="1458.372" y="1384" fill="#e2e8f0" font-size="11.5" font-weight="600">tenant orgs</text>
+<text x="1580.258" y="1384" fill="#fb923c" font-size="9" text-anchor="end">TARGETS</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="286" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="286" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="729.1659999999999" y="301" fill="#cbd5e1" font-size="10" font-weight="400">slowapi rate limit</text>
+<text x="887.1659999999999" y="301" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="286" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="286" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="911.1659999999999" y="301" fill="#cbd5e1" font-size="10" font-weight="400">RequestTimeout 10s</text>
+<text x="1069.166" y="301" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="312" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="312" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="729.1659999999999" y="327" fill="#cbd5e1" font-size="10" font-weight="400">app-session + device token</text>
+<text x="887.1659999999999" y="327" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="312" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="312" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="911.1659999999999" y="327" fill="#cbd5e1" font-size="10" font-weight="400">OrgOperate + dual control</text>
+<text x="1069.166" y="327" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="338" width="178" height="22" rx="6" fill="#0e1319" stroke="#a3a3a3" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="338" width="3" height="22" rx="1.5" fill="#a3a3a3"/>
+<text x="729.1659999999999" y="353" fill="#cbd5e1" font-size="10" font-weight="400">audit + 5xx event</text>
+<text x="887.1659999999999" y="353" fill="#a3a3a3" font-size="9" text-anchor="end">OBSERVERS</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="338" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="338" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="911.1659999999999" y="353" fill="#cbd5e1" font-size="10" font-weight="400">control_plane</text>
+<text x="1069.166" y="353" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="364" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="364" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="729.1659999999999" y="379" fill="#cbd5e1" font-size="10" font-weight="400">soc_engine</text>
+<text x="887.1659999999999" y="379" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="364" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="364" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="911.1659999999999" y="379" fill="#cbd5e1" font-size="10" font-weight="400">asset_engine</text>
+<text x="1069.166" y="379" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="390" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="390" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="729.1659999999999" y="405" fill="#cbd5e1" font-size="10" font-weight="400">compliance_engine</text>
+<text x="887.1659999999999" y="405" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="390" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="390" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="911.1659999999999" y="405" fill="#cbd5e1" font-size="10" font-weight="400">reporting_engine</text>
+<text x="1069.166" y="405" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="416" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="416" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="729.1659999999999" y="431" fill="#cbd5e1" font-size="10" font-weight="400">vapt_engine</text>
+<text x="887.1659999999999" y="431" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="416" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="416" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="911.1659999999999" y="431" fill="#cbd5e1" font-size="10" font-weight="400">operations_engine</text>
+<text x="1069.166" y="431" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="442" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="442" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="729.1659999999999" y="457" fill="#cbd5e1" font-size="10" font-weight="400">scanner_engine</text>
+<text x="887.1659999999999" y="457" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="442" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="442" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="911.1659999999999" y="457" fill="#cbd5e1" font-size="10" font-weight="400">ai_engine</text>
+<text x="1069.166" y="457" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="468" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="468" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="729.1659999999999" y="483" fill="#cbd5e1" font-size="10" font-weight="400">threat_model_engine</text>
+<text x="887.1659999999999" y="483" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="468" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="468" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="911.1659999999999" y="483" fill="#cbd5e1" font-size="10" font-weight="400">risk_engine</text>
+<text x="1069.166" y="483" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="494" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="494" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="729.1659999999999" y="509" fill="#cbd5e1" font-size="10" font-weight="400">audit_engine</text>
+<text x="887.1659999999999" y="509" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="494" width="178" height="22" rx="6" fill="#0e1319" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="494" width="3" height="22" rx="1.5" fill="#60a5fa"/>
+<text x="911.1659999999999" y="509" fill="#cbd5e1" font-size="10" font-weight="400">alert_engine</text>
+<text x="1069.166" y="509" fill="#60a5fa" font-size="9" text-anchor="end">ENGINES</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="520" width="178" height="22" rx="6" fill="#0e1319" stroke="#c084fc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="520" width="3" height="22" rx="1.5" fill="#c084fc"/>
+<text x="729.1659999999999" y="535" fill="#cbd5e1" font-size="10" font-weight="400">engine bus</text>
+<text x="887.1659999999999" y="535" fill="#c084fc" font-size="9" text-anchor="end">QUEUES</text>
+</g>
+<g>
+<rect x="901.1659999999999" y="520" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="901.1659999999999" y="520" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="911.1659999999999" y="535" fill="#cbd5e1" font-size="10" font-weight="400">engine registry</text>
+<text x="1069.166" y="535" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="546" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="546" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="729.1659999999999" y="561" fill="#cbd5e1" font-size="10" font-weight="400">superadmin terminal (local</text>
+<text x="887.1659999999999" y="561" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="719.1659999999999" y="682" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="719.1659999999999" y="682" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="729.1659999999999" y="697" fill="#cbd5e1" font-size="10" font-weight="400">job_reaper</text>
+<text x="887.1659999999999" y="697" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="1421.494" y="121" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="121" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="136" fill="#cbd5e1" font-size="10" font-weight="400">_agent_loop (orchestrator)</text>
+<text x="1589.494" y="136" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+</g>
+<g>
+<rect x="1421.494" y="147" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="147" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="1431.494" y="162" fill="#cbd5e1" font-size="10" font-weight="400">oversight / mission</text>
+<text x="1589.494" y="162" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="1421.494" y="173" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="173" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="1431.494" y="188" fill="#cbd5e1" font-size="10" font-weight="400">finding_manager</text>
+<text x="1589.494" y="188" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="1421.494" y="199" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="199" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="214" fill="#cbd5e1" font-size="10" font-weight="400">candidate_verifier</text>
+<text x="1589.494" y="214" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+</g>
+<g>
+<rect x="1421.494" y="225" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="225" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="240" fill="#cbd5e1" font-size="10" font-weight="400">exploit_subagent</text>
+<text x="1589.494" y="240" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+</g>
+<g>
+<rect x="1421.494" y="251" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="251" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="266" fill="#cbd5e1" font-size="10" font-weight="400">recon_subagent</text>
+<text x="1589.494" y="266" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+</g>
+<g>
+<rect x="1421.494" y="277" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="277" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="292" fill="#cbd5e1" font-size="10" font-weight="400">autofix_subagent</text>
+<text x="1589.494" y="292" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+</g>
+<g>
+<rect x="1421.494" y="303" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="303" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="318" fill="#cbd5e1" font-size="10" font-weight="400">pi_subagent</text>
+<text x="1589.494" y="318" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+</g>
+<g>
+<rect x="1421.494" y="329" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="329" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="344" fill="#cbd5e1" font-size="10" font-weight="400">specialist sweepers (15)</text>
+<text x="1589.494" y="344" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+<text x="1431.494" y="362" fill="#64748b" font-size="8.6">class_sweeper · injection · authz · upload · rce · probe · js · supply_chain · rate · crypto · integrity · bopla …+3</text>
+</g>
+<g>
+<rect x="1421.494" y="355" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="355" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="370" fill="#cbd5e1" font-size="10" font-weight="400">knowledge_keeper</text>
+<text x="1589.494" y="370" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+</g>
+<g>
+<rect x="1421.494" y="381" width="178" height="22" rx="6" fill="#0e1319" stroke="#f0abfc" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="381" width="3" height="22" rx="1.5" fill="#f0abfc"/>
+<text x="1431.494" y="396" fill="#cbd5e1" font-size="10" font-weight="400">scope_guard + prompt_guard</text>
+<text x="1589.494" y="396" fill="#f0abfc" font-size="9" text-anchor="end">SUPERVISORS</text>
+</g>
+<g>
+<rect x="1421.494" y="407" width="178" height="22" rx="6" fill="#0e1319" stroke="#fbbf24" stroke-opacity="0.4" stroke-width="1"/>
+<rect x="1421.494" y="407" width="3" height="22" rx="1.5" fill="#fbbf24"/>
+<text x="1431.494" y="422" fill="#cbd5e1" font-size="10" font-weight="400">tool catalogue (47 sandbox</text>
+<text x="1589.494" y="422" fill="#fbbf24" font-size="9" text-anchor="end">AGENTS</text>
+</g>
+</g>
+<line x1="34" y1="1909" x2="2341.75" y2="1909" stroke="#1b2430"/>
+<text x="34" y="1925" fill="#64748b" font-size="10" letter-spacing="1.3">LEGEND</text>
+<rect x="108" y="1916" width="9" height="9" rx="2" fill="#4ade80"/>
+<text x="122" y="1925" fill="#94a3b8" font-size="10.5">runners <tspan fill="#e2e8f0" font-weight="600">13</tspan></text>
+<rect x="180.2" y="1916" width="9" height="9" rx="2" fill="#60a5fa"/>
+<text x="194.2" y="1925" fill="#94a3b8" font-size="10.5">engines <tspan fill="#e2e8f0" font-weight="600">13</tspan></text>
+<rect x="252.39999999999998" y="1916" width="9" height="9" rx="2" fill="#f0abfc"/>
+<text x="266.4" y="1925" fill="#94a3b8" font-size="10.5">supervisors <tspan fill="#e2e8f0" font-weight="600">13</tspan></text>
+<rect x="351" y="1916" width="9" height="9" rx="2" fill="#fbbf24"/>
+<text x="365" y="1925" fill="#94a3b8" font-size="10.5">agents <tspan fill="#e2e8f0" font-weight="600">9</tspan></text>
+<rect x="416.6" y="1916" width="9" height="9" rx="2" fill="#c084fc"/>
+<text x="430.6" y="1925" fill="#94a3b8" font-size="10.5">queues <tspan fill="#e2e8f0" font-weight="600">11</tspan></text>
+<rect x="482.20000000000005" y="1916" width="9" height="9" rx="2" fill="#22d3ee"/>
+<text x="496.20000000000005" y="1925" fill="#94a3b8" font-size="10.5">models <tspan fill="#e2e8f0" font-weight="600">7</tspan></text>
+<rect x="547.8000000000001" y="1916" width="9" height="9" rx="2" fill="#34d399"/>
+<text x="561.8000000000001" y="1925" fill="#94a3b8" font-size="10.5">stores <tspan fill="#e2e8f0" font-weight="600">8</tspan></text>
+<rect x="613.4000000000001" y="1916" width="9" height="9" rx="2" fill="#facc15"/>
+<text x="627.4000000000001" y="1925" fill="#94a3b8" font-size="10.5">sandboxes <tspan fill="#e2e8f0" font-weight="600">4</tspan></text>
+<rect x="698.8000000000001" y="1916" width="9" height="9" rx="2" fill="#f87171"/>
+<text x="712.8000000000001" y="1925" fill="#94a3b8" font-size="10.5">mcp <tspan fill="#e2e8f0" font-weight="600">4</tspan></text>
+<rect x="744.6" y="1916" width="9" height="9" rx="2" fill="#94a3b8"/>
+<text x="758.6" y="1925" fill="#94a3b8" font-size="10.5">gateways <tspan fill="#e2e8f0" font-weight="600">3</tspan></text>
+<rect x="823.4" y="1916" width="9" height="9" rx="2" fill="#a3a3a3"/>
+<text x="837.4" y="1925" fill="#94a3b8" font-size="10.5">observers <tspan fill="#e2e8f0" font-weight="600">14</tspan></text>
+<rect x="908.8" y="1916" width="9" height="9" rx="2" fill="#fb923c"/>
+<text x="922.8" y="1925" fill="#94a3b8" font-size="10.5">targets <tspan fill="#e2e8f0" font-weight="600">2</tspan></text>
+<rect x="981" y="1916" width="9" height="9" rx="2" fill="#ef4444"/>
+<text x="995" y="1925" fill="#94a3b8" font-size="10.5">strays <tspan fill="#e2e8f0" font-weight="600">2</tspan></text>
+<text x="34" y="1945" fill="#5b6675" font-size="9.6">agents found: _agent_loop (orchestrator), candidate_verifier, exploit_subagent, recon_subagent, autofix_subagent, pi_subagent, specialist sweepers (15), knowledge_keeper, tool catalogue (47 sandbox + 34 advanced + 16 probes)</text>
+<text x="34" y="1959" fill="#5b6675" font-size="9.6">queues found: engine bus, scans, vapt, ai, alerts, reports, bus, celery (default), autofix, continuous, integrations</text>
+<text x="34" y="1973" fill="#5b6675" font-size="9.6">models found: DeepSeek api.deepseek.com, Z.AI api.z.ai/paas/v4, AgentRouter agentrouter.org, Moonshot api.moonshot.cn, NVIDIA NIM integrate.api.nvidia.com, TypeSafe System One api.typesafe.ai, unconfigured providers  ·  stores: coolify-db (postgres:15), coolify-redis, db (postgres:16-alpine), bench-security-db (postgres:16-alpine), redis (redis:7-alpine), phantix_storage volume, /data/agi-artifacts, pgvector halfvec(384)</text>
+</svg>

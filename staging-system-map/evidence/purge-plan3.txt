@@ -1,9 +1,0 @@
-mode=plan apply=false db=db-vtm5vs1bjkltpx3atda799cv-214640649641 sec=bench-security-db
-──────── platform ────────
-ERROR:  syntax error at or near "0"
-LINE 1: set QUIET 0
-                  ^
-──────── security ────────
-ERROR:  syntax error at or near "0"
-LINE 1: set QUIET 0
-                  ^
