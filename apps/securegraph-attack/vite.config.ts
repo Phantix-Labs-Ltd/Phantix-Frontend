@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { siteFiles } from "../../packages/sg-shared/vite/siteFiles";
+import { docPageIds, siteFiles } from "../../packages/sg-shared/vite/siteFiles";
 
 // SecureGraph application shell. Browser config is same-origin; the dev server
 // proxies /api upstream. Shared code lives in ../../packages/sg-shared.
@@ -13,7 +13,36 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      siteFiles({ siteUrl: "https://attack.phantixlabs.com", allow: [], entryBudgetKB: 600 }),
+      siteFiles({
+        siteUrl: "https://attack.phantixlabs.com",
+        // Only the documentation is public: every other route renders inside
+        // the operator shell, which bounces a signed-out visitor to Core's
+        // sign-in page (`/` included).
+        allow: ["/docs"],
+        sitemap: () => [
+          "/docs",
+          ...docPageIds(path.resolve(__dirname, "../../packages/sg-shared/src")).map((id) => `/docs/${id}`),
+        ],
+        // Every authenticated surface (see src/App.tsx). `/assets` is absent on
+        // purpose: a prefix `Disallow: /assets` would also block Vite's hashed
+        // /assets/*.js bundle and break rendering-based indexing. The catch-all
+        // below still blocks the operator pages.
+        disallow: [
+          "/api/",
+          "/targets",
+          "/pentest-scope",
+          "/prior-reports",
+          "/pentest-agent",
+          "/mobile",
+          "/vapt",
+          "/scans",
+          "/tracker",
+          "/remediation",
+          "/assistant",
+        ],
+        aiCrawlers: true,
+        entryBudgetKB: 600,
+      }),
     ],
     publicDir: path.resolve(__dirname, "../../public"),
     resolve: {

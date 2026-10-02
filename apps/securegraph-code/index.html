@@ -31,25 +31,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1B2338" />
     <meta name="referrer" content="no-referrer" />
-    <title>SecureGraph Code: Secure Code Review and Threat Models</title>
-    <meta name="robots" content="noindex, nofollow" />
-    <meta name="description" content="SecureGraph Code: repository review with the fix offered back as a pull request, plus the threat models that define what secure means for your system." />
+
+    <!-- Primary SEO. src/lib/useSeo.ts rewrites title, description, canonical
+         and robots on every route: /docs stays indexable, the operator routes
+         (including `/`) become noindex, nofollow. -->
+    <title>SecureGraph Code: Repository Review and Threat Models</title>
+    <meta
+      name="description"
+      content="Review repositories for security flaws, get the fix offered back as a pull request, and keep the threat models that define what secure means for your system."
+    />
+    <meta
+      name="keywords"
+      content="securegraph code, secure code review, threat modeling, repository security review, SAST, pull request security fixes, developer security, phantix labs"
+    />
+    <meta name="author" content="Phantix Labs Ltd" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://code.phantixlabs.com/" />
+
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="SecureGraph" />
+    <meta property="og:site_name" content="SecureGraph by Phantix Labs" />
     <meta property="og:url" content="https://code.phantixlabs.com/" />
-    <meta property="og:title" content="SecureGraph Code: Secure Code Review and Threat Models" />
+    <meta property="og:title" content="SecureGraph Code: Repository Review and Threat Models" />
+    <meta
+      property="og:description"
+      content="Review repositories for security flaws, get the fix offered back as a pull request, and keep the threat models that define what secure means for your system."
+    />
     <meta property="og:image" content="https://code.phantixlabs.com/og-code.png" />
+    <meta property="og:image:alt" content="SecureGraph Code: secure code review and threat models" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@phantixlabs" />
+    <meta name="twitter:title" content="SecureGraph Code: Repository Review and Threat Models" />
+    <meta
+      name="twitter:description"
+      content="Review repositories for security flaws, get fixes offered back as pull requests, and keep the threat models for your system."
+    />
+    <meta name="twitter:image" content="https://code.phantixlabs.com/og-code.png" />
+
+    <!-- Structured data: organization + site + product (mirrors phantixlabs.com) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://phantixlabs.com/#organization",
+          "name": "Phantix Labs Ltd",
+          "legalName": "Phantix Labs Ltd",
+          "identifier": "RC - 9904435",
+          "alternateName": ["Phantix Labs", "Phantom Labs", "Phantom Security"],
+          "url": "https://phantixlabs.com/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://phantixlabs.com/logo-transparent.png"
+          },
+          "description": "Phantix Labs Ltd builds SecureGraph. SecureGraph gives lean teams vulnerability assessment, penetration testing, and continuous security.",
+          "slogan": "PROTECT. PREVENT. PERFORM.",
+          "sameAs": []
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://phantixlabs.com/#website",
+          "url": "https://phantixlabs.com/",
+          "name": "SecureGraph",
+          "publisher": { "@id": "https://phantixlabs.com/#organization" },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://code.phantixlabs.com/#softwareapplication",
+          "name": "SecureGraph Code",
+          "applicationCategory": "SecurityApplication",
+          "operatingSystem": "Web",
+          "url": "https://code.phantixlabs.com/",
+          "publisher": { "@id": "https://phantixlabs.com/#organization" },
+          "description": "Review repositories for security flaws, get the fix offered back as a pull request, and keep the threat models that define what secure means for your system."
+        }
+      ]
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <meta property="og:description" content="SecureGraph Code: repository review with the fix offered back as a pull request, plus the threat models that define what secure means for your system." />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="SecureGraph Code: Secure Code Review and Threat Models" />
-    <meta name="twitter:title" content="SecureGraph Code: Secure Code Review and Threat Models" />
-    <meta name="twitter:description" content="SecureGraph Code: repository review with the fix offered back as a pull request, plus the threat models that define what secure means for your system." />
-    <meta name="twitter:image" content="https://code.phantixlabs.com/og-code.png" />
   </head>
   <body>
     <div id="root"></div>

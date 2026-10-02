@@ -13,6 +13,7 @@ import BrandLoader from "@sg/components/BrandLoader";
 import { HOSTS } from "./hosts";
 import { NAV } from "./nav";
 import SectionGate from "@sg/components/SectionGate";
+import { useSeo } from "./lib/useSeo";
 
 const Agent = React.lazy(() => import("@sg/pages/Agent"));
 const NotFound = React.lazy(() => import("@sg/pages/NotFound"));
@@ -38,8 +39,14 @@ const SocAdvisor = React.lazy(() => import("./pages/SocAdvisor"));
 const SocLogPipeline = React.lazy(() => import("./pages/SocLogPipeline"));
 const SocAgentManager = React.lazy(() => import("./pages/SocAgentManager"));
 const SocCloudIntegration = React.lazy(() => import("./pages/SocCloudIntegration"));
+const SecurityAlerts = React.lazy(() => import("./pages/SecurityAlerts"));
+const DetectionPacks = React.lazy(() => import("./pages/DetectionPacks"));
+const CloudConfig = React.lazy(() => import("./pages/CloudConfig"));
+const LogRetention = React.lazy(() => import("./pages/LogRetention"));
 
 export default function App() {
+  // Per-route SEO: /docs stays indexable, every operator route is noindex.
+  useSeo();
   return (
     <StoreProvider>
       <Suspense fallback={<BrandLoader label="Defend" message="Loading" />}>
@@ -59,6 +66,7 @@ export default function App() {
           <Route path="/assets/intelligence/graph" element={<AssetGraph />} />
           <Route path="/posture" element={<Posture />} />
           <Route path="/cloud" element={<SectionGate section="defend.cloud"><Cloud /></SectionGate>} />
+          <Route path="/cloud-config" element={<CloudConfig />} />
           <Route path="/risks" element={<Risks />} />
           <Route path="/endpoint-monitoring" element={<EndpointMonitoring />} />
           <Route path="/threat-intel" element={<SectionGate section="defend.threat_intel"><ThreatIntel /></SectionGate>} />
@@ -69,6 +77,9 @@ export default function App() {
           <Route path="/compliance/profile" element={<SectionGate section="defend.compliance_profile"><ComplianceProfile /></SectionGate>} />
           <Route path="/compliance/connectors" element={<SectionGate section="defend.compliance_connectors"><ComplianceConnectors /></SectionGate>} />
           <Route path="/soc" element={<SectionGate section="defend.soc"><SocDashboard /></SectionGate>} />
+          <Route path="/security-alerts" element={<SecurityAlerts />} />
+          <Route path="/detection-packs" element={<DetectionPacks />} />
+          <Route path="/log-retention" element={<LogRetention />} />
           <Route path="/soc/war-room" element={<SectionGate section="defend.soc_war_room"><SocWarRoom /></SectionGate>} />
           <Route path="/soc/playbooks" element={<SectionGate section="defend.soc_playbooks"><SocPlaybooks /></SectionGate>} />
           <Route path="/soc/advisor" element={<SectionGate section="defend.soc_advisor"><SocAdvisor /></SectionGate>} />

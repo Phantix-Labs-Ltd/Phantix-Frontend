@@ -267,91 +267,9 @@ export default function Support() {
         }
       />
 
-      {/* Real-time help + documentation, side by side. */}
-      <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="Real-time help" subtitle="Fastest first, depending on what you need" />
-          <div className="space-y-2.5">
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="flex w-full items-start gap-3 rounded-lg border border-gold-400/30 bg-gold-400/[0.07] px-3.5 py-3 text-left transition-colors hover:bg-gold-400/[0.12]"
-            >
-              <MessageSquare size={16} className="mt-0.5 shrink-0 text-gold-300" />
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold text-gold-200">Start a ticket now</span>
-                <span className="block text-[13px] leading-5 text-gold-100/80">
-                  Answered in-thread and by email. First response {RESPONSE_TARGETS[priority]} at {priority} priority.
-                </span>
-              </span>
-            </button>
-            <a href="mailto:support@phantixlabs.com" className="flex items-start gap-3 rounded-lg border border-phantix-700/50 px-3.5 py-3 transition-colors hover:bg-phantix-800/40">
-              <Mail size={16} className="mt-0.5 shrink-0 text-slate-400" />
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold text-slate-200">Email support</span>
-                <span className="block text-[13px] leading-5 text-slate-500">support@phantixlabs.com. Include your organization and any job or campaign IDs.</span>
-              </span>
-            </a>
-            <div className="flex items-start gap-3 rounded-lg border border-severity-critical/25 bg-severity-critical/[0.06] px-3.5 py-3">
-              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-severity-critical" />
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold text-severity-critical">Live security incident</span>
-                <span className="block text-[13px] leading-5 text-red-200/85">
-                  Raise a ticket with <strong>Critical</strong> priority and category “Security incident”. The team triages it first.
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-md border border-phantix-700/50 bg-phantix-950/40 p-3">
-            <p className="text-[12px] uppercase tracking-wider text-slate-500">First-response targets</p>
-            <div className="mt-2 space-y-1">
-              {TICKET_PRIORITIES.map((p) => (
-                <div key={p.id} className="flex items-center justify-between gap-3 text-[13px]">
-                  <span className="text-slate-400">{p.label}</span>
-                  <span className="text-slate-500">{RESPONSE_TARGETS[p.id]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader title="Documentation" subtitle="Most answers are already written down" />
-          <div className="space-y-1.5">
-            {QUICK_LINKS.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                className="flex items-center gap-3 rounded-lg border border-phantix-700/40 px-3.5 py-2.5 transition-colors hover:border-gold-400/30 hover:bg-phantix-800/40"
-              >
-                <BookOpen size={14} className="shrink-0 text-gold-400" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-medium text-slate-200">{l.label}</span>
-                  <span className="block text-[13px] text-slate-500">{l.hint}</span>
-                </span>
-                <ExternalLink size={12} className="shrink-0 text-slate-600" />
-              </Link>
-            ))}
-            {/* Not a link — an operator has no company password to complete a
-                billing redirect, so this names who can act instead. */}
-            <div className="flex items-center gap-3 rounded-lg border border-phantix-700/40 px-3.5 py-2.5">
-              <ShieldCheck size={14} className="shrink-0 text-gold-400" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-xs font-medium text-slate-200">{BILLING_NOTE.label}</span>
-                <span className="block text-[13px] text-slate-500">{BILLING_NOTE.hint}</span>
-              </span>
-            </div>
-          </div>
-          <p className="mt-3 text-[13px] leading-5 text-slate-500">
-            Support is available to every operator in your organization; tickets are owned by the organization, and
-            the person who raised one is recorded so the desk knows who to answer.
-          </p>
-        </Card>
-      </div>
-
-      {/* Tickets */}
-      <Card className={tickets.length ? "!p-0 overflow-hidden" : undefined}>
-        <div className={tickets.length ? "px-5 pt-5" : undefined}>
+      {/* Tickets first: checking or answering a ticket is why people open this page. */}
+      <Card className={cx("mb-4", tickets.length > 0 && "!p-0 overflow-hidden")}>
+        <div className={tickets.length ? "px-4 pt-4" : undefined}>
           <CardHeader
             title="Your tickets"
             subtitle={tickets.length ? `${tickets.length} ticket${tickets.length === 1 ? "" : "s"}` : "Nothing open"}
@@ -366,7 +284,7 @@ export default function Support() {
           <EmptyState
             icon={<LifeBuoy size={22} />}
             title="No tickets yet"
-            body="Raise one above, or use the Support switch in the assistant at the bottom right of any page."
+            body="Raise one with New ticket, or use the Support switch in the assistant at the bottom right of any page."
           />
         ) : (
           <table className="w-full">
@@ -412,6 +330,87 @@ export default function Support() {
           </table>
         )}
       </Card>
+
+      {/* Real-time help + documentation, side by side. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader title="Real-time help" subtitle="Fastest first, depending on what you need" />
+          <div className="space-y-2">
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex w-full items-start gap-3 rounded-lg border border-gold-400/30 bg-gold-400/[0.07] px-3 py-2 text-left transition-colors hover:bg-gold-400/[0.12]"
+            >
+              <MessageSquare size={16} className="mt-0.5 shrink-0 text-gold-300" />
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-gold-200">Start a ticket now</span>
+                <span className="block text-[13px] leading-5 text-gold-100/80">
+                  Answered in-thread and by email. First response {RESPONSE_TARGETS[priority]} at {priority} priority.
+                </span>
+              </span>
+            </button>
+            <a href="mailto:support@phantixlabs.com" className="flex items-start gap-3 rounded-lg border border-phantix-700/50 px-3 py-2 transition-colors hover:bg-phantix-800/40">
+              <Mail size={16} className="mt-0.5 shrink-0 text-slate-400" />
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-slate-200">Email support</span>
+                <span className="block text-[13px] leading-5 text-slate-500">support@phantixlabs.com. Include your organization and any job or campaign IDs.</span>
+              </span>
+            </a>
+            <div className="flex items-start gap-3 rounded-lg border border-severity-critical/25 bg-severity-critical/[0.06] px-3 py-2">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0 text-severity-critical" />
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-severity-critical">Live security incident</span>
+                <span className="block text-[13px] leading-5 text-red-200/85">
+                  Raise a ticket with <strong>Critical</strong> priority and category “Security incident”. The team triages it first.
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-md border border-phantix-700/50 bg-phantix-950/40 px-3 py-2">
+            <p className="text-[12px] uppercase tracking-wider text-slate-500">First-response targets</p>
+            <div className="mt-1.5 grid grid-cols-2 gap-x-6 gap-y-1">
+              {TICKET_PRIORITIES.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 text-[13px]">
+                  <span className="text-slate-400">{p.label}</span>
+                  <span className="text-slate-500">{RESPONSE_TARGETS[p.id]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Documentation" subtitle="Most answers are already written down" />
+          <div className="space-y-1">
+            {QUICK_LINKS.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                className="flex items-center gap-3 rounded-lg border border-phantix-700/40 px-3 py-1.5 transition-colors hover:border-gold-400/30 hover:bg-phantix-800/40"
+              >
+                <BookOpen size={14} className="shrink-0 text-gold-400" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-xs font-medium text-slate-200">{l.label}<span className="ml-2 font-normal text-slate-500">{l.hint}</span></span>
+                </span>
+                <ExternalLink size={12} className="shrink-0 text-slate-600" />
+              </Link>
+            ))}
+            {/* Not a link — an operator has no company password to complete a
+                billing redirect, so this names who can act instead. */}
+            <div className="flex items-center gap-3 rounded-lg border border-phantix-700/40 px-3 py-1.5">
+              <ShieldCheck size={14} className="shrink-0 text-gold-400" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-medium text-slate-200">{BILLING_NOTE.label}</span>
+                <span className="block text-[13px] text-slate-500">{BILLING_NOTE.hint}</span>
+              </span>
+            </div>
+          </div>
+          <p className="mt-3 text-[13px] leading-5 text-slate-500">
+            Support is available to every operator in your organization; tickets are owned by the organization, and
+            the person who raised one is recorded so the desk knows who to answer.
+          </p>
+        </Card>
+      </div>
 
       {/* New ticket */}
       <Modal open={createOpen} onClose={closeCreate} title="New support ticket" wide>

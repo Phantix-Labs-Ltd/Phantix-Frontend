@@ -12,8 +12,11 @@ export interface NavLeaf {
   lockReason?: string | null;
 }
 
+/** One sidebar group: a header (icon + label) that drops down its pages. A
+ *  group with a single page renders as that page's link, not a dropdown. */
 export interface NavSection {
   label: string;
+  icon?: React.ReactNode;
   items: NavLeaf[];
 }
 

@@ -1,0 +1,36 @@
+<svg style="background:#0A0A0A" xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" font-family="Geist Variable, Space Grotesk, Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0A0A0A"/><stop offset="100%" stop-color="#2A2A2E"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A1A1AA"/>
+    </marker>
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#E8B54D"/>
+    </marker>
+  </defs>
+  <rect width="900" height="470" fill="#0A0A0A"/>
+  <text x="450.0" y="40" text-anchor="middle" font-size="20" font-weight="700" fill="#F4F4F5">Time to a Proven Fix, Trending Down</text>
+  <text x="450.0" y="63" text-anchor="middle" font-size="13" fill="#A1A1AA">The one number that shows whether the program works</text>
+  <line x1="90" y1="380" x2="830" y2="380" stroke="#3F3F46" stroke-width="1.4"/>
+  <line x1="90" y1="120" x2="90" y2="380" stroke="#3F3F46" stroke-width="1.4"/>
+  <path d="M 90,180 L 210,210 L 330,250 L 450,250 L 570,300 L 690,320 L 810,340" fill="none" stroke="#E8B54D" stroke-width="2.4"/>
+  <circle cx="90" cy="180" r="4" fill="#E8B54D"/>
+  <circle cx="210" cy="210" r="4" fill="#E8B54D"/>
+  <circle cx="330" cy="250" r="4" fill="#E8B54D"/>
+  <circle cx="450" cy="250" r="4" fill="#E8B54D"/>
+  <circle cx="570" cy="300" r="4" fill="#E8B54D"/>
+  <circle cx="690" cy="320" r="4" fill="#E8B54D"/>
+  <circle cx="810" cy="340" r="4" fill="#E8B54D"/>
+  <text x="90" y="405" text-anchor="middle" font-size="11" font-weight="400" fill="#A1A1AA">Q1</text>
+  <text x="210" y="405" text-anchor="middle" font-size="11" font-weight="400" fill="#A1A1AA">Q2</text>
+  <text x="330" y="405" text-anchor="middle" font-size="11" font-weight="400" fill="#A1A1AA">Q3</text>
+  <text x="450" y="405" text-anchor="middle" font-size="11" font-weight="400" fill="#A1A1AA">Q4</text>
+  <text x="570" y="405" text-anchor="middle" font-size="11" font-weight="400" fill="#A1A1AA">Q5</text>
+  <text x="690" y="405" text-anchor="middle" font-size="11" font-weight="400" fill="#A1A1AA">Q6</text>
+  <text x="810" y="405" text-anchor="middle" font-size="11" font-weight="400" fill="#A1A1AA">Q7</text>
+  <text x="104" y="148" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">slower</text>
+  <text x="104" y="368" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">faster</text>
+  <text x="470" y="110" text-anchor="middle" font-size="12.5" font-weight="700" fill="#E8B54D">Days from verified finding to proven fix</text>
+</svg>

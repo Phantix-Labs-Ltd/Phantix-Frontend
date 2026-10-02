@@ -203,7 +203,7 @@ function demoSnapshot(): ApplicationsSnapshot {
         label: "Core",
         tagline: "Connect the security picture",
         description:
-          "Core is the security graph every other application . Assets, findings, risk, reports and alerts in one placece.",
+          "Core is the security graph every other application reports into. Assets, findings, risk, reports and alerts in one place.",
         capabilities: ["Overview", "Findings", "Risk", "Reports", "Alerts", "AI"],
         order: 0,
         base: true,

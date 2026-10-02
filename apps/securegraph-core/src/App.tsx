@@ -12,7 +12,7 @@ import Home from "./pages/Home";
 import Login from "@sg/pages/Login";
 import ChooseApp from "@sg/pages/ChooseApp";
 import PublicChrome from "./components/PublicChrome";
-import { useCanonicalUrl } from "@sg/pageTitle";
+import { useSeo } from "./lib/useSeo";
 
 // Only the entry points (home, sign-in, the application picker) ship in the
 // first-paint bundle. The docs (which inline every how-to guide), legal pages,
@@ -68,7 +68,8 @@ function RequireAuthorizer({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  useCanonicalUrl("https://app.phantixlabs.com");
+  // Per-route SEO: public pages stay indexable, every operator route is noindex.
+  useSeo();
   return (
     <StoreProvider>
       <Suspense fallback={<BrandLoader label="Core" message="Loading" />}>

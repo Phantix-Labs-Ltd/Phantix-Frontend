@@ -39,7 +39,7 @@ export default function SocPlaybooks() {
             <motion.div key={pb.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
               <Card className="!p-4">
                 <CardHeader title={pb.title} subtitle={`${humanize(pb.category)} · v${pb.version}`} />
-                <p className="mt-2 text-xs text-slate-400">{pb.phases?.length || 0} phases</p>
+                <p className="mt-2 text-xs text-slate-400">{pb.phase_count ?? pb.phases?.length ?? 0} phases</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {pb.mitre_id && <span className="chip border-phantix-700 bg-phantix-800 text-slate-300">{pb.mitre_id}</span>}
                   <span className="chip border-phantix-700 bg-phantix-800 text-slate-300">{pb.org_only ? "Custom" : "Global"}</span>

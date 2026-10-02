@@ -34,7 +34,7 @@ Only what is already published in this repo. Anything marked ⚠️ needs a deci
 | Support | `support@phantixlabs.com` | `apps/securegraph-core/src/pages/Support.tsx` |
 | Privacy and DPO | `privacy@phantixlabs.com` | `landing/src/pages/Cookies.tsx` |
 | Public numbers already on site | 13 engines · 10+ AI agents · 600+ checks | `landing/src/components/chrome.tsx` |
-| Plans | Free (no card) · Starter ₦19,900/mo · Growth ₦49,900/mo ⚠️ *verify against live billing before you quote* | `landing/index.html` `Offer` |
+| Plans | Free (no card) · Starter ₦49,900/mo · Growth ₦99,900/mo ⚠️ *verify against live billing before you quote* | `landing/index.html` `Offer` |
 | Billing | Paystack, NGN-first | [docs/07](../07-pricing-and-plans.md) |
 | Privacy posture | Data-isolation design aligned with the **NDPA** of Nigeria | [docs/06](../06-privacy-and-trust.md) |
 | GitHub org | `https://github.com/Phantom-Fort` (existing. Do not rename for social tidy-up) | repo remote |
@@ -694,6 +694,6 @@ rather than DMs; never debug a customer issue in a public thread.
 | 2 | City and country for the location fields? | LinkedIn (HQ) and Facebook require them |
 | 3 | Registered entity name and founding year for the press boilerplate? | Press listings usually ask |
 | 4 | Public contact email on social: `support@` or a new `hello@` and `social@`? | The bios currently point at `support@` |
-| 5 | Are the NGN prices safe to quote publicly today? | Site structured data says Starter ₦19,900 or Growth ₦49,900; [docs/07](../07-pricing-and-plans.md) warns to load live prices |
+| 5 | Are the NGN prices safe to quote publicly today? | Site structured data says Starter ₦49,900 or Growth ₦99,900; [docs/07](../07-pricing-and-plans.md) warns to load live prices |
 | 6 | Founder profile specifics: exact title, business email, city? | [§9](#9-founder-facing-linkedin-profile) is drafted with a `{{founder email}}` placeholder still in it |
 | 7 | Should Instagram and TikTok be fed from `AAAnimations/` motion assets? | Determines whether we need 1080×1920 renders |

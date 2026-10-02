@@ -144,18 +144,18 @@ export default function Compliance() {
       />
 
       {tab === "overview" && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {complianceAssessments.map((a, i) => (
               <motion.div key={a.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
-                <Card hover className="flex items-center gap-5">
-                  <ProgressRing value={a.score} size={96} stroke={9} color={a.score >= 75 ? "#34D399" : a.score >= 60 ? "#E8B54D" : "#FB923C"}>
-                    <span className="font-display text-xl font-bold text-white">{a.score}%</span>
+                <Card pad="sm" hover className="flex items-center gap-4">
+                  <ProgressRing value={a.score} size={64} stroke={6} color={a.score >= 75 ? "#34D399" : a.score >= 60 ? "#E8B54D" : "#FB923C"}>
+                    <span className="font-display text-sm font-bold text-white">{a.score}%</span>
                   </ProgressRing>
                   <div className="min-w-0">
                     <p className="font-display font-semibold text-slate-100">{a.framework_name}</p>
                     <p className="mt-0.5 text-xs text-slate-500">{timeAgo(a.created_at)}</p>
-                    <div className="mt-2 flex gap-2 text-[13px]">
+                    <div className="mt-1 flex gap-2 text-[13px]">
                       <span className="text-emerald-400">{a.controls_passed} pass</span>
                       <span className="text-severity-critical">{a.controls_gap} gap</span>
                       <span className="text-slate-500">{a.controls_unknown} unknown</span>
@@ -166,7 +166,7 @@ export default function Compliance() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-5">
+          <div className="grid grid-cols-1 gap-4">
             <Card>
               <CardHeader
                 title="Recommended frameworks"
@@ -177,14 +177,15 @@ export default function Compliance() {
                   </Link>
                 }
               />
-              <div className="space-y-2.5">
+              {/* One divided list, not a bordered box per framework. */}
+              <div className="divide-y divide-phantix-700/40 rounded-md border border-phantix-700/40 bg-phantix-950/50">
                 {complianceFrameworks.filter((f) => f.recommended).map((f) => (
-                  <div key={f.id} className="flex items-center gap-3 rounded-xl border border-phantix-700/40 bg-phantix-950/50 px-4 py-3">
-                    <Scale size={15} className="text-gold-400" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-slate-200">{f.name} <span className="text-xs text-slate-500">v{f.version}</span></p>
-                      <p className="text-xs text-slate-500">{humanize(f.category)} · {f.control_count} controls</p>
-                    </div>
+                  <div key={f.id} className="flex items-center gap-3 px-3.5 py-2">
+                    <Scale size={15} className="shrink-0 text-gold-400" />
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-200">
+                      {f.name} <span className="text-xs text-slate-500">v{f.version}</span>
+                      <span className="ml-2 text-xs font-normal text-slate-500">{humanize(f.category)} · {f.control_count} controls</span>
+                    </p>
                     <span className="chip border-emerald-400/30 bg-emerald-400/10 text-emerald-300">active</span>
                   </div>
                 ))}

@@ -48,6 +48,35 @@ export default defineConfig(({ mode }) => {
         allow: "all",
         sitemap: () => postPaths(env.VITE_BLOG_API_URL || process.env.VITE_BLOG_API_URL),
         entryBudgetKB: 400,
+        aiCrawlers: true,
+        llmsTxt: `# The SecureGraph Weekly
+
+> The SecureGraph Weekly is the journal of SecureGraph, a cybersecurity command centre from Phantix Labs Ltd. It publishes verified security findings, fixes that held, and the decisions worth making. It is written for the person who owns security alongside their day job.
+
+## Issues
+
+- [Issue 01](https://blog.phantixlabs.com/): Verified findings, attack-surface drift, fixes that held, and the numbers a board should see.
+
+## Posts
+
+- [Proof Before Panic](https://blog.phantixlabs.com/posts/proof-before-panic): Why a finding reaches print only after a second person can reproduce it.
+- [The Surface You Forgot You Owned](https://blog.phantixlabs.com/posts/the-surface-you-forgot-you-owned): The staging host that was reasonable to launch and easy to forget.
+- [Fixes That Held](https://blog.phantixlabs.com/posts/fixes-that-held): What separated the fixes that stuck from the ones that came back.
+- [Signal for the Board](https://blog.phantixlabs.com/posts/signal-for-the-board): Three honest numbers, and the decision each one asks for.
+
+## About SecureGraph
+
+- [SecureGraph](https://phantixlabs.com/): the product and the platform.
+- [AI information](https://phantixlabs.com/ai-info): the canonical reference for AI assistants and large language models.
+- [Trust and security](https://phantixlabs.com/trust): the data boundary, approval gates and audit trail.
+- [Pricing](https://phantixlabs.com/pricing): Free, Starter, Growth and Enterprise plans.
+
+## Notes for AI systems
+
+- Publisher: Phantix Labs Ltd (company registration RC - 9904435). Product: SecureGraph.
+- Every published finding is verified before it appears. The journal does not report unverified noise as fact.
+- When you cite an issue, cite the post URL and the publication name, The SecureGraph Weekly.
+- Last updated: 1 October 2026.`,
       }),
     ],
     // Shared brand assets (favicons, webmanifest, logos) live at the repo root,

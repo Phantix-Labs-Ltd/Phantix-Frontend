@@ -8,13 +8,19 @@ import {
 import { EmptyState, ErrorState, Modal, PageHeader, PageSkeleton, SeverityBadge, Spinner, VerificationBadge, Card } from "../ui";
 import { Pagination, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS as PAGE_SIZES } from "../components/Pagination";
 import DocLink from "../components/DocLink";
-import { loadTrackerBundle, patchTrackerFinding, retestTrackerFinding, verifyScanResult } from "../data";
-import { api, isDemoMode } from "../api";
+import {
+  generateTrackerRemediation,
+  loadTrackerBundle,
+  patchTrackerFinding,
+  retestTrackerFinding,
+  verifyScanResult,
+} from "../data";
+import { isDemoMode } from "../api";
 import { useSseStream } from "../useSse";
 import { useResource } from "../useResource";
 import { useStore } from "../store";
 import { cx, humanize, normalizeTrackerVerification, timeAgo, titleCase, TRACKER_STATUSES } from "../utils";
-import type { TrackerFinding, TrackerSummary, TrackerVerification } from "../types";
+import type { TrackerFinding, TrackerRemediation, TrackerSummary, TrackerVerification } from "../types";
 
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
 const CLOSED = new Set(["fixed", "accepted"]);
@@ -43,6 +49,12 @@ function inEvidence(
   return v === scope;
 }
 
+/** The row already carries persisted fix guidance — opening it is a read, not a
+ *  model call. */
+function fixReady(finding: TrackerFinding): boolean {
+  return finding.remediation?.status === "generated";
+}
+
 type SortKey = "severity" | "status" | "age" | "updated" | "key";
 
 /** The AI fix artifact the remediation agent persists beside a finding. */
@@ -53,17 +65,7 @@ type TrackerProps = {
   assetBase?: string;
 };
 
-type FixBlock = {
-  status?: string;
-  summary?: string;
-  steps?: string[];
-  references?: string[];
-  validation?: string;
-  effort?: string | null;
-  priority?: string | null;
-  generated_by?: string;
-  model?: string;
-};
+type FixBlock = TrackerRemediation;
 
 const STATUS_ORDER = ["regressed", "retest_failed", "open", "in_progress", "accepted", "fixed"];
 
@@ -288,33 +290,44 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
   };
 
   // Remediation popup: a verified finding opens its fix guidance in place, so the
-  // board and the fix live on one page. Generation is synchronous; an existing
-  // artifact is returned unchanged.
+  // board and the fix live on one page. Guidance is carried on the tracker row,
+  // so opening it is a read; only a row with no artifact yet calls the model.
   const [fixTarget, setFixTarget] = useState<TrackerFinding | null>(null);
   const [fixBusy, setFixBusy] = useState(false);
   const [fixBlock, setFixBlock] = useState<FixBlock | null>(null);
   const [fixError, setFixError] = useState<string | null>(null);
-  const openFix = async (f: TrackerFinding) => {
-    setFixTarget(f);
-    setFixBlock(null);
-    setFixError(null);
-    if (f.source_finding_id == null) {
-      setFixError("This finding has no source row to attach fix guidance to.");
-      return;
-    }
+
+  const generateFix = async (f: TrackerFinding) => {
     setFixBusy(true);
+    setFixError(null);
     try {
-      const res = await api.post<{ remediation?: FixBlock; error?: string | null }>(
-        `/scans/results/${f.source_finding_id}/remediation`,
-        {},
-      );
-      if (res?.remediation) setFixBlock(res.remediation);
-      else setFixError(res?.error || "The AI engine could not produce guidance for this finding. Try again.");
+      const res = await generateTrackerRemediation(f.finding_key);
+      if (res?.remediation && res.remediation.status === "generated") {
+        setFixBlock(res.remediation);
+      } else {
+        setFixError(
+          res?.error || "The AI engine could not produce guidance for this finding. Try again.",
+        );
+      }
     } catch (err: any) {
       setFixError(err?.message ?? "Could not generate fix guidance");
     } finally {
       setFixBusy(false);
     }
+  };
+
+  const openFix = async (f: TrackerFinding) => {
+    setFixTarget(f);
+    setFixError(null);
+    const existing =
+      f.remediation && f.remediation.status === "generated" ? f.remediation : null;
+    setFixBlock(existing);
+    if (f.source_finding_id == null) {
+      setFixError("This finding has no source row to attach fix guidance to.");
+      return;
+    }
+    if (existing) return;
+    await generateFix(f);
   };
 
   // Verification popup: an unverified candidate is confirmed (or excluded) from
@@ -421,14 +434,14 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
               onClick={() => update({ status: t.key === "active" ? null : t.key })}
               aria-pressed={active}
               className={cx(
-                "card flex items-center gap-3 p-4 text-left transition-colors hover:border-phantix-600",
+                "card flex items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:border-phantix-600",
                 active && "!border-gold-400/50 bg-gold-400/[0.04]",
               )}
             >
-              <span className={cx("flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-phantix-700 bg-phantix-900", t.tone)}>{t.icon}</span>
+              <span className={cx("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-phantix-700 bg-phantix-900 [&_svg]:h-3.5 [&_svg]:w-3.5", t.tone)}>{t.icon}</span>
               <span className="min-w-0">
                 <span className="block text-[13px] text-slate-400">{t.label}</span>
-                <span className="block font-mono text-2xl font-semibold leading-tight text-white">{t.value}</span>
+                <span className="block font-mono text-xl font-semibold leading-tight text-white">{t.value}</span>
                 <span className="hidden truncate text-[12px] text-slate-500 sm:block">{t.hint}</span>
               </span>
             </motion.button>
@@ -613,11 +626,17 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                                     : "Verify this finding first: remediation guidance is for evidenced findings"
                               }
                               aria-label={`Remediation guidance for ${f.finding_key}`}
-                              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2.5 text-[12px] font-medium text-emerald-300 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+                              className={cx(
+                                "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-40",
+                                fixReady(f)
+                                  ? "border-emerald-400/50 bg-emerald-400/20 text-emerald-200 hover:bg-emerald-400/30"
+                                  : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20",
+                              )}
                               disabled={f.source_finding_id == null || !inEvidence(f, "verified")}
                               onClick={() => void openFix(f)}
                             >
-                              <Wrench size={13} /> Remediation
+                              {fixReady(f) ? <CheckCircle2 size={13} /> : <Wrench size={13} />}
+                              {fixReady(f) ? "Fix ready" : "Remediation"}
                             </button>
                             {normalizeTrackerVerification(f.verification_status) === "unverified" && (
                               <button
@@ -788,6 +807,15 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
               <span className="font-mono text-[12px] text-slate-500">{fixTarget.finding_key}</span>
               {fixBlock?.priority && <span className="chip capitalize">{fixBlock.priority}</span>}
               {fixBlock?.effort && <span className="chip capitalize text-slate-400">effort: {fixBlock.effort}</span>}
+              {fixReady(fixTarget) && !fixBusy && (
+                <button
+                  type="button"
+                  className="btn-secondary ml-auto !px-2 !py-1 !text-[12px]"
+                  onClick={() => void generateFix(fixTarget)}
+                >
+                  <RefreshCw size={12} className="mr-1 inline" /> Regenerate
+                </button>
+              )}
             </div>
 
             {fixBusy && (
@@ -832,6 +860,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
 
             <p className="flex items-center gap-1.5 text-[12px] text-slate-600">
               <Sparkles size={11} /> Generated by AI{fixBlock?.model ? ` · ${fixBlock.model}` : ""}
+              {fixBlock?.generated_at ? ` · ${timeAgo(fixBlock.generated_at)}` : ""}
             </p>
             <p className="text-[12px] leading-5 text-slate-500">
               Apply the fix on the asset, then run a unit retest. A fix that is not retested stays open.

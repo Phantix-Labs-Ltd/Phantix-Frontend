@@ -90,7 +90,7 @@ export function UpsellBanner({
   return (
     <div
       className={cx(
-        "mb-4 flex flex-wrap items-center gap-3 rounded-md border border-gold-400/30 bg-gold-400/[0.07] px-3.5 py-2.5",
+        "mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-gold-400/30 bg-gold-400/[0.07] px-3 py-1.5",
         className,
       )}
     >

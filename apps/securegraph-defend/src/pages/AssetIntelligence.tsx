@@ -267,7 +267,7 @@ export default function AssetIntelligenceDashboard() {
                 isVerified: a.isVerified ?? false,
               })) ?? [];
             return criticalList.length > 0 ? (
-              <div className="-mx-5 -mb-2 overflow-x-auto">
+              <div className="-mx-4 -mb-2 overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-phantix-700/40">
@@ -324,7 +324,7 @@ export default function AssetIntelligenceDashboard() {
                 source: a.source ?? null,
               })) ?? [];
             return newList.length > 0 ? (
-              <div className="-mx-5 -mb-2 overflow-x-auto">
+              <div className="-mx-4 -mb-2 overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-phantix-700/40">

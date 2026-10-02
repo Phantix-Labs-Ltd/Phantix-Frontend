@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { isDemoMode } from "./api";
+import { onOrgDataChanged } from "./orgLive";
 
 export type ResourceState<T> = {
   data: T;
@@ -43,6 +44,15 @@ export function useResource<T>(loader: () => Promise<T>, initial: T, cacheKey?: 
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  // All applications move as one: a change made anywhere in the org (a finding
+  // discovered in Attack, a risk updated in Defend, an asset added in Core)
+  // revalidates this cached resource. Only cached (list/bundle) resources
+  // participate, so detail views never flicker on an unrelated event.
+  useEffect(() => {
+    if (!cacheKey) return;
+    return onOrgDataChanged(() => setTick((t) => t + 1));
+  }, [cacheKey]);
 
   useEffect(() => {
     const hadCached = cacheKey && _swrCache.has(cacheKey);

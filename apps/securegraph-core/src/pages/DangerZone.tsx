@@ -114,7 +114,7 @@ export default function DangerZone() {
   if (error) return <ErrorState title="Could not load assets" body={error} onRetry={reload} />;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
         title="Danger zone"
         description="Remove assets from the inventory of this organization. This action is deliberate and logged. By default it is reversible."
@@ -122,22 +122,20 @@ export default function DangerZone() {
       />
 
       {/* Why this page exists, in the operator's terms. */}
-      <Card className="border-severity-critical/30 bg-severity-critical/5">
-        <div className="flex gap-3 p-4">
-          <ShieldAlert size={20} className="mt-0.5 shrink-0 text-severity-critical" />
-          <div className="text-sm text-slate-300">
-            <p className="font-semibold text-slate-100">Removal is not an inventory edit.</p>
-            <p className="mt-1 text-slate-400">
-              Findings, risk scores and reports reference the asset. Use <b>Edit</b> on the Assets page to
-              correct details, and only remove an asset here when it is genuinely out of scope, retired, or was
-              created in error.
-            </p>
-          </div>
+      <Card pad="sm" className="border-severity-critical/30 bg-severity-critical/5">
+        <div className="flex gap-2.5 text-sm">
+          <ShieldAlert size={16} className="mt-0.5 shrink-0 text-severity-critical" />
+          <p className="text-slate-400">
+            <span className="font-semibold text-slate-100">Removal is not an inventory edit.</span>{" "}
+            Findings, risk scores and reports reference the asset. Use <b>Edit</b> on the Assets page to
+            correct details, and only remove an asset here when it is genuinely out of scope, retired, or was
+            created in error.
+          </p>
         </div>
       </Card>
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-3 border-b border-phantix-800/70 p-4">
+      <Card pad="none" className="overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 border-b border-phantix-800/70 px-4 py-3">
           <div className="relative min-w-[220px] flex-1">
             <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
@@ -232,7 +230,7 @@ export default function DangerZone() {
       </Card>
 
       {selected.size > 0 && (
-        <Card className="border-severity-critical/40">
+        <Card pad="none" className="border-severity-critical/40">
           <div className="space-y-4 p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle size={18} className="mt-0.5 shrink-0 text-severity-critical" />

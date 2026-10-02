@@ -83,22 +83,23 @@ export function KpiTile({
   size?: "md" | "lg";
 }) {
   const body = (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
+      {/* A small marker, not a feature graphic: the number is the content. */}
       <span
         className={cx(
-          "flex shrink-0 items-center justify-center rounded-full border border-gold-400/30 bg-gold-400/10 text-gold-300",
-          size === "lg" ? "h-14 w-14" : "h-12 w-12",
+          "flex shrink-0 items-center justify-center rounded-full border border-gold-400/30 bg-gold-400/10 text-gold-300 [&_svg]:h-4 [&_svg]:w-4",
+          size === "lg" ? "h-9 w-9" : "h-8 w-8",
         )}
       >
         {icon}
       </span>
       <div className="min-w-0">
         <p className="truncate text-[13px] font-medium text-slate-400">{label}</p>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
           <span
             className={cx(
               "font-mono font-semibold leading-none tracking-tight text-white",
-              size === "lg" ? "text-[30px]" : "text-[26px]",
+              size === "lg" ? "text-[26px]" : "text-[22px]",
             )}
           >
             {value == null ? "Not set" : <AnimatedNumber value={value} />}
@@ -106,7 +107,7 @@ export function KpiTile({
           </span>
           {delta}
         </div>
-        <p className="mt-1 truncate text-[12px] text-slate-500">{hint}</p>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{hint}</p>
       </div>
     </div>
   );
@@ -118,11 +119,11 @@ export function KpiTile({
       className={className}
     >
       {to ? (
-        <Link to={to} className="card block h-full p-4 transition-colors hover:border-phantix-600">
+        <Link to={to} className="card block h-full px-4 py-3 transition-colors hover:border-phantix-600">
           {body}
         </Link>
       ) : (
-        <div className="card h-full p-4">{body}</div>
+        <div className="card h-full px-4 py-3">{body}</div>
       )}
     </motion.div>
   );

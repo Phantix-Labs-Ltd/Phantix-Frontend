@@ -67,6 +67,7 @@ import type {
   SupportTicket,
   TiSignal,
   TrackerFinding,
+  TrackerRemediation,
   TrackerSummary,
   CommandCenter,
   SocAgentInstallCatalog,
@@ -925,6 +926,36 @@ export async function retestTrackerFinding(
   return raw ? (normalizeTrackerFinding(raw) as TrackerFinding) : null;
 }
 
+/** Generate (or return) AI fix guidance for a tracked finding. The tracker owns
+ *  its fix action, so the board and the guidance are one page. */
+export async function generateTrackerRemediation(
+  findingKey: string,
+): Promise<{ ok: boolean; remediation?: TrackerRemediation | null; error?: string | null }> {
+  if (isDemoMode()) {
+    await delay(900);
+    return {
+      ok: true,
+      remediation: {
+        status: "generated",
+        summary: "Upgrade the vulnerable dependency and redeploy the service.",
+        steps: [
+          "Bump the affected package to the fixed release.",
+          "Redeploy the service and clear the build cache.",
+          "Run the unit retest to confirm the finding no longer reproduces.",
+        ],
+        validation: "The retest no longer reproduces the finding.",
+        effort: "low",
+        priority: "immediate",
+        generated_by: "AI",
+      },
+    };
+  }
+  return api.post<{ ok: boolean; remediation?: TrackerRemediation | null; error?: string | null }>(
+    `/reports/tracker/${encodeURIComponent(findingKey)}/remediation`,
+    {},
+  );
+}
+
 export async function loadTrackerDetail(findingKey: string): Promise<any | null> {
   if (isDemoMode()) {
     await delay(200);
@@ -1439,13 +1470,24 @@ export async function loadPrioritizedAssets(): Promise<PrioritizedAsset[]> {
       last_seen_at: a.last_seen_at,
     }));
   }
-  const rows = await softListAll<PrioritizedAsset>("/assets/intelligence/prioritized");
+  // The endpoint returns the GraphQL-mirrored camelCase shape (PrioritizedAssetItem);
+  // the app speaks snake_case. Normalise once here, keeping the raw keys so
+  // camelCase-first readers keep working.
+  const rows = await softListAll<Record<string, unknown>>("/assets/intelligence/prioritized");
   return rows.map((a) => ({
     ...a,
     id: Number(a.id),
-    risk_score: Number(a.risk_score ?? 0),
-    open_findings: Number(a.open_findings ?? 0),
-  }));
+    asset_type: String(a.assetType ?? a.asset_type ?? ""),
+    value: String(a.value ?? ""),
+    name: String(a.name ?? a.value ?? ""),
+    criticality: String(a.criticality ?? ""),
+    risk_score: Number(a.riskScore ?? a.risk_score ?? 0),
+    risk_level: String(a.riskLevel ?? a.risk_level ?? "low"),
+    open_findings: Number(a.openFindingsCount ?? a.open_findings ?? 0),
+    exposure: String(a.exposureLevel ?? a.exposure ?? ""),
+    is_verified: Boolean(a.isVerified ?? a.is_verified ?? false),
+    last_seen_at: String(a.lastScannedAt ?? a.last_seen_at ?? ""),
+  })) as PrioritizedAsset[];
 }
 
 export async function loadAssetIntelligence(assetId: number): Promise<AssetIntelligence | null> {
@@ -1472,7 +1514,37 @@ export async function loadAssetIntelligence(assetId: number): Promise<AssetIntel
       active_threats: ["CVE-2026-12345", "OWASP A03-Injection"],
     };
   }
-  return await softOne<AssetIntelligence>(`/assets/${assetId}/intelligence`);
+  // The API returns the camelCase AssetIntelligenceRead (postureSummary,
+  // riskScoreDelta, openFindingsCount, recommendedActions, …); the app type is
+  // snake_case. Normalise here so every reader (AssetInventory modal, aiExplain)
+  // sees the same shape instead of silently reading undefined.
+  const r = await softOne<Record<string, any>>(`/assets/${assetId}/intelligence`);
+  if (!r) return null;
+  return {
+    ...r,
+    asset: {
+      id: r.id,
+      name: r.name ?? r.value ?? "",
+      value: r.value ?? "",
+      asset_type: r.assetType ?? r.asset_type ?? "",
+    },
+    risk_score: r.riskScore ?? r.risk_score ?? 0,
+    risk_level: r.riskLevel ?? r.risk_level ?? "low",
+    previous_risk_score: r.previousRiskScore ?? r.previous_risk_score ?? null,
+    risk_score_delta: r.riskScoreDelta ?? r.risk_score_delta ?? null,
+    open_findings_count: r.openFindingsCount ?? r.open_findings_count ?? 0,
+    exposure_level: r.exposureLevel ?? r.exposure_level ?? "unknown",
+    posture_summary: r.postureSummary ?? r.posture_summary ?? null,
+    recommended_actions: r.recommendedActions ?? r.recommended_actions ?? [],
+    related_assets: (r.relatedAssets ?? r.related_assets ?? []).map((x: any) => ({
+      id: x.id,
+      name: x.name,
+      value: x.value,
+      asset_type: x.assetType ?? x.asset_type ?? "",
+      risk_score: x.riskScore ?? x.risk_score ?? 0,
+    })),
+    active_threats: r.activeThreats ?? r.active_threats ?? [],
+  } as AssetIntelligence;
 }
 
 export async function loadDashboardBundle() {
@@ -1653,6 +1725,8 @@ export async function streamAgentChat(
     thinking?: boolean;
     reasoning_effort?: "low" | "high" | "max";
     scope_grant?: string;
+    /** Turn id. Reuse it when re-sending after an approval_required event. */
+    analysis_id?: string;
   },
   onEvent: (event: string, data: any) => void,
   signal?: AbortSignal,
@@ -1663,6 +1737,23 @@ export async function streamAgentChat(
     return;
   }
   await streamAgentPost("/ai/agent/chat/stream", body, onEvent, signal, onScopeRequired);
+}
+
+/**
+ * Approve or reject an action the assistant proposed (POST /ai/agent/approvals/{id}/decide).
+ * Approving mints a fresh, single-use authorization for that action on that exact
+ * turn; re-send the same chat turn (same analysis_id) and the tool will run once.
+ */
+export async function decideAgentApproval(
+  approvalId: string,
+  approve: boolean,
+  notes = "",
+): Promise<{ approval_id: string; status: string; action: string }> {
+  if (isDemoMode()) {
+    await delay(200);
+    return { approval_id: approvalId, status: approve ? "approved" : "rejected", action: "demo" };
+  }
+  return api.post(`/ai/agent/approvals/${encodeURIComponent(approvalId)}/decide`, { approve, notes });
 }
 
 /**
@@ -2838,7 +2929,13 @@ export function cloudConnectUrl(connector: CloudConnector): string {
 // ── SOC War Room ──────────────────────────────────────────────────────────────
 export async function loadSocWarRoom(): Promise<SocWarRoomResponse | null> {
   if (isDemoMode()) { await delay(150); return demo.socWarRoom; }
-  return api.get<SocWarRoomResponse | null>("/soc/war-room").catch(() => null);
+  return api.get<SocWarRoomResponse | null>("/soc/war-room")
+    .then((r) =>
+      r && Array.isArray(r.playbook_catalog)
+        ? { ...r, playbook_catalog: (r.playbook_catalog as unknown as RawJson[]).map(normalizePlaybook) }
+        : r,
+    )
+    .catch(() => null);
 }
 
 export async function loadSocWarRoomCase(id: number): Promise<SocWarRoomCase | null> {
@@ -2900,6 +2997,39 @@ export async function linkWarRoomEvidence(caseId: number, logId: number): Promis
 }
 
 // ── SOC Playbooks ─────────────────────────────────────────────────────────────
+/** Loose JSON object as returned by the API before normalization. */
+type RawJson = Record<string, unknown>;
+
+/**
+ * Map a backend playbook payload to the app's ``SocPlaybook`` shape.
+ *
+ * The list endpoint returns a summary (``mitre_mappings`` array, ``phase_count``,
+ * ``is_org_custom``); the detail endpoint adds ``phases``. Both are normalized
+ * here so pages never see undefined/array mismatches.
+ */
+export function normalizePlaybook(raw: RawJson): SocPlaybook {
+  const phases = (Array.isArray(raw.phases) ? raw.phases : []) as NonNullable<SocPlaybook["phases"]>;
+  const phaseCount = Number(raw.phase_count ?? phases.length ?? 0);
+  const mappings = Array.isArray(raw.mitre_mappings) ? raw.mitre_mappings : [];
+  const firstMapping = mappings.find((m): m is string => typeof m === "string");
+  const mitreId = typeof raw.mitre_id === "string" && raw.mitre_id ? raw.mitre_id : firstMapping;
+  return {
+    id: (raw.id ?? "") as string | number,
+    title: String(raw.title ?? ""),
+    description: typeof raw.description === "string" ? raw.description : undefined,
+    category: String(raw.category ?? "uncategorized"),
+    mitre_id: mitreId,
+    severity: typeof raw.severity === "string" ? raw.severity : undefined,
+    phases,
+    phase_count: Number.isFinite(phaseCount) ? phaseCount : phases.length,
+    enabled: raw.enabled !== false,
+    org_only: Boolean(raw.is_org_custom ?? raw.org_only ?? false),
+    version: Number(raw.version ?? 1),
+    created_at: typeof raw.created_at === "string" ? raw.created_at : undefined,
+    updated_at: typeof raw.updated_at === "string" ? raw.updated_at : undefined,
+  };
+}
+
 export async function loadPlaybooks(params?: { category?: string; mitre_id?: string; enabled?: boolean }): Promise<SocPlaybook[]> {
   if (isDemoMode()) {
     await delay(150);
@@ -2909,12 +3039,16 @@ export async function loadPlaybooks(params?: { category?: string; mitre_id?: str
     return items;
   }
   const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
-  return (await api.get<{ items: SocPlaybook[] } | SocPlaybook[]>(`/soc/provisioning/playbooks${qs}`)) as unknown as SocPlaybook[];
+  const res = await api.get<{ items?: RawJson[] } | RawJson[]>(`/soc/provisioning/playbooks${qs}`);
+  const items = Array.isArray(res) ? res : res.items ?? [];
+  return items.map(normalizePlaybook);
 }
 
-export async function loadPlaybook(id: number): Promise<SocPlaybook | null> {
-  if (isDemoMode()) { await delay(100); return demo.socPlaybooks.find((p) => p.id === id) ?? null; }
-  return api.get<SocPlaybook | null>(`/soc/provisioning/playbooks/${id}`).catch(() => null);
+export async function loadPlaybook(id: string | number): Promise<SocPlaybook | null> {
+  if (isDemoMode()) { await delay(100); return demo.socPlaybooks.find((p) => String(p.id) === String(id)) ?? null; }
+  return api.get<RawJson | null>(`/soc/provisioning/playbooks/${id}`)
+    .then((r) => (r ? normalizePlaybook(r) : null))
+    .catch(() => null);
 }
 
 export async function loadRunbooks(): Promise<SocRunbook[]> {
@@ -2943,35 +3077,192 @@ export async function loadMitreTechnique(id: string): Promise<MitreTechnique | n
   return api.get<MitreTechnique | null>(`/soc/provisioning/mitre/techniques/${id}`).catch(() => null);
 }
 
+/** The backend returns per-tactic technique objects; collapse them to counts. */
+export function normalizeMitreMatrix(raw: RawJson | null): MitreMatrix | null {
+  if (!raw || !Array.isArray(raw.tactics)) return null;
+  let total = 0;
+  let covered = 0;
+  const tactics = (raw.tactics as RawJson[]).map((t) => {
+    const techs = Array.isArray(t.techniques) ? (t.techniques as RawJson[]) : [];
+    const mapped = techs.filter((x) => x.mapped === true).length;
+    total += techs.length;
+    covered += mapped;
+    return {
+      id: String(t.id ?? t.tactic_id ?? ""),
+      name: String(t.name ?? t.tactic_name ?? ""),
+      techniques: techs.length,
+      coverage: techs.length ? Math.round((mapped / techs.length) * 100) : 0,
+    };
+  });
+  return {
+    tactics,
+    total_techniques: total,
+    covered_techniques: covered,
+    coverage_pct: total ? Math.round((covered / total) * 100) : 0,
+  };
+}
+
+export function normalizeMitreStats(raw: RawJson | null): MitreStats | null {
+  if (!raw) return null;
+  const total = Number(raw.total_techniques ?? 0);
+  const covered = Number(raw.techniques_mapped_to_playbooks ?? raw.covered ?? 0);
+  return {
+    total_techniques: total,
+    covered,
+    not_covered: Math.max(0, total - covered),
+    by_tactic: (raw.covered_tactics ?? raw.by_tactic ?? {}) as MitreStats["by_tactic"],
+  };
+}
+
 export async function loadMitreMatrix(): Promise<MitreMatrix | null> {
   if (isDemoMode()) { await delay(150); return demo.mitreMatrix; }
-  return api.get<MitreMatrix | null>("/soc/provisioning/mitre/matrix").catch(() => null);
+  return api.get<RawJson | null>("/soc/provisioning/mitre/matrix")
+    .then(normalizeMitreMatrix)
+    .catch(() => null);
 }
 
 export async function loadMitreStats(): Promise<MitreStats | null> {
   if (isDemoMode()) { await delay(100); return demo.mitreStats; }
-  return api.get<MitreStats | null>("/soc/provisioning/mitre/stats").catch(() => null);
+  return api.get<RawJson | null>("/soc/provisioning/mitre/stats")
+    .then(normalizeMitreStats)
+    .catch(() => null);
 }
 
 // ── SOC Advisor ───────────────────────────────────────────────────────────────
+/** Backend priority codes → app priority words. */
+const ADVISOR_PRIORITY: Record<string, SocAdvisorRecommendation["priority"]> = {
+  p0: "critical", p1: "high", p2: "medium", p3: "low",
+  critical: "critical", high: "high", medium: "medium", low: "low",
+};
+
+export function normalizeAdvisorRecommendation(raw: RawJson): SocAdvisorRecommendation {
+  const priority = ADVISOR_PRIORITY[String(raw.priority ?? "").toLowerCase()] ?? "medium";
+  return {
+    id: Number(raw.id ?? 0),
+    title: String(raw.title ?? ""),
+    description: typeof raw.description === "string" ? raw.description : undefined,
+    priority,
+    status: (raw.status as SocAdvisorRecommendation["status"]) ?? "open",
+    assignee: (raw.assigned_to ?? raw.assignee ?? null) as string | null,
+    notes: (raw.resolution_notes ?? raw.notes ?? null) as string | null,
+    created_at: typeof raw.created_at === "string" ? raw.created_at : undefined,
+  };
+}
+
+export function normalizeAdvisorReport(raw: RawJson): SocAdvisorReport {
+  return {
+    id: Number(raw.id ?? 0),
+    report_type: String(raw.report_type ?? "posture"),
+    title: String(raw.title ?? ""),
+    status: String(raw.status ?? "draft"),
+    score: raw.score == null ? undefined : Number(raw.score),
+    executive_summary: typeof raw.executive_summary === "string" ? raw.executive_summary : undefined,
+    recommendations: Array.isArray(raw.recommendations)
+      ? (raw.recommendations as RawJson[]).map(normalizeAdvisorRecommendation)
+      : undefined,
+    created_at: typeof raw.created_at === "string"
+      ? raw.created_at
+      : typeof raw.generated_at === "string" ? raw.generated_at : undefined,
+    published_at: (raw.published_at ?? null) as string | null,
+  };
+}
+
+/** Frameworks the Advisor dashboard shows readiness for. */
+const ADVISOR_FRAMEWORKS = ["NIST CSF 2.0", "ISO 27001:2022", "NDPR", "SOC 2"];
+
+/**
+ * The backend exposes the advisor as separate endpoints (dashboard, trends,
+ * benchmarks, readiness). The page wants one dashboard object, so compose them
+ * here and normalize the shapes.
+ */
 export async function loadAdvisorDashboard(): Promise<SocAdvisorDashboard | null> {
   if (isDemoMode()) { await delay(150); return demo.advisorDashboard; }
-  return api.get<SocAdvisorDashboard | null>("/soc/advisor/dashboard").catch(() => null);
+
+  const [dash, trends, benchmarks, readinessPairs] = await Promise.all([
+    api.get<RawJson>("/soc/advisor/dashboard").catch(() => null),
+    api.get<RawJson>("/soc/advisor/trends").catch(() => null),
+    api.get<RawJson>("/soc/advisor/benchmarks").catch(() => null),
+    Promise.all(
+      ADVISOR_FRAMEWORKS.map((f) =>
+        api.get<RawJson>(`/soc/advisor/readiness/${encodeURIComponent(f)}`).catch(() => null),
+      ),
+    ),
+  ]);
+  if (!dash && !trends && !benchmarks) return null;
+
+  // ``open_recommendations`` is a {priority: count} map on the backend.
+  const openByPriority = (dash?.open_recommendations ?? {}) as Record<string, unknown>;
+  const openCount = Object.values(openByPriority).reduce<number>((n, v) => n + Number(v ?? 0), 0);
+
+  const latest = Array.isArray(dash?.latest_reports) ? (dash?.latest_reports as RawJson[]) : [];
+  const benchScore = benchmarks?.org_posture_score;
+  const score = benchScore != null
+    ? Number(benchScore)
+    : latest.map((r) => Number(r.score)).find((n) => Number.isFinite(n)) ?? 0;
+
+  const series = (trends?.series ?? {}) as Record<string, RawJson[]>;
+  const trendSeries = series.posture ?? Object.values(series)[0] ?? [];
+  const trend = trendSeries
+    .map((pt) => ({ date: String(pt.generated_at ?? pt.date ?? "").slice(0, 10), score: Number(pt.score ?? 0) }))
+    .filter((pt) => pt.date)
+    .slice(-12);
+
+  const readiness: SocAdvisorDashboard["readiness"] = {};
+  ADVISOR_FRAMEWORKS.forEach((framework, i) => {
+    const r = readinessPairs[i];
+    if (!r) return;
+    const total = Number(r.total_controls ?? 0);
+    const passed = Number(r.covered_controls ?? r.passed ?? 0);
+    readiness[framework] = {
+      score: Number(r.readiness_pct ?? (total ? (passed / total) * 100 : 0)),
+      total_controls: total,
+      passed,
+    };
+  });
+
+  const industry = Array.isArray(benchmarks?.industry) ? (benchmarks?.industry as RawJson[]) : [];
+  const benchList = industry.map((b) => ({
+    name: String(b.segment ?? b.name ?? ""),
+    score,
+    industry_avg: Number(b.median ?? b.industry_avg ?? 0),
+  }));
+
+  return { score, trend, benchmarks: benchList, readiness, open_recommendations: openCount };
 }
 
-export async function loadAdvisorTrends(): Promise<unknown> {
+export async function loadAdvisorTrends(): Promise<Array<{ date: string; score: number }>> {
   if (isDemoMode()) { await delay(100); return demo.advisorDashboard.trend; }
-  return api.get("/soc/advisor/trends").catch(() => null);
+  const raw = await api.get<RawJson>("/soc/advisor/trends").catch(() => null);
+  const series = (raw?.series ?? {}) as Record<string, RawJson[]>;
+  const pts = series.posture ?? Object.values(series)[0] ?? [];
+  return pts
+    .map((pt) => ({ date: String(pt.generated_at ?? pt.date ?? "").slice(0, 10), score: Number(pt.score ?? 0) }))
+    .filter((p) => p.date);
 }
 
-export async function loadAdvisorBenchmarks(): Promise<unknown> {
+export async function loadAdvisorBenchmarks(): Promise<SocAdvisorDashboard["benchmarks"]> {
   if (isDemoMode()) { await delay(100); return demo.advisorDashboard.benchmarks; }
-  return api.get("/soc/advisor/benchmarks").catch(() => null);
+  const raw = await api.get<RawJson>("/soc/advisor/benchmarks").catch(() => null);
+  const score = Number(raw?.org_posture_score ?? 0);
+  const industry = Array.isArray(raw?.industry) ? (raw?.industry as RawJson[]) : [];
+  return industry.map((b) => ({
+    name: String(b.segment ?? b.name ?? ""),
+    score,
+    industry_avg: Number(b.median ?? b.industry_avg ?? 0),
+  }));
 }
 
-export async function loadAdvisorReadiness(framework: string): Promise<unknown> {
+export async function loadAdvisorReadiness(framework: string): Promise<SocAdvisorDashboard["readiness"][string] | null> {
   if (isDemoMode()) { await delay(100); return demo.advisorDashboard.readiness[framework] ?? null; }
-  return api.get(`/soc/advisor/readiness/${encodeURIComponent(framework)}`).catch(() => null);
+  const raw = await api.get<RawJson>(`/soc/advisor/readiness/${encodeURIComponent(framework)}`).catch(() => null);
+  if (!raw) return null;
+  const total = Number(raw.total_controls ?? 0);
+  const passed = Number(raw.covered_controls ?? raw.passed ?? 0);
+  return {
+    score: Number(raw.readiness_pct ?? (total ? (passed / total) * 100 : 0)),
+    total_controls: total,
+    passed,
+  };
 }
 
 export async function loadAdvisorRecommendations(status?: string): Promise<SocAdvisorRecommendation[]> {
@@ -2980,7 +3271,9 @@ export async function loadAdvisorRecommendations(status?: string): Promise<SocAd
     return status ? demo.advisorRecommendations.filter((r) => r.status === status) : demo.advisorRecommendations;
   }
   const qs = status ? `?status=${encodeURIComponent(status)}` : "";
-  return api.get<SocAdvisorRecommendation[] | { items: SocAdvisorRecommendation[] }>(`/soc/advisor/recommendations${qs}`).then(r => (r as { items: SocAdvisorRecommendation[] }).items ?? r as SocAdvisorRecommendation[]);
+  const res = await api.get<{ items?: RawJson[] } | RawJson[]>(`/soc/advisor/recommendations${qs}`);
+  const items = Array.isArray(res) ? res : res.items ?? [];
+  return items.map(normalizeAdvisorRecommendation);
 }
 
 export async function updateAdvisorRecommendation(id: number, body: Record<string, unknown>): Promise<void> {
@@ -2995,7 +3288,9 @@ export async function generateAdvisorReport(body: Record<string, unknown>): Prom
 
 export async function loadAdvisorReports(): Promise<SocAdvisorReport[]> {
   if (isDemoMode()) { await delay(150); return demo.advisorReports; }
-  return api.get<SocAdvisorReport[] | { items: SocAdvisorReport[] }>("/soc/advisor/reports").then(r => (r as { items: SocAdvisorReport[] }).items ?? r as SocAdvisorReport[]);
+  const res = await api.get<{ items?: RawJson[] } | RawJson[]>("/soc/advisor/reports");
+  const items = Array.isArray(res) ? res : res.items ?? [];
+  return items.map(normalizeAdvisorReport);
 }
 
 export async function publishAdvisorReport(id: number, reviewedBy?: string): Promise<void> {

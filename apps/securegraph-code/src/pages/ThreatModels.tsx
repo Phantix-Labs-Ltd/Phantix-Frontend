@@ -141,8 +141,8 @@ export default function ThreatModels() {
       ) : error ? (
         <ErrorState title="Threat models unavailable" body={error} onRetry={() => void load()} />
       ) : (
-        <div className="space-y-5">
-          <p className="flex items-start gap-2 rounded-md border border-gold-400/30 bg-gold-400/10 p-3 text-[13px] leading-5 text-gold-200">
+        <div className="space-y-4">
+          <p className="flex items-start gap-2 rounded-md border border-gold-400/30 bg-gold-400/10 px-3 py-1.5 text-xs leading-5 text-gold-200">
             <Info size={12} className="mt-0.5 shrink-0" />
             <span>
               A model comes from the information of a product. Add <strong className="font-semibold">product information</strong>, an architecture diagram

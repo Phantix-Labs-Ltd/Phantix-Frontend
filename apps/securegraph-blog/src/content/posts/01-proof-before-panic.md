@@ -2,9 +2,9 @@
 title: "Proof Before Panic"
 no: "01"
 order: 1
-date: "September 2026"
+date: "2026-09-25"
 kicker: "Lead essay"
-excerpt: "Every finding in this issue arrived with evidence attached. Here is why we will not print one that did not."
+excerpt: "Why we only publish findings that arrive with evidence attached, and what changes when you verify first."
 featured: true
 ---
 
@@ -12,11 +12,19 @@ Most security weeks begin with a scare. A scanner lights up, a headline names a 
 
 The SecureGraph Weekly starts from the other end. Before anything reaches these pages it has to survive a simple test: can we show it happening? Not a version string that looks vulnerable, not a pattern match, but a request, a response, and a result a second person can reproduce.
 
+![A raw result passes through deduplication and verification before it reaches a report; unreproducible results leave the pipeline](/blog/figures/01-verification-pipeline.svg)
+
+*Figure 1. The path from a raw tool result to a verified finding. Most of the value is in what leaves the pipeline.*
+
 ## Evidence is the unit of work
 
 A verified finding carries its own proof. It names the asset, the path to it, the exact input that triggered it, and what came back. That bundle is what turns an alert into a decision. With it, an engineer can fix the right thing the first time. A manager can also decide what waits and what does not, without a meeting to argue about it.
 
 Without it, every finding is a negotiation. Teams burn hours proving a scanner wrong, and trust in the whole program wears down one false positive at a time.
+
+![The fields a verified finding carries, next to the two states a result can have](/blog/figures/01-evidence-bundle.svg)
+
+*Figure 2. What a verified finding carries, and the two states a result can have.*
 
 ## What changes when you verify first
 
@@ -28,4 +36,4 @@ Three things, in our experience:
 
 > A finding nobody verified is a rumor. We only print what we can prove.
 
-That is the promise of this publication, and of the platform behind it. Each week we pick the evidence worth your attention, show our working, and leave the noise out.
+That is the promise of this publication, and of the platform behind it. In every issue we pick the evidence worth your attention, show our working, and leave the noise out.

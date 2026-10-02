@@ -24,14 +24,51 @@ export interface SiteFilesOptions {
   sitemap?: () => string[] | Promise<string[]>;
   /** Fail the build when an entry chunk is larger than this (KB, minified). */
   entryBudgetKB?: number;
+  /**
+   * Authenticated (or transient) route prefixes, emitted as explicit
+   * `Disallow:` lines ahead of the catch-all. Only used when `allow` is an
+   * allowlist; the catch-all already blocks them, but naming them documents
+   * the intent and survives a change to the allowlist.
+   */
+  disallow?: string[];
+  /**
+   * Welcome the main AI / answer-engine crawlers with the same rules as
+   * `User-agent: *`, matching phantixlabs.com. They may read the public
+   * routes only — listing them separately never widens access.
+   */
+  aiCrawlers?: boolean;
+  /**
+   * Body of an `llms.txt` file (https://llmstxt.org). Emit it only on hosts
+   * that are genuinely public and have a machine-readable story to tell.
+   * Omit the option and no file is written.
+   */
+  llmsTxt?: string;
 }
+
+/** The AI crawlers the landing site welcomes; kept in step with it. */
+const AI_CRAWLERS = ["GPTBot", "OAI-SearchBot", "PerplexityBot", "ClaudeBot", "Google-Extended"];
 
 function xmlEscape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/** The Allow/Disallow body shared by `User-agent: *` and the AI crawlers. */
+function crawlRules(allow: "all" | string[], disallow: string[]): string[] {
+  const lines: string[] = [];
+  if (allow === "all") {
+    lines.push("Allow: /");
+    for (const p of disallow) lines.push(`Disallow: ${p}`);
+    return lines;
+  }
+  for (const p of allow) lines.push(`Allow: ${p}`);
+  for (const p of disallow) lines.push(`Disallow: ${p}`);
+  lines.push("Disallow: /");
+  return lines;
+}
+
 export function siteFiles(opts: SiteFilesOptions): Plugin {
   const origin = opts.siteUrl.replace(/\/+$/, "");
+  const disallow = opts.disallow ?? [];
   return {
     name: "sg-site-files",
     apply: "build",
@@ -51,15 +88,21 @@ export function siteFiles(opts: SiteFilesOptions): Plugin {
 
       const paths = Array.from(new Set((opts.sitemap ? await opts.sitemap() : []).map((p) => p || "/")));
 
-      const robots = ["User-agent: *"];
-      if (opts.allow === "all") {
-        robots.push("Allow: /");
-      } else {
-        for (const p of opts.allow) robots.push(`Allow: ${p}`);
-        robots.push("Disallow: /");
+      const robots = ["User-agent: *", ...crawlRules(opts.allow, disallow)];
+      if (opts.aiCrawlers) {
+        robots.push(
+          "",
+          "# Answer engines and AI crawlers: public routes only, same rules as *.",
+          ...AI_CRAWLERS.map((ua) => `User-agent: ${ua}`),
+          ...crawlRules(opts.allow, disallow),
+        );
       }
       if (paths.length) robots.push("", `Sitemap: ${origin}/sitemap.xml`);
       this.emitFile({ type: "asset", fileName: "robots.txt", source: robots.join("\n") + "\n" });
+
+      if (opts.llmsTxt) {
+        this.emitFile({ type: "asset", fileName: "llms.txt", source: opts.llmsTxt.trim() + "\n" });
+      }
 
       if (paths.length) {
         const urls = paths
