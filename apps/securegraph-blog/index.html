@@ -14,6 +14,12 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <title>The SecureGraph Weekly</title>
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="author" content="Phantix Labs ltd" />
+    <meta
+      name="keywords"
+      content="SecureGraph Weekly, verified findings, penetration testing, VAPT, continuous security, remediation, security reporting, Phantix Labs"
+    />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="SecureGraph" />
     <meta property="og:url" content="https://blog.phantixlabs.com/" />
@@ -27,7 +33,53 @@
     <meta name="twitter:title" content="The SecureGraph Weekly" />
     <meta name="twitter:description" content="The SecureGraph Weekly: verified security findings, fixes that held, and the decisions worth making. One short issue every week." />
     <meta name="twitter:image" content="https://blog.phantixlabs.com/og-weekly.png" />
+    <meta name="twitter:site" content="@SecureGraph_AI" />
+    <meta name="twitter:creator" content="@SecureGraph_AI" />
+    <meta property="og:locale" content="en_US" />
     <link rel="canonical" href="https://blog.phantixlabs.com/" />
+
+    <!-- Structured data: the publisher, the site, and the journal. Per-post
+         Article and BreadcrumbList nodes are added at runtime by usePostSeo.ts. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://phantixlabs.com/#organization",
+          "name": "Phantix Labs ltd",
+          "url": "https://phantixlabs.com/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://phantixlabs.com/logo-transparent.png"
+          },
+          "sameAs": [
+            "https://www.linkedin.com/company/securegraph-ai",
+            "https://x.com/SecureGraph_AI"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://blog.phantixlabs.com/#website",
+          "url": "https://blog.phantixlabs.com/",
+          "name": "The SecureGraph Weekly",
+          "description": "Verified security findings, fixes that held, and the decisions worth making. One short issue every week.",
+          "publisher": { "@id": "https://phantixlabs.com/#organization" },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "Blog",
+          "@id": "https://blog.phantixlabs.com/#blog",
+          "url": "https://blog.phantixlabs.com/",
+          "name": "The SecureGraph Weekly",
+          "description": "The journal of SecureGraph. Each issue publishes verified findings, attack-surface lessons, remediation that held, and security reporting for leadership.",
+          "publisher": { "@id": "https://phantixlabs.com/#organization" },
+          "isPartOf": { "@id": "https://blog.phantixlabs.com/#website" },
+          "inLanguage": "en"
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
