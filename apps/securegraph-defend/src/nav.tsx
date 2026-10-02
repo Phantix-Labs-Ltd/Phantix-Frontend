@@ -7,10 +7,13 @@ import {
   Building2,
   ClipboardList,
   Cloud,
+  Database,
   Fingerprint,
+  GitCompare,
   LayoutDashboard,
   Logs,
   Network,
+  Package,
   Plug,
   Radar,
   Scale,
@@ -19,6 +22,7 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Siren,
   Swords,
 } from "lucide-react";
 import type { NavSection } from "@sg/shell/types";
@@ -36,9 +40,15 @@ export const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Continuous",
+    label: "Cloud",
     items: [
       { to: "/cloud", label: "Cloud posture", icon: <Cloud size={17} /> },
+      { to: "/cloud-config", label: "Config changes", icon: <GitCompare size={17} /> },
+    ],
+  },
+  {
+    label: "Continuous",
+    items: [
       { to: "/endpoint-monitoring", label: "Endpoint monitoring", icon: <Radar size={17} /> },
       { to: "/risks", label: "Risk register", icon: <ShieldAlert size={17} /> },
     ],
@@ -57,6 +67,9 @@ export const NAV: NavSection[] = [
     label: "SOC",
     items: [
       { to: "/soc", label: "SOC dashboard", icon: <Activity size={17} /> },
+      { to: "/security-alerts", label: "Security alerts", icon: <Siren size={17} /> },
+      { to: "/detection-packs", label: "Detection packs", icon: <Package size={17} /> },
+      { to: "/log-retention", label: "Log retention", icon: <Database size={17} /> },
       { to: "/soc/war-room", label: "War room", icon: <Swords size={17} /> },
       { to: "/soc/playbooks", label: "Playbooks and MITRE", icon: <ScrollText size={17} /> },
       { to: "/soc/advisor", label: "Advisor", icon: <Shield size={17} /> },

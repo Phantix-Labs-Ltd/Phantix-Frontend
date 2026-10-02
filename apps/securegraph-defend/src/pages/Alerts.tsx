@@ -124,8 +124,8 @@ export default function Alerts() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {/* Integrations Hub link */}
           <div className="lg:col-span-2">
-            <Card>
-              <div className="flex items-center justify-between p-4">
+            <Card pad="sm">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Cable size={16} className="text-gold-400" />
                   <div>

@@ -75,7 +75,7 @@ export default function SocAdvisor() {
                   <div key={framework} className="flex items-center gap-3">
                     <span className="w-32 text-xs font-medium text-slate-200">{framework}</span>
                     <div className="flex-1 h-2 rounded-full bg-phantix-800">
-                      <div className="h-full rounded-full bg-emerald-400" style={{ width: `${(data.passed / data.total_controls) * 100}%` }} />
+                      <div className="h-full rounded-full bg-emerald-400" style={{ width: `${data.total_controls ? (data.passed / data.total_controls) * 100 : 0}%` }} />
                     </div>
                     <span className="text-xs text-slate-400">{data.passed}/{data.total_controls}</span>
                   </div>

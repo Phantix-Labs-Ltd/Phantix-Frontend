@@ -368,6 +368,8 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
   /** Raw-store row id (e.g. a scan_results id) the remediation endpoint keys on. */
   source_finding_id?: number | null;
   source_store?: string | null;
+  /** AI fix artifact carried on the board row (status `generated` | `pending`). */
+  remediation?: any | null;
 } {
   const statusRaw = String(raw?.status ?? "open").toLowerCase().replace(/-/g, "_");
   // Map legacy / verification labels onto the living-board set only.
@@ -423,6 +425,7 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
     source_finding_id:
       raw?.source_finding_id != null ? Number(raw.source_finding_id) : null,
     source_store: raw?.source_store != null ? String(raw.source_store) : null,
+    remediation: raw?.remediation ?? null,
   };
 }
 

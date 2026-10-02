@@ -31,25 +31,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1B2338" />
     <meta name="referrer" content="no-referrer" />
-    <title>SecureGraph Attack — Penetration Testing &amp; VAPT</title>
-    <meta name="robots" content="noindex, nofollow" />
-    <meta name="description" content="SecureGraph Attack: scoped VAPT campaigns, web, API and mobile scans, and an autonomous pentest agent that tests your security the way an attacker would." />
+
+    <!-- Primary SEO. src/lib/useSeo.ts rewrites title, description, canonical
+         and robots on every route: /docs stays indexable, the operator routes
+         (including `/`) become noindex, nofollow. -->
+    <title>SecureGraph Attack: Penetration Testing and VAPT Scans</title>
+    <meta
+      name="description"
+      content="Scope VAPT campaigns, run web, API and mobile scans, and let the autonomous pentest agent test your defenses the way an attacker would. Fix what matters."
+    />
+    <meta
+      name="keywords"
+      content="securegraph attack, penetration testing, VAPT, web application scanning, API security testing, mobile app testing, autonomous pentest agent, phantix labs"
+    />
+    <meta name="author" content="Phantix Labs ltd" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://attack.phantixlabs.com/" />
+
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="SecureGraph" />
+    <meta property="og:site_name" content="SecureGraph by Phantix Labs" />
     <meta property="og:url" content="https://attack.phantixlabs.com/" />
-    <meta property="og:title" content="SecureGraph Attack — Penetration Testing &amp; VAPT" />
+    <meta property="og:title" content="SecureGraph Attack: Penetration Testing and VAPT Scans" />
+    <meta
+      property="og:description"
+      content="Scope VAPT campaigns, run web, API and mobile scans, and let the autonomous pentest agent test your defenses the way an attacker would."
+    />
     <meta property="og:image" content="https://attack.phantixlabs.com/og-attack.png" />
+    <meta property="og:image:alt" content="SecureGraph Attack: penetration testing and VAPT campaigns" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@phantixlabs" />
+    <meta name="twitter:title" content="SecureGraph Attack: Penetration Testing and VAPT Scans" />
+    <meta
+      name="twitter:description"
+      content="Scope VAPT campaigns, run web, API and mobile scans, and let the autonomous pentest agent test your defenses like an attacker."
+    />
+    <meta name="twitter:image" content="https://attack.phantixlabs.com/og-attack.png" />
+
+    <!-- Structured data: organization + site + product (mirrors phantixlabs.com) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://phantixlabs.com/#organization",
+          "name": "Phantix Labs ltd",
+          "alternateName": ["Phantix Labs", "Phantom Labs", "Phantom Security"],
+          "url": "https://phantixlabs.com/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://phantixlabs.com/logo-transparent.png"
+          },
+          "description": "Phantix Labs ltd builds SecureGraph. SecureGraph gives lean teams vulnerability assessment, penetration testing, and continuous security.",
+          "slogan": "PROTECT. PREVENT. PERFORM.",
+          "sameAs": []
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://phantixlabs.com/#website",
+          "url": "https://phantixlabs.com/",
+          "name": "SecureGraph",
+          "publisher": { "@id": "https://phantixlabs.com/#organization" },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://attack.phantixlabs.com/#softwareapplication",
+          "name": "SecureGraph Attack",
+          "applicationCategory": "SecurityApplication",
+          "operatingSystem": "Web",
+          "url": "https://attack.phantixlabs.com/",
+          "publisher": { "@id": "https://phantixlabs.com/#organization" },
+          "description": "Scope VAPT campaigns, run web, API and mobile scans, and let the autonomous pentest agent test your defenses the way an attacker would. Fix what matters."
+        }
+      ]
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <meta property="og:description" content="SecureGraph Attack: scoped VAPT campaigns, web, API and mobile scans, and an autonomous pentest agent that tests your security the way an attacker would." />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="SecureGraph Attack — Penetration Testing &amp; VAPT" />
-    <meta name="twitter:title" content="SecureGraph Attack — Penetration Testing &amp; VAPT" />
-    <meta name="twitter:description" content="SecureGraph Attack: scoped VAPT campaigns, web, API and mobile scans, and an autonomous pentest agent that tests your security the way an attacker would." />
-    <meta name="twitter:image" content="https://attack.phantixlabs.com/og-attack.png" />
   </head>
   <body>
     <div id="root"></div>

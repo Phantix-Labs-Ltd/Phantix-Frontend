@@ -16,8 +16,10 @@ export default defineConfig(({ mode }) => {
       siteFiles({
         siteUrl: "https://app.phantixlabs.com",
         // Home, the docs and the legal pages are public; everything else is
-        // behind sign-in.
-        allow: ["/$", "/docs", "/privacy", "/cookies", "/sandbox-apply"],
+        // behind sign-in. `/login` is crawlable so a crawler can read its
+        // noindex tag, but it is not listed in the sitemap: the form has no
+        // content of its own.
+        allow: ["/$", "/login", "/docs", "/privacy", "/cookies", "/sandbox-apply"],
         sitemap: () => [
           "/",
           "/docs",
@@ -26,6 +28,34 @@ export default defineConfig(({ mode }) => {
           "/sandbox-apply",
           ...docPageIds(path.resolve(__dirname, "../../packages/sg-shared/src")).map((id) => `/docs/${id}`),
         ],
+        // Everything the Core shell owns, plus the entry and reset flows that
+        // must never be indexed. `/assets` is deliberately absent: robots.txt
+        // matches by prefix, so `Disallow: /assets` would also block Vite's
+        // hashed /assets/*.js bundle and stop Google rendering /docs at all.
+        // The catch-all below already blocks that page.
+        disallow: [
+          "/api/",
+          "/choose-app",
+          "/dashboard",
+          "/analytics",
+          "/tracker",
+          "/findings",
+          "/reports",
+          "/integrations",
+          "/audit",
+          "/agent",
+          "/authorizations",
+          "/support",
+          "/sandbox",
+          "/danger-zone",
+          "/assistant",
+          "/password-reset",
+          "/reset-password",
+          "/device-confirm",
+        ],
+        // Query the AI crawlers the landing site welcomes; they get the public
+        // routes only, exactly like `User-agent: *`.
+        aiCrawlers: true,
         entryBudgetKB: 600,
       }),
     ],

@@ -12,6 +12,13 @@ import type { ApplicationKey, NavLeaf, NavSection } from "./types";
 // The static per-app `nav.tsx` is kept only as (a) the offline/demo fallback and
 // (b) the icon registry, matched by path. If the snapshot has no surfaces we
 // return the fallback unchanged.
+
+// Routes the frontend has retired, mapped to the page that replaced them. The
+// backend catalog can lag behind a rename; without this the sidebar shows the
+// old label, links to a redirect, and loses its icon (icons match by path).
+const RETIRED_PATHS: Record<string, string> = {
+  "/remediation": "/tracker",
+};
 export function useApplicationNav(
   application: ApplicationKey,
   fallback: NavSection[],
@@ -28,13 +35,23 @@ export function useApplicationNav(
     if (surfaces.length === 0) return fallback;
 
     const iconByPath = new Map<string, React.ReactNode>();
+    const labelByPath = new Map<string, string>();
     for (const section of fallback) {
-      for (const item of section.items) iconByPath.set(item.to, item.icon);
+      for (const item of section.items) {
+        iconByPath.set(item.to, item.icon);
+        labelByPath.set(item.to, item.label);
+      }
     }
+    const seen = new Set<string>();
 
     const groups: NavSection[] = [];
     const groupIndex = new Map<string, number>();
     for (const surface of surfaces) {
+      const replacement = RETIRED_PATHS[surface.path];
+      const path = replacement ?? surface.path;
+      // A retired path and its replacement can both be listed: keep one.
+      if (seen.has(path)) continue;
+      seen.add(path);
       const group = surface.group || "More";
       let idx = groupIndex.get(group);
       if (idx === undefined) {
@@ -43,9 +60,9 @@ export function useApplicationNav(
         groups.push({ label: group, items: [] });
       }
       const leaf: NavLeaf = {
-        to: surface.path,
-        label: surface.label,
-        icon: iconByPath.get(surface.path),
+        to: path,
+        label: (replacement && labelByPath.get(path)) || surface.label,
+        icon: iconByPath.get(path),
         locked: Boolean(surface.locked),
         lockReason: surface.lock_reason ?? null,
       };

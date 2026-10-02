@@ -62,7 +62,7 @@ function Skeleton() {
   );
 }
 
-const KPI_GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4";
+const KPI_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4";
 const PANEL_GRID = "mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3";
 
 // ── Attack ────────────────────────────────────────────────────────────────────

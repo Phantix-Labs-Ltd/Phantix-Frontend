@@ -15,6 +15,7 @@ import { HOSTS } from "./hosts";
 import { NAV } from "./nav";
 import AgiDrawer from "@sg/components/AgiDrawer";
 import SectionGate from "@sg/components/SectionGate";
+import { useSeo } from "./lib/useSeo";
 
 const Agent = React.lazy(() => import("@sg/pages/Agent"));
 const NotFound = React.lazy(() => import("@sg/pages/NotFound"));
@@ -33,6 +34,8 @@ const Tracker = React.lazy(() => import("@sg/pages/Tracker"));
 const PriorReports = React.lazy(() => import("./pages/PriorReports"));
 
 export default function App() {
+  // Per-route SEO: /docs stays indexable, every operator route is noindex.
+  useSeo();
   return (
     <StoreProvider>
       <Suspense fallback={<BrandLoader label="Attack" message="Loading" />}>

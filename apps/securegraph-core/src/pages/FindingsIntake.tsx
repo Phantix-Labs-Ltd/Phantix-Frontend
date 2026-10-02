@@ -180,16 +180,16 @@ export default function FindingsIntake() {
               onClick={() => { setView(t.key); setPage(1); }}
               aria-pressed={active}
               className={cx(
-                "card flex items-center gap-3 p-4 text-left transition-colors hover:border-phantix-600",
+                "card flex items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:border-phantix-600",
                 active && "!border-gold-400/50 bg-gold-400/[0.04]",
               )}
             >
-              <span className={cx("flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-phantix-700 bg-phantix-900", t.tone)}>
+              <span className={cx("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-phantix-700 bg-phantix-900 [&_svg]:h-3.5 [&_svg]:w-3.5", t.tone)}>
                 {t.icon}
               </span>
               <span className="min-w-0">
                 <span className="block text-[13px] text-slate-400">{t.label}</span>
-                <span className="block font-mono text-2xl font-semibold leading-tight text-white">{t.value}</span>
+                <span className="block font-mono text-xl font-semibold leading-tight text-white">{t.value}</span>
               </span>
             </motion.button>
           );

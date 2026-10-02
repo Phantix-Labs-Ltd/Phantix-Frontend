@@ -212,33 +212,11 @@ export default function Code() {
 
       <UpsellBanner feature="continuous_pr" />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className={cx("chip text-xs", connected ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-phantix-600/40 text-slate-400")}>
-          <Github size={12} className="mr-1 inline" /> {connected ? "GitHub connected" : "GitHub not connected"}
-        </span>
-        {wallet?.balance_ngn != null && (
-          <span className="chip text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300">
-            Branch-review wallet · ₦{Number(wallet.balance_ngn).toLocaleString()}
-          </span>
-        )}
-        {autofix?.continuous_pr && (
-          <span className="chip text-xs border-gold-400/30 bg-gold-400/10 text-gold-200">
-            Continuous PR {autofix.continuous_pr.opens_pr ? "enabled" : "off"}
-          </span>
-        )}
-        {scmInstalls.filter((i) => i.connector_id !== "github").map((i) => (
-          <span key={i.installation_id} className={cx("chip text-xs", providerTone(i.status))}>
-            {scmIcon(i.connector_id)}
-            <span className="ml-1">{i.connector_id}</span>
-            <span className="ml-1 opacity-70">{i.status === "active" ? "connected" : i.status}</span>
-          </span>
-        ))}
-      </div>
-
-      {/* Source control, compact: one icon per provider with its state. The
-          full cards live on the Providers page — this strip exists so the
-          section you actually came for is not pushed below the fold. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-phantix-700/40 bg-phantix-900/40 px-3 py-2">
+      {/* Source control and account state in one strip: one icon per provider
+          with its state, then the wallet and Continuous PR. The full cards
+          live on the Providers page — this strip exists so the section you
+          actually came for is not pushed below the fold. */}
+      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-phantix-700/40 bg-phantix-900/40 px-3 py-1.5">
         <span className="mr-1 font-mono text-[12px] uppercase tracking-[0.18em] text-slate-500">
           Source control
         </span>
@@ -248,7 +226,7 @@ export default function Code() {
           title={connected ? "GitHub: connected" : "GitHub: not connected"}
           aria-label={connected ? "GitHub connected" : "GitHub not connected"}
           className={cx(
-            "relative flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
+            "relative flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
             connected
               ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
               : "border-phantix-600/40 bg-phantix-800/50 text-slate-400 hover:text-slate-200",
@@ -274,7 +252,7 @@ export default function Code() {
               title={`${c.name || c.connector_id}: ${active ? "connected" : install ? install.status : "not connected"}`}
               aria-label={c.name || c.connector_id}
               className={cx(
-                "relative flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
+                "relative flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
                 active
                   ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
                   : "border-phantix-600/40 bg-phantix-800/50 text-slate-400 hover:text-slate-200",
@@ -287,6 +265,16 @@ export default function Code() {
             </button>
           );
         })}
+        {wallet?.balance_ngn != null && (
+          <span className="chip ml-1 text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300">
+            Branch-review wallet · ₦{Number(wallet.balance_ngn).toLocaleString()}
+          </span>
+        )}
+        {autofix?.continuous_pr && (
+          <span className="chip text-xs border-gold-400/30 bg-gold-400/10 text-gold-200">
+            Continuous PR {autofix.continuous_pr.opens_pr ? "enabled" : "off"}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setTab("providers")}

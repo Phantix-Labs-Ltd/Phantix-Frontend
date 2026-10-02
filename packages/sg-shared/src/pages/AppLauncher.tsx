@@ -102,35 +102,32 @@ export default function AppLauncher({
 
   return (
     <div>
-      {/* Header: what this application is for, from the backend catalog. */}
+      {/* Header: name and tagline only. The catalog's long description belongs
+          on the app picker, not above the work on every overview. */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-5 flex flex-wrap items-start gap-4"
+        className="mb-4 flex flex-wrap items-center gap-3"
       >
         <span
           className={cx(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border bg-phantix-900/70",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-phantix-900/70 [&_svg]:h-[18px] [&_svg]:w-[18px]",
             ACCENT[application],
           )}
         >
           {ICONS[application]}
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[26px] font-bold leading-tight tracking-tight text-white">
+          <h1 className="font-display text-[24px] font-bold leading-tight tracking-tight text-white">
             {card?.label || APPLICATION_LABEL[application]}
             {card?.tagline ? (
               <span className="ml-3 align-middle text-sm font-semibold text-gold-300">{card.tagline}</span>
             ) : null}
           </h1>
-          {card?.description ? (
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{card.description}</p>
-          ) : null}
-          <div className="mt-2">
-            <DocLink docId="howto-app-38" label="Overview and navigation how-to" />
-          </div>
         </div>
+        {/* Beside the title, not on a line of its own. */}
+        <DocLink docId="howto-app-38" label="Overview and navigation how-to" className="shrink-0" />
       </motion.div>
 
       <AppMiniDashboard application={application} />

@@ -335,7 +335,7 @@ export default function ProviderConnect() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <Card className="h-full">
             <CardHeader title="Setup" subtitle="What to configure on the provider side" action={<Webhook size={16} className="text-gold-300" />} />
-            <div className="space-y-3 p-4">
+            <div className="space-y-3">
               <ol className="space-y-2 text-sm leading-6 text-slate-300">
                 {steps.map((step, i) => (
                   <li key={i} className="flex gap-2">

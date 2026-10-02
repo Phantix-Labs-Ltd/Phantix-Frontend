@@ -12,6 +12,7 @@ import AiBudgetOverlay from "@sg/components/AiBudgetOverlay";
 import { BrandLoader } from "@sg/components/BrandLoader";
 import { HOSTS } from "./hosts";
 import { NAV } from "./nav";
+import { useSeo } from "./lib/useSeo";
 
 const Agent = React.lazy(() => import("@sg/pages/Agent"));
 const NotFound = React.lazy(() => import("@sg/pages/NotFound"));
@@ -20,8 +21,11 @@ const Code = React.lazy(() => import("./pages/Code"));
 const ProviderConnect = React.lazy(() => import("./pages/ProviderConnect"));
 const ThreatModels = React.lazy(() => import("./pages/ThreatModels"));
 const ContextProjects = React.lazy(() => import("./pages/ContextProjects"));
+const CiCd = React.lazy(() => import("./pages/CiCd"));
 
 export default function App() {
+  // Per-route SEO: /docs stays indexable, every operator route is noindex.
+  useSeo();
   return (
     <StoreProvider>
       <Suspense fallback={<BrandLoader label="Code" message="Loading" />}>
@@ -39,6 +43,7 @@ export default function App() {
           <Route path="/code-review" element={<Code />} />
           <Route path="/code-review/providers/:provider" element={<ProviderConnect />} />
           <Route path="/code-review/:section" element={<Code />} />
+          <Route path="/cicd" element={<CiCd />} />
           <Route path="/threat-models" element={<ThreatModels />} />
           <Route path="/context" element={<ContextProjects />} />
           <Route path="/assistant" element={<Agent />} />

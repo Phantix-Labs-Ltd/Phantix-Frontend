@@ -492,26 +492,25 @@ export default function Vapt() {
 
       {/* Pending approvals strip */}
       {pending.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-          <Card className="border-severity-medium/30 bg-severity-medium/5">
-            <div className="flex flex-wrap items-center gap-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-severity-medium/15 text-severity-medium">
-                <UserCheck size={18} />
-              </span>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-100">{pending.length} approval{pending.length > 1 ? "s" : ""} waiting</p>
-                <p className="text-xs text-slate-400">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-3">
+          {/* One line: what waits, who must act, and the two actions. */}
+          <Card pad="sm" className="border-severity-medium/30 bg-severity-medium/5 !py-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <UserCheck size={16} className="shrink-0 text-severity-medium" />
+              <div className="min-w-0 flex-1 text-sm">
+                <span className="font-semibold text-slate-100">{pending.length} approval{pending.length > 1 ? "s" : ""} waiting</span>
+                <span className="ml-2 text-xs text-slate-400">
                   {pending[0].step} --- requires the <strong>{pending[0].role_required}</strong>
                   {(pending[0].role_required === "authorizer"
                     ? dualControl.authorizer?.full_name
                     : dualControl.initiator?.full_name) && (
                     <> ({pending[0].role_required === "authorizer" ? dualControl.authorizer?.full_name : dualControl.initiator?.full_name})</>
                   )}
-                </p>
+                </span>
               </div>
               <div className="flex gap-2">
-                <button className="btn-primary !py-2" onClick={() => handleApprove(pending[0].id, true)}>Approve</button>
-                <button className="btn-danger !py-2" onClick={() => handleApprove(pending[0].id, false)}>Reject</button>
+                <button className="btn-primary !py-1" onClick={() => handleApprove(pending[0].id, true)}>Approve</button>
+                <button className="btn-danger !py-1" onClick={() => handleApprove(pending[0].id, false)}>Reject</button>
               </div>
             </div>
           </Card>
@@ -528,12 +527,12 @@ export default function Vapt() {
       />
 
       {tab === "campaigns" && (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-5 xl:items-start">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5 xl:items-start">
           {/* What is still running — the operator can end it here. Hidden once
               the detail column is scrolled, so it doesn't eat into the space
               freed up by the split-pane layout below. */}
           {activeCampaigns.length > 0 && !detailScrolled && (
-            <div className="xl:col-span-5 flex flex-wrap items-center gap-2 rounded-xl border border-severity-medium/30 bg-severity-medium/8 px-3.5 py-2.5 text-xs text-severity-medium">
+            <div className="xl:col-span-5 flex flex-wrap items-center gap-2 rounded-lg border border-severity-medium/30 bg-severity-medium/8 px-3 py-1.5 text-xs text-severity-medium">
               <AlertTriangle size={14} className="shrink-0" />
               <span>
                 <strong>{activeCampaigns[0].name}</strong>{" "}
@@ -623,17 +622,17 @@ export default function Vapt() {
                   action={<StatusBadge status={activeSelected.status} />}
                 />
 
-                {/* Stats row */}
-                <div className="grid grid-cols-4 gap-2 mb-4">
+                {/* Stats row: one inline strip, not four boxed tiles. */}
+                <div className="mb-4 grid grid-cols-4 divide-x divide-phantix-700/40 rounded-md border border-phantix-700/40 bg-phantix-950/50">
                   {[
                     [activeSelected.asset_count ?? "---", "Assets", "text-blue-400"],
                     [activeSelected.findings_count ?? "---", "Findings", "text-emerald-400"],
                     [(activeSelected as any).procedure_snapshot?.steps?.length ?? "---", "Steps", "text-phantix-300"],
                     [activeSelected.requires_approval ? "Yes" : "No", "Approval", activeSelected.requires_approval ? "text-severity-medium" : "text-slate-400"],
                   ].map(([v, l, c]) => (
-                    <div key={String(l)} className="rounded-lg bg-phantix-950/50 border border-phantix-700/40 px-3 py-2.5 text-center">
-                      <p className={cx("font-display text-lg font-bold", c)}>{v}</p>
-                      <p className="text-[12px] uppercase tracking-wider text-slate-500">{l}</p>
+                    <div key={String(l)} className="flex items-baseline justify-center gap-1.5 px-2 py-1.5">
+                      <span className={cx("font-display text-base font-bold", c)}>{v}</span>
+                      <span className="truncate text-[12px] text-slate-500">{l}</span>
                     </div>
                   ))}
                 </div>

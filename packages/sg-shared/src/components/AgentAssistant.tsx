@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, Square, Sparkles, X, Trash2, ArrowRight, ArrowDown, BrainCircuit, BookOpen, Mail } from "lucide-react";
+import { Send, Square, Sparkles, X, Trash2, ArrowRight, ArrowDown, BrainCircuit, BookOpen, Mail, Wrench, Check, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { applicationHandoffHref, applicationTarget } from "../applications";
-import { streamAgentChat } from "../data";
+import { decideAgentApproval, streamAgentChat } from "../data";
 import { useStore } from "../store";
 import { cx } from "../utils";
 import LottiePlayer from "./LottiePlayer";
@@ -20,16 +20,31 @@ import {
   releaseAssistantPanel,
 } from "./assistantEvents";
 
-type Msg = { role: "user" | "agent"; text: string; thinking?: string; nav?: { route: string; label: string; also?: { route: string; label: string }[] } };
+type ToolStep = { tool: string; status: "running" | "done" | "error"; error?: string };
+type ApprovalReq = { approval_id: string; tool: string; params: Record<string, unknown>; analysis_id: string; prompt: string };
+type Msg = {
+  role: "user" | "agent";
+  text: string;
+  thinking?: string;
+  steps?: ToolStep[];
+  approval?: ApprovalReq;
+  nav?: { route: string; label: string; also?: { route: string; label: string }[] };
+};
+
+function stepLabel(tool: string): string {
+  return tool
+    .replace(/\./g, " › ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 const DEFAULT_GREETING =
-  "Hi, I am SecureGraph Agent, your security operations assistant. I can summarize your posture and surface highest-risk assets. I can list open critical risks, preview report findings, and explain risks or findings. I can also point you to any page in the app. Ask \u201cwhere do I find\u2026\u201d. What would you like to look into?";
+  "Hi, I am SecureGraph Agent. I work alongside you: I can look up your assets, findings, risks and campaigns, and I can take the same actions the app can \u2014 add an asset, update one, re-verify ownership, update a risk. Anything that changes your data asks for your approval first, and you can stop me at any point. Ask me a question or tell me what to do. What would you like to look into?";
 
 const SUGGESTIONS = [
-  "Summarize my current security posture",
   "Which of my assets are highest risk?",
-  "How many critical risks are open right now?",
-  "Where do I find my risk register?",
+  "Show me the prioritized remediation queue",
+  "Add api.example.com to my inventory",
+  "Summarize my current security posture",
 ];
 
 const WIDTH = 400;
@@ -76,6 +91,9 @@ export default function AgentAssistant() {
   const [phase, setPhase] = useState<"idle" | "connecting" | "streaming">("idle");
   const [liveAnswer, setLiveAnswer] = useState("");
   const [liveThinking, setLiveThinking] = useState("");
+  const [liveSteps, setLiveSteps] = useState<ToolStep[]>([]);
+  const [liveApproval, setLiveApproval] = useState<ApprovalReq | null>(null);
+  const [approving, setApproving] = useState(false);
   const [connError, setConnError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const chatSend = useChatSend();
@@ -127,7 +145,12 @@ export default function AgentAssistant() {
     return () => window.removeEventListener("keydown", fn);
   }, []);
 
-  const resetLive = () => { setLiveAnswer(""); setLiveThinking(""); };
+  const resetLive = () => {
+    setLiveAnswer("");
+    setLiveThinking("");
+    setLiveSteps([]);
+    setLiveApproval(null);
+  };
 
   const resetChat = () => {
     setMessages([{ role: "agent", text: DEFAULT_GREETING }]);
@@ -142,27 +165,23 @@ export default function AgentAssistant() {
     chatSend.requestSend(msg, (m) => dispatchSend(m));
   };
 
-  const dispatchSend = async (msg: string) => {
+  // Conversation sent to the model: the stored history, minus the greeting and
+  // minus action cards (which are not assistant prose). Bounded so a long chat
+  // does not grow the prompt without limit.
+  const buildHistory = (extraUser?: string) => {
+    const hist = messages
+      .filter((m, i) => i > 0 && m.text.trim() && !m.approval)
+      .slice(-10)
+      .map((m) => ({ role: m.role === "agent" ? "assistant" : "user", content: m.text }));
+    if (extraUser) hist.push({ role: "user", content: extraUser });
+    return hist;
+  };
+
+  // One streamed turn. The backend may call read tools inline and pause on a
+  // write for approval; we surface both and let the operator decide.
+  const runStream = async (opts: { text: string; analysisId?: string; includeText: boolean }) => {
     if (busy) abortRef.current?.abort();
-
-    if (!msg.toLowerCase().startsWith("/")) {
-      const nav = tryNavigationAnswer(msg);
-      if (nav) {
-        setMessages((m) => [...m, { role: "user", text: msg }, { role: "agent", text: nav.text, nav }]);
-        setInput("");
-        return;
-      }
-    }
-    if (/^(help|hi|hello|hey|what can you do|help me|where is everything|how do i use this|get started)\b/i.test(msg) && /navigat|find|where|page|module|help|guide|use|do/i.test(msg)) {
-      setMessages((m) => [...m, { role: "user", text: msg }, { role: "agent", text: helpOverview() }]);
-      setInput("");
-      return;
-    }
-
-    if (!(await requireDualControl("Using SecureGraph Agent requires a dual-control operate session."))) return;
     setConnError(null);
-    setMessages((m) => [...m, { role: "user", text: msg }]);
-    setInput("");
     setBusy(true);
     setPhase("connecting");
     resetLive();
@@ -170,15 +189,62 @@ export default function AgentAssistant() {
     abortRef.current = controller;
     let answer = "";
     let thinking = "";
+    let analysisId = opts.analysisId ?? "";
+    const steps: ToolStep[] = [];
+    let approval: ApprovalReq | null = null;
     try {
       await streamAgentChat(
-        { messages: [{ role: "user", content: msg }], thinking: true, reasoning_effort: "high", domain: "cross" },
+        {
+          messages: buildHistory(opts.includeText ? opts.text : undefined),
+          thinking: true,
+          reasoning_effort: "high",
+          domain: "cross",
+          analysis_id: analysisId || undefined,
+        },
         (event, data) => {
-          if (event === "connected") setPhase("streaming");
-          else if (event === "reasoning") { thinking += data?.content ?? ""; setLiveThinking(thinking); }
-          else if (event === "delta") { answer += data?.content ?? ""; setLiveAnswer(answer); }
-          else if (event === "done") {
-            setMessages((prev) => [...prev, { role: "agent", text: answer || "No response from agent.", thinking: thinking || undefined }]);
+          if (event === "connected") {
+            setPhase("streaming");
+            if (data?.analysisId) analysisId = String(data.analysisId);
+          } else if (event === "meta") {
+            if (data?.analysis_id) analysisId = String(data.analysis_id);
+          } else if (event === "reasoning") {
+            thinking += data?.content ?? "";
+            setLiveThinking(thinking);
+          } else if (event === "delta") {
+            answer += data?.content ?? "";
+            setLiveAnswer(answer);
+          } else if (event === "tool_call") {
+            steps.push({ tool: String(data?.tool ?? "tool"), status: "running" });
+            setLiveSteps([...steps]);
+          } else if (event === "tool_result") {
+            const tool = String(data?.tool ?? "");
+            const step = [...steps].reverse().find((s) => s.tool === tool && s.status === "running");
+            if (step) {
+              step.status = data?.ok === false ? "error" : "done";
+              step.error = data?.error ?? undefined;
+            }
+            setLiveSteps([...steps]);
+          } else if (event === "approval_required") {
+            approval = {
+              approval_id: String(data?.approval_id ?? ""),
+              tool: String(data?.tool ?? ""),
+              params: (data?.params ?? {}) as Record<string, unknown>,
+              analysis_id: String(data?.analysis_id ?? analysisId),
+              prompt: opts.text,
+            };
+            setLiveApproval(approval);
+          } else if (event === "done") {
+            const text = answer || (approval ? "I can do that once you approve it." : "No response from agent.");
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "agent",
+                text,
+                thinking: thinking || undefined,
+                steps: steps.length ? [...steps] : undefined,
+                approval: approval || undefined,
+              },
+            ]);
             resetLive();
           } else if (event === "error") {
             throw new Error(data?.error ?? "Agent stream error");
@@ -210,6 +276,60 @@ export default function AgentAssistant() {
       setPhase("idle");
       abortRef.current = null;
     }
+  };
+
+  const handleApproval = async (approval: ApprovalReq, approve: boolean) => {
+    if (approving) return;
+    setApproving(true);
+    // The card has served its purpose; drop it from the transcript.
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.approval?.approval_id === approval.approval_id ? { ...m, approval: undefined } : m,
+      ),
+    );
+    try {
+      if (!approve) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "agent", text: `Cancelled \`${approval.tool}\`. Nothing was changed.` },
+        ]);
+        return;
+      }
+      await decideAgentApproval(approval.approval_id, true);
+      await runStream({
+        text: approval.prompt,
+        analysisId: approval.analysis_id,
+        includeText: false,
+      });
+    } catch (e) {
+      toast("error", "Approval failed", e instanceof Error ? e.message : "");
+      setConnError("Could not approve that action. Try again.");
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const dispatchSend = async (msg: string) => {
+    if (busy) abortRef.current?.abort();
+
+    if (!msg.toLowerCase().startsWith("/")) {
+      const nav = tryNavigationAnswer(msg);
+      if (nav) {
+        setMessages((m) => [...m, { role: "user", text: msg }, { role: "agent", text: nav.text, nav }]);
+        setInput("");
+        return;
+      }
+    }
+    if (/^(help|hi|hello|hey|what can you do|help me|where is everything|how do i use this|get started)\b/i.test(msg) && /navigat|find|where|page|module|help|guide|use|do/i.test(msg)) {
+      setMessages((m) => [...m, { role: "user", text: msg }, { role: "agent", text: helpOverview() }]);
+      setInput("");
+      return;
+    }
+
+    if (!(await requireDualControl("Using SecureGraph Agent requires a dual-control operate session."))) return;
+    setMessages((m) => [...m, { role: "user", text: msg }]);
+    setInput("");
+    await runStream({ text: msg, includeText: true });
   };
 
   const stop = () => {
@@ -341,6 +461,49 @@ export default function AgentAssistant() {
                             </details>
                           )}
                           {m.role === "agent" ? <MarkdownView source={m.text} /> : <p className="whitespace-pre-wrap">{m.text}</p>}
+                          {m.role === "agent" && m.steps && m.steps.length > 0 && (
+                            <div className="mt-2 space-y-1 border-t border-phantix-700/40 pt-2">
+                              {m.steps.map((s, si) => (
+                                <div key={`${s.tool}-${si}`} className="flex items-center gap-1.5 text-[12px] text-slate-400">
+                                  {s.status === "running" ? (
+                                    <Wrench size={11} className="shrink-0 animate-pulse text-gold-300" />
+                                  ) : s.status === "error" ? (
+                                    <X size={11} className="shrink-0 text-severity-critical" />
+                                  ) : (
+                                    <Check size={11} className="shrink-0 text-emerald-400" />
+                                  )}
+                                  <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool)}</span>
+                                  {s.error && <span className="truncate text-slate-500">· {s.error}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {m.role === "agent" && m.approval && (
+                            <div className="mt-2 rounded-xl border border-gold-400/30 bg-gold-400/[0.08] p-2.5">
+                              <p className="flex items-center gap-1.5 text-[12px] font-semibold text-gold-200">
+                                <ShieldCheck size={12} /> Approval needed
+                              </p>
+                              <p className="mt-1 text-[12px] leading-5 text-gold-100/80">
+                                Allow <strong>{stepLabel(m.approval.tool)}</strong>? It changes your data and runs once.
+                              </p>
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  disabled={approving}
+                                  onClick={() => void handleApproval(m.approval!, true)}
+                                  className="btn-primary !px-2.5 !py-1 !text-[12px] disabled:opacity-60"
+                                >
+                                  {approving ? "Approving…" : "Approve & run"}
+                                </button>
+                                <button
+                                  disabled={approving}
+                                  onClick={() => void handleApproval(m.approval!, false)}
+                                  className="btn-secondary !px-2.5 !py-1 !text-[12px] disabled:opacity-60"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
                           {m.nav && (
                             <div className="mt-2 space-y-1">
                               <button
@@ -390,6 +553,32 @@ export default function AgentAssistant() {
                           </motion.div>
                         )}
                         {liveAnswer && <p className="mt-1.5 whitespace-pre-wrap">{liveAnswer}<span className="ml-0.5 inline-block h-3.5 w-[7px] animate-pulse rounded-sm bg-gold-400/70 align-middle" /></p>}
+                        {liveSteps.length > 0 && (
+                          <div className="mt-1.5 space-y-1">
+                            {liveSteps.map((s, si) => (
+                              <div key={`${s.tool}-${si}`} className="flex items-center gap-1.5 text-[12px] text-slate-400">
+                                {s.status === "running" ? (
+                                  <Wrench size={11} className="shrink-0 animate-pulse text-gold-300" />
+                                ) : s.status === "error" ? (
+                                  <X size={11} className="shrink-0 text-severity-critical" />
+                                ) : (
+                                  <Check size={11} className="shrink-0 text-emerald-400" />
+                                )}
+                                <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {liveApproval && (
+                          <div className="mt-2 rounded-xl border border-gold-400/30 bg-gold-400/[0.08] p-2.5">
+                            <p className="flex items-center gap-1.5 text-[12px] font-semibold text-gold-200">
+                              <ShieldCheck size={12} /> Approval needed
+                            </p>
+                            <p className="mt-1 text-[12px] leading-5 text-gold-100/80">
+                              Allow <strong>{stepLabel(liveApproval.tool)}</strong>? It changes your data and runs once.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -446,7 +635,7 @@ export default function AgentAssistant() {
                   <Sparkles size={10} />
                   {chatSend.hint === "queued"
                     ? "Queued. Press Enter again to send now, or wait for the current reply."
-                    : "PII redacted before provider calls · every interaction audited · agent never changes findings or risk scores"}
+                    : "PII redacted before provider calls · every interaction audited · actions that change your data need your approval"}
                 </p>
               </div>
             </motion.div>

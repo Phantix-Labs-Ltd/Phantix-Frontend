@@ -753,6 +753,25 @@ export interface TrackerFinding {
   /** Raw-store row the finding came from — keys the remediation artifact. */
   source_finding_id?: number | null;
   source_store?: string | null;
+  /**
+   * AI fix artifact, carried on the row because the tracker *is* the
+   * remediation board. `status` is `generated` (guidance ready) or `pending`.
+   */
+  remediation?: TrackerRemediation | null;
+}
+
+/** The AI remediation artifact the remediation agent persists beside a finding. */
+export interface TrackerRemediation {
+  status?: string;
+  summary?: string;
+  steps?: string[];
+  references?: string[];
+  validation?: string;
+  effort?: string | null;
+  priority?: string | null;
+  generated_by?: string;
+  model?: string;
+  generated_at?: string;
 }
 
 /** The three evidence levels the tracker board carries. */
@@ -1777,13 +1796,15 @@ export interface SocWarRoomResponse {
 
 // ── SOC Playbooks & MITRE ─────────────────────────────────────────────────────
 export interface SocPlaybook {
-  id: number;
+  id: string | number;
   title: string;
   description?: string;
   category: string;
   mitre_id?: string;
   severity?: string;
-  phases: SocPlaybookPhase[];
+  phases?: SocPlaybookPhase[];
+  /** Phase count from list endpoints (they return a summary, not full phases). */
+  phase_count?: number;
   enabled: boolean;
   org_only: boolean;
   version: number;

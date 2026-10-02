@@ -382,8 +382,9 @@ export default function SocDashboard() {
       />
 
       {socData.data.message && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-phantix-700/30 bg-phantix-900/40 px-4 py-2.5 text-sm text-slate-400">
-          <Monitor size={15} className="mt-0.5 shrink-0 text-phantix-400" />
+        // Engine status, as one quiet line under the header rather than a boxed banner.
+        <div className="-mt-2 mb-3 flex items-start gap-2 text-xs text-slate-500">
+          <Monitor size={13} className="mt-0.5 shrink-0 text-phantix-400" />
           <span className="leading-5">{socData.data.message}</span>
         </div>
       )}

@@ -518,11 +518,11 @@ export default function Dashboard() {
       </div>
 
       {/* Headline KPIs */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 2xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 xl:grid-cols-5">
         <KpiTile
           icon={<Gauge size={22} />}
           label="Posture score"
-          className="lg:col-span-2 2xl:col-span-1"
+          className="lg:col-span-2 xl:col-span-1"
           value={postureKnown ? postureScore : null}
           suffix="/100"
           delta={<Delta value={scoreDelta} unit=" pts" goodWhen="up" />}
@@ -533,7 +533,7 @@ export default function Dashboard() {
         <KpiTile
           icon={<Bug size={22} />}
           label="Open findings"
-          className="lg:col-span-2 2xl:col-span-1"
+          className="lg:col-span-2 xl:col-span-1"
           value={openFindings}
           delta={<Delta value={findingsDelta} goodWhen="down" />}
           hint={findingsDelta != null ? "vs 14 days ago" : "From intelligence and the tracker"}
@@ -543,7 +543,7 @@ export default function Dashboard() {
         <KpiTile
           icon={<ShieldAlert size={22} />}
           label="Open risks"
-          className="lg:col-span-2 2xl:col-span-1"
+          className="lg:col-span-2 xl:col-span-1"
           value={openRisks}
           hint={cc?.risks?.available === false ? "Risk engine unavailable" : "In the treatment queue"}
           delay={0.08}
@@ -551,7 +551,7 @@ export default function Dashboard() {
         <KpiTile
           icon={<Boxes size={22} />}
           label="Active assets"
-          className="lg:col-span-3 2xl:col-span-1"
+          className="lg:col-span-3 xl:col-span-1"
           value={activeAssets}
           hint={`${criticalAssets.length} critical at risk`}
           to={href("assets", "/assets")}
@@ -560,7 +560,7 @@ export default function Dashboard() {
         <KpiTile
           icon={<CheckCircle2 size={22} />}
           label="Fix rate"
-          className="lg:col-span-3 2xl:col-span-1"
+          className="lg:col-span-3 xl:col-span-1"
           value={fixRate}
           suffix="%"
           hint={trackedTotal ? `${fixed} of ${trackedTotal} tracked findings fixed` : "No tracked findings yet"}
@@ -799,9 +799,8 @@ export default function Dashboard() {
       <LatestAssessmentPanel app="core" className="mt-4" />
 
       {/* Coverage summary */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
         <KpiTile
-          size="lg"
           icon={<ShieldCheck size={24} />}
           label="Verified assets"
           value={verified}
@@ -810,7 +809,6 @@ export default function Dashboard() {
           delay={0.2}
         />
         <KpiTile
-          size="lg"
           icon={<ScanSearch size={24} />}
           label="Never scanned"
           value={neverScanned}
@@ -819,7 +817,6 @@ export default function Dashboard() {
           delay={0.24}
         />
         <KpiTile
-          size="lg"
           icon={<Radar size={24} />}
           label="Reports generated"
           value={reportsTotal}
