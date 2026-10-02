@@ -55,6 +55,7 @@ import {
   APPLICATION_LABEL,
   APPLICATION_ORDER,
   type ApplicationKey,
+  type NavLeaf,
   type NavSection,
 } from "./types";
 
@@ -80,6 +81,114 @@ export interface ApplicationShellProps {
   nav: NavSection[];
   /** Absolute base URL per application (for the app switcher). */
   hosts: Record<ApplicationKey, string>;
+}
+
+/** The group holding the page at `pathname`: the longest item route that is
+ *  the path itself or a parent of it, so `/code-review/repositories` resolves
+ *  to its own group rather than to `/code-review`'s. */
+function activeGroupLabel(nav: NavSection[], pathname: string): string | null {
+  let best: { label: string; length: number } | null = null;
+  for (const section of nav) {
+    for (const item of section.items) {
+      const hit =
+        item.to === "/"
+          ? pathname === "/"
+          : pathname === item.to || pathname.startsWith(`${item.to}/`);
+      if (hit && (!best || item.to.length > best.length)) {
+        best = { label: section.label, length: item.to.length };
+      }
+    }
+  }
+  return best?.label ?? null;
+}
+
+function NavLeafLink({ item, collapsible }: { item: NavLeaf; collapsible: boolean }) {
+  return (
+    <NavLink
+      to={item.to}
+      end={item.to === "/"}
+      title={
+        item.locked
+          ? `${item.label}: ${item.lockReason || "Included with a paid plan"}`
+          : item.label
+      }
+      className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+    >
+      {item.icon}
+      {collapsible ? <span className="sg-hide-collapsed">{item.label}</span> : item.label}
+      {item.locked ? (
+        <Lock
+          size={12}
+          className={`ml-auto shrink-0 text-gold-400/80 ${collapsible ? "sg-hide-collapsed" : ""}`}
+          aria-label={item.lockReason || "Included with a paid plan"}
+        />
+      ) : null}
+    </NavLink>
+  );
+}
+
+/**
+ * One sidebar group: the header shows only the group's icon and name, and
+ * drops down its pages when opened. A single-page group is just that page's
+ * link. In the collapsed rail the list stays hidden until the rail widens on
+ * hover, like every other label.
+ */
+function NavGroup({
+  section,
+  open,
+  active,
+  collapsible,
+  onToggle,
+}: {
+  section: NavSection;
+  open: boolean;
+  active: boolean;
+  collapsible: boolean;
+  onToggle: () => void;
+}) {
+  if (section.items.length === 1) {
+    return <NavLeafLink item={section.items[0]} collapsible={collapsible} />;
+  }
+  const listId = `nav-group-${section.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        title={section.label}
+        aria-expanded={open}
+        aria-controls={listId}
+        className={`nav-item w-full ${active ? "text-slate-100" : ""}`}
+      >
+        {section.icon ?? section.items[0]?.icon}
+        {collapsible ? <span className="sg-hide-collapsed">{section.label}</span> : section.label}
+        <ChevronDown
+          size={14}
+          className={`ml-auto shrink-0 text-slate-500 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          } ${collapsible ? "sg-hide-collapsed" : ""}`}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={listId}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className={`overflow-hidden ${collapsible ? "sg-hide-collapsed" : ""}`}
+          >
+            <div className="ml-[1.1rem] mt-0.5 space-y-0.5 border-l border-phantix-700/50 pl-2">
+              {section.items.map((item) => (
+                <NavLeafLink key={item.to} item={item} collapsible={collapsible} />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 /** mm:ss countdown for an active operate session. */
@@ -328,6 +437,13 @@ export function ApplicationShell({
     setSwitcherOpen(false);
   }, [location.pathname]);
 
+  // One group open at a time; landing on a page opens the group it lives in.
+  const activeGroup = useMemo(() => activeGroupLabel(nav, location.pathname), [nav, location.pathname]);
+  const [openGroup, setOpenGroup] = useState<string | null>(activeGroup);
+  useEffect(() => {
+    if (activeGroup) setOpenGroup(activeGroup);
+  }, [activeGroup]);
+
   // Tell components mounted outside this shell (e.g. the global AgiDrawer) that
   // the app session is established, so they can run their first authenticated
   // call now instead of firing early during the cross-app handoff and 401ing.
@@ -465,36 +581,14 @@ export function ApplicationShell({
 
   function renderNav(collapsible: boolean) {
     return nav.map((section) => (
-      <div key={section.label}>
-        <p className={collapsible ? "nav-section-label sg-hide-collapsed" : "nav-section-label"}>
-          {section.label}
-        </p>
-        <div className="space-y-0.5">
-          {section.items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              title={
-                item.locked
-                  ? `${item.label}: ${item.lockReason || "Included with a paid plan"}`
-                  : item.label
-              }
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-            >
-              {item.icon}
-              {collapsible ? <span className="sg-hide-collapsed">{item.label}</span> : item.label}
-              {item.locked ? (
-                <Lock
-                  size={12}
-                  className={`ml-auto shrink-0 text-gold-400/80 ${collapsible ? "sg-hide-collapsed" : ""}`}
-                  aria-label={item.lockReason || "Included with a paid plan"}
-                />
-              ) : null}
-            </NavLink>
-          ))}
-        </div>
-      </div>
+      <NavGroup
+        key={section.label}
+        section={section}
+        open={openGroup === section.label}
+        active={activeGroup === section.label}
+        collapsible={collapsible}
+        onToggle={() => setOpenGroup((g) => (g === section.label ? null : section.label))}
+      />
     ));
   }
 
@@ -533,7 +627,7 @@ export function ApplicationShell({
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1.5 overflow-y-auto px-2.5 pb-3">{renderNav(true)}</nav>
+          <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-3">{renderNav(true)}</nav>
 
           {/* Dual-control widget — present on every page of every application. */}
           <div className="sg-hide-collapsed border-t border-phantix-700/60 p-2">
@@ -881,7 +975,7 @@ export function ApplicationShell({
                 exit={{ opacity: 0, height: 0 }}
                 className="fixed inset-x-0 top-[57px] z-40 max-h-[calc(100vh-57px)] overflow-y-auto border-b border-phantix-700/60 bg-phantix-950 shadow-card lg:hidden"
               >
-                <nav className="space-y-1.5 px-2.5 py-3">{renderNav(false)}</nav>
+                <nav className="space-y-0.5 px-2.5 py-3">{renderNav(false)}</nav>
                 <div className="border-t border-phantix-700/40 px-2.5 pb-3">
                   <div className="rounded-md border border-phantix-700 bg-phantix-900 p-2">
                     <p className="text-[13px] font-semibold text-slate-500">Dual control</p>
