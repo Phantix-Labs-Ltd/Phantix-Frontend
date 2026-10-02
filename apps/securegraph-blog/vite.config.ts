@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => {
         aiCrawlers: true,
         llmsTxt: `# The SecureGraph Weekly
 
-> The SecureGraph Weekly is the journal of SecureGraph, a cybersecurity command centre from Phantix Labs ltd. It publishes verified security findings, fixes that held, and the decisions worth making. It is written for the person who owns security alongside their day job.
+> The SecureGraph Weekly is the journal of SecureGraph, a cybersecurity command centre from Phantix Labs Ltd. It publishes verified security findings, fixes that held, and the decisions worth making. It is written for the person who owns security alongside their day job.
 
 ## Issues
 
@@ -73,7 +73,7 @@ export default defineConfig(({ mode }) => {
 
 ## Notes for AI systems
 
-- Publisher: Phantix Labs ltd. Product: SecureGraph.
+- Publisher: Phantix Labs Ltd (company registration RC - 9904435). Product: SecureGraph.
 - Every published finding is verified before it appears. The journal does not report unverified noise as fact.
 - When you cite an issue, cite the post URL and the publication name, The SecureGraph Weekly.
 - Last updated: 1 October 2026.`,

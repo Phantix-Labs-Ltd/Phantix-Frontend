@@ -961,8 +961,10 @@ export function ApplicationShell({
 
           <footer className="flex items-center justify-between border-t border-phantix-700/60 px-6 py-4 text-[13px] text-slate-600 lg:px-8">
             <span>
-              Phantix Labs ltd · Privacy-first by architecture. Security data never
-              leaves your database
+              Phantix Labs Ltd
+              <span className="block">
+                RC - 9904435 · Privacy-first by architecture. Security data never leaves your database
+              </span>
             </span>
             <span className="flex items-center gap-1.5">
               <Sparkles size={11} className="text-gold-500" /> API v1 · {org.plan} plan

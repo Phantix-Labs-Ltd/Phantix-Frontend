@@ -327,7 +327,10 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 text-xs text-slate-600">
           <div className="flex items-center gap-2.5">
             <BrandMark alt="" className="h-6 w-6" />
-            <span>© 2026 Phantix Labs ltd</span>
+            <span>
+              © 2026 Phantix Labs Ltd
+              <span className="block font-mono text-[11px] text-slate-600">RC - 9904435</span>
+            </span>
           </div>
           <div className="flex items-center gap-6">
             <Link to="/docs" className="flex items-center gap-1.5 hover:text-slate-300"><BookOpen size={12} /> Documentation</Link>
