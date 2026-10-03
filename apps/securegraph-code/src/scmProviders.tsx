@@ -69,7 +69,7 @@ export const SCM_PROVIDER_SETUP: Record<string, ScmProviderSetup> = {
     blurb:
       "Install the SecureGraph GitHub App on the account or organization that owns the repositories. Reviews run on watched branches and open draft pull requests.",
     docsUrl: "https://docs.github.com/en/apps",
-    scopes: ["Contents: read", "Pull requests: write", "Checks: write", "Metadata: read"],
+    scopes: ["Contents: read and write", "Pull requests: read and write", "Checks: read and write", "Metadata: read", "Email addresses: read"],
     webhookSecretHeader: "X-Hub-Signature-256",
     setup: [
       "Install the GitHub App on the account or organization that owns the repositories.",

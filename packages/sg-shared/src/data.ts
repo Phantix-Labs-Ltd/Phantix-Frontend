@@ -124,6 +124,7 @@ export const emptyOrganization: Organization = {
 export const emptyDualControl: DualControlState = {
   configured: false,
   require_dual_control: false,
+  policy_mode: null,
   initiator: null,
   authorizer: null,
 };
@@ -298,6 +299,7 @@ export function normalizeDualControl(raw: unknown, users: OrgUser[] = []): DualC
   return {
     configured,
     require_dual_control: Boolean(r.require_dual_control ?? configured),
+    policy_mode: r.policy_mode === "off" || r.policy_mode === "on" || r.policy_mode === "enforced" ? r.policy_mode : null,
     initiator: initiator
       ? { id: initiator.id, full_name: initiator.full_name, email: initiator.email, title: initiator.title ?? "" }
       : null,
@@ -528,6 +530,7 @@ export function normalizeVaptCampaign(raw: Record<string, unknown>): VaptCampaig
         (assetIds.length > 0 ? assetIds.length : assetTypes.length > 0 ? assetTypes.length : 0),
     ),
     requires_approval: Boolean(raw.requires_approval ?? raw.approval_required ?? false),
+    self_approvable: raw.self_approvable === true,
     phase: String(raw.current_phase ?? c.phase ?? ""),
     progress: Number(raw.progress ?? progress),
     created_by: String(raw.created_by ?? ""),

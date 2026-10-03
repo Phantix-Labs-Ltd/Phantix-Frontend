@@ -7,6 +7,8 @@ import SecurityDbBanner from "@sg/components/SecurityDbBanner";
 import DocLink from "@sg/components/DocLink";
 import MobileHandoffCard from "@sg/components/MobileHandoffCard";
 import AssetTreeView from "@sg/components/AssetTreeView";
+import AssetOwnership from "@sg/components/AssetOwnership";
+import { PlatformSetupLink, hostOf, isIpLike, isWebAssetType, suggestDomain } from "@sg/platformSetup";
 import AssetListView from "@sg/components/AssetListView";
 import AssetCandidatesView from "@sg/components/AssetCandidatesView";
 import { chainLabel, discoverAssetPaths, loadAssetChain, setChainScopeExcluded } from "@sg/assetChain";
@@ -20,6 +22,7 @@ import { loadGithubInstallation } from "@sg/codeOps";
 import { classifyAsset, createAssetTag, deleteAssetTag, TAG_COLORS, type AssetClassification } from "@sg/assetTags";
 import { sanitizeSingleLine, validateUploadFile } from "@sg/uploadValidation";
 import type { Asset, AssetIntelligence, DiscoveryJob } from "@sg/types";
+import { SetupRequired } from "@sg/platformSetup";
 
 const typeIcon: Record<string, React.ReactNode> = {
   domain: <Globe size={15} />,
@@ -157,6 +160,13 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
   const [selectedIntel, setSelectedIntel] = useState<AssetIntelligence | null>(null);
   const [verifyStep, setVerifyStep] = useState<{ message: string; hint: string } | null>(null);
   const [addConfirmOwnership, setAddConfirmOwnership] = useState(false);
+  const openAdd = async () => {
+    if (await requireDualControl("Adding assets requires a dual-control operate session.")) {
+      setVerifyStep(null);
+      setAddConfirmOwnership(false);
+      setAddOpen(true);
+    }
+  };
   const [addForm, setAddForm] = useState({ type: "domain", value: "", name: "", environment: "production", criticality: "medium" });
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubMethod, setGithubMethod] = useState<"pat" | "app">("pat");
@@ -593,21 +603,14 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
             </button>
             <button
               className="btn-primary"
-              onClick={() =>
-                void (async () => {
-                  if (await requireDualControl("Adding assets requires a dual-control operate session.")) {
-                    setVerifyStep(null);
-                    setAddConfirmOwnership(false);
-                    setAddOpen(true);
-                  }
-                })()
-              }
+              onClick={() => void openAdd()}
             >
               <Plus size={15} /> Add asset
             </button>
           </div>
         }
       />
+      <SetupRequired action="add and scan assets" needs={["database"]} />
 
       <Tabs
         tabs={[
@@ -766,6 +769,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                 onCheckedChange={setChecked}
                 onRunDiscovery={(list) => void runDiscovery(list)}
                 breadcrumb={breadcrumb}
+                onAdd={() => void openAdd()}
                 notice={
                   view === "tree" ? (
                     <p className="border-b border-phantix-700/40 bg-phantix-900/40 px-4 py-2 text-xs text-slate-400">
@@ -1230,18 +1234,8 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                 )}
               </>
             )}
+            <AssetOwnership asset={selected} />
             <div className="flex gap-2.5">
-              <button
-                className="btn-primary flex-1"
-                onClick={() =>
-                  void (async () => {
-                    if (!(await requireDualControl("Asset verification requires a dual-control operate session."))) return;
-                    toast("success", "Verification queued", "This asset is queued for ownership verification.");
-                  })()
-                }
-              >
-                Re-verify ownership
-              </button>
               <button
                 className="btn-secondary"
                 onClick={() => void runDiscovery([selected])}
@@ -1267,6 +1261,15 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
               <p className="text-severity-medium font-semibold">Verification Required</p>
               <p className="text-slate-300">{verifyStep.message}</p>
               <p className="text-slate-500">{verifyStep.hint}</p>
+              {isWebAssetType(addForm.type) && !isIpLike(addForm.value) && hostOf(addForm.value) && (
+                <p className="text-slate-300">
+                  Fastest fix:{" "}
+                  <PlatformSetupLink task={{ kind: "verify_domain", domain: suggestDomain(addForm.value) }}>
+                    verify {suggestDomain(addForm.value)}
+                  </PlatformSetupLink>{" "}
+                  in a new tab, then come back and retry. It covers every subdomain too.
+                </p>
+              )}
               <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
                 <input
                   type="checkbox"

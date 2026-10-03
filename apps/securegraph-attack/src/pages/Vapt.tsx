@@ -16,6 +16,7 @@ import { executeVaptPlan, generateVaptPlan } from "@sg/vaptOps";
 import type { VaptPlan } from "@sg/vaptOps";
 import type { VaptCampaign, VaptFinding, VaptQuota } from "@sg/types";
 import { UpsellBanner } from "@sg/components/UpgradeGate";
+import { SetupRequired } from "@sg/platformSetup";
 
 /**
  * Free-plan quota strip. The shared free pool is 10 campaigns/day across every
@@ -487,6 +488,7 @@ export default function Vapt() {
           </>
         }
       />
+      <SetupRequired action="run a VAPT campaign" needs={dualControl.policy_mode === "off" ? ["database", "verified_domain"] : ["database"]} />
 
       <UpsellBanner feature="continuous_pentest" />
 
@@ -881,11 +883,27 @@ export default function Vapt() {
                           <Play size={14} /> Start Campaign
                         </button>
                         <p className="w-full text-[12px] text-slate-500">
-                          Review the plan above, then start. Full VAPT requires authorizer approval before execution.
+                          {dualControl.policy_mode === "off"
+                            ? "Review the plan above, then start. You approve it yourself with a code from your email."
+                            : "Review the plan above, then start. Full VAPT requires authorizer approval before execution."}
                         </p>
                       </>
                     )}
-                    {activeSelected.status === "pending_approval" && (
+                    {activeSelected.status === "pending_approval" && activeSelected.self_approvable && (
+                      <div className="w-full rounded-lg border border-gold-400/30 bg-gold-400/5 p-3 text-xs space-y-2">
+                        <p className="flex items-center gap-1 font-semibold text-gold-300"><UserCheck size={14} /> Waiting for your approval</p>
+                        <p className="text-slate-300">You work in solo mode, so you approve your own campaigns. Starting asks for a code from your email.</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button className="btn-primary !py-1.5 text-xs" onClick={() => handleCampaignAction(activeSelected.id, "start")}>
+                            <Play size={12} /> Approve and start
+                          </button>
+                          <button className="btn-danger !py-1.5 text-xs" onClick={() => handleCampaignAction(activeSelected.id, "cancel")}>
+                            <XCircle size={12} /> Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {activeSelected.status === "pending_approval" && !activeSelected.self_approvable && (
                       <div className="w-full rounded-lg bg-severity-medium/5 border border-severity-medium/30 p-3 text-xs space-y-1.5">
                         <p className="text-severity-medium font-semibold flex items-center gap-1"><UserCheck size={14} /> Awaiting Authorizer Approval</p>
                         <p className="text-slate-300">Campaign submitted for approval --- will start automatically once the authorizer approves.</p>

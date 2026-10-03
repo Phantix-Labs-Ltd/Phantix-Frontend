@@ -19,7 +19,7 @@ export default function SecurityDbBanner({ message }: { message?: string | null 
             "Connect and bootstrap the security_data_storage database in Platform settings. Assets, scans, and VAPT stay blocked until schema is ready."}
         </p>
       </div>
-      <a href={PLATFORM_CONNECTIONS_URL} className="btn-primary !py-2 !text-xs">
+      <a href={PLATFORM_CONNECTIONS_URL} className="btn-primary !py-2 !text-xs" target="_blank" rel="noopener noreferrer">
         <ExternalLink size={12} /> Open Platform · Connections
       </a>
     </div>

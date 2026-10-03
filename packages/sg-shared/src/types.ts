@@ -39,6 +39,12 @@ export interface OrgUser {
 export interface DualControlState {
   configured: boolean;
   require_dual_control: boolean;
+  /**
+   * Org policy. "off" is solo mode: actions run without an approver, and
+   * sensitive ones ask for a step-up code. null means the backend predates the
+   * policy, which behaves like "on".
+   */
+  policy_mode: "off" | "on" | "enforced" | null;
   initiator: Pick<OrgUser, "id" | "full_name" | "email" | "title"> | null;
   authorizer: Pick<OrgUser, "id" | "full_name" | "email" | "title"> | null;
 }
@@ -438,6 +444,8 @@ export interface VaptCampaign {
   asset_count: number;
   findings_count: number;
   requires_approval: boolean;
+  /** Solo mode: the requester can approve this campaign themselves (C9). */
+  self_approvable?: boolean;
   created_by: string;
   created_at: string;
   started_at: string | null;
@@ -926,9 +934,12 @@ export interface AlertEvent {
   event_type: string;
   severity: Severity;
   title: string;
-  status: "pending" | "delivered" | "failed";
+  /** External delivery state; every event is an in-app notification regardless. */
+  status: "pending" | "delivered" | "sent" | "partial" | "skipped" | "failed";
   channels: string[];
   created_at: string;
+  body?: string;
+  payload?: Record<string, unknown> | null;
 }
 
 export interface AlertSettings {

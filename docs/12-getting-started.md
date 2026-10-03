@@ -4,12 +4,12 @@
 
 ## Path A. Self-serve (most teams)
 
-1. **Get started free** on the Platform
-2. Complete organization setup and verification steps
-3. Connect a **dedicated security database**
-4. Add your first assets (domain, public GitHub via **Connect GitHub**)
-5. Run a light assessment within Free entitlements
-6. Review findings; export JSON/Markdown
+1. **Get started free**: company name, work email and password, or **Continue with GitHub**. No card.
+2. Enter the 6-digit code we email you (skipped when you sign up with GitHub)
+3. Enter a domain or a GitHub repo and run a **Quick Scan**: passive checks, a few minutes, no setup
+4. Review the findings, then connect a **security database** to keep them (a free Neon or Supabase project takes about two minutes)
+5. Invite a teammate. Turn on **dual control** if you want a second person to approve sensitive actions; until then you work in solo mode and confirm sensitive actions with a code
+6. Verify you own a target, then run active testing (VAPT) within your plan
 7. When ready, upgrade to **Premium** for VAPT, PDF reports, private repos, richer AI
 
 ---

@@ -21,6 +21,13 @@ const DeviceConfirm = React.lazy(() => import("@sg/pages/DeviceConfirm"));
 const GithubCallback = React.lazy(() => import("./pages/GithubCallback"));
 const IntegrationOAuthCallback = React.lazy(() => import("./pages/IntegrationOAuthCallback"));
 const Cookies = React.lazy(() => import("./pages/Cookies"));
+const AssuranceEngagements = React.lazy(() => import("./pages/assurance/Engagements"));
+const AssuranceWorkspace = React.lazy(() => import("./pages/assurance/Workspace"));
+const AssuranceRegimes = React.lazy(() => import("./pages/assurance/Regimes"));
+const AssuranceNew = React.lazy(() => import("./pages/assurance/New"));
+const AssuranceFindingRedirect = React.lazy(() => import("./pages/assurance/FindingRedirect"));
+const AssuranceReports = React.lazy(() => import("./pages/assurance/ReportsAndMonitoring").then((m) => ({ default: m.AssuranceReports })));
+const AssuranceMonitoring = React.lazy(() => import("./pages/assurance/ReportsAndMonitoring").then((m) => ({ default: m.AssuranceMonitoring })));
 const Privacy = React.lazy(() => import("./pages/Privacy"));
 const SandboxApplyPublic = React.lazy(() => import("./pages/SandboxApplyPublic"));
 const PasswordResetRequest = React.lazy(() => import("@sg/pages/auth/PasswordResetRequest"));
@@ -108,6 +115,14 @@ export default function App() {
             <Route path="/reports/:id/view" element={<ReportViewer />} />
             <Route path="/integrations" element={<IntegrationsHub />} />
             <Route path="/audit" element={<Audit />} />
+            <Route path="/assurance" element={<AssuranceEngagements />} />
+            <Route path="/assurance/new" element={<AssuranceNew />} />
+            <Route path="/assurance/findings/:key" element={<AssuranceFindingRedirect />} />
+            <Route path="/assurance/regimes" element={<AssuranceRegimes />} />
+            <Route path="/assurance/profile" element={<Navigate to="/assurance/regimes" replace />} />
+            <Route path="/assurance/reports" element={<AssuranceReports />} />
+            <Route path="/assurance/monitoring" element={<AssuranceMonitoring />} />
+            <Route path="/assurance/:id" element={<AssuranceWorkspace />} />
             <Route path="/agent" element={<Navigate to="/assistant" replace />} />
             <Route path="/agent-activity" element={<AgentActivity />} />
             <Route path="/authorizations" element={<RequireAuthorizer><AuthorizerInbox /></RequireAuthorizer>} />

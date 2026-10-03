@@ -10,6 +10,7 @@ import { APPLICATION_LABEL, type ApplicationKey, type NavSection } from "@sg/she
 import LatestAssessmentPanel from "../components/LatestAssessment";
 import AppMiniDashboard from "../components/AppMiniDashboard";
 import DocLink from "../components/DocLink";
+import OnboardingChecklist from "../components/OnboardingChecklist";
 
 /**
  * An application's landing page: what this application is, and every page it
@@ -102,6 +103,7 @@ export default function AppLauncher({
 
   return (
     <div>
+      <OnboardingChecklist />
       {/* Header: name and tagline only. The catalog's long description belongs
           on the app picker, not above the work on every overview. */}
       <motion.div

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { CrossAppLink } from "@sg/components/CrossAppLink";
 import { Scale, Play, FileUp, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, ProgressRing, ProgressBar, Tabs, Modal, Spinner, PageSkeleton, ErrorState } from "@sg/ui";
 import DocLink from "@sg/components/DocLink";
@@ -24,7 +25,8 @@ export default function Compliance() {
   const complianceAssessments = data.assessments;
   const complianceControlResults = data.controlResults;
   const evidenceItems = data.evidence;
-  const [tab, setTab] = useState("overview");
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(() => params.get("tab") || "overview");
   const [assessOpen, setAssessOpen] = useState(false);
   const [assessBusy, setAssessBusy] = useState(false);
   const [assessForm, setAssessForm] = useState({
@@ -213,6 +215,9 @@ export default function Compliance() {
                   <span>{f.control_count} controls</span>
                   <span>{humanize(f.category)}</span>
                 </div>
+                <CrossAppLink app="core" to={`/assurance/new?framework=${encodeURIComponent(f.id)}`} className="mt-3 inline-block text-xs text-gold-400 hover:text-gold-300">
+                  Start an audit against this
+                </CrossAppLink>
               </Card>
             </motion.div>
           ))}
