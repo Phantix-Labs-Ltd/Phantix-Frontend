@@ -26,7 +26,7 @@ Phantix runs the orchestration, identity, billing and tooling. The **record of y
 
 ## Principles
 
-1. **Least privilege**: integrations request only the access needed (e.g. GitHub App: repository contents read, not write).
+1. **Least privilege**: integrations request only the access a feature uses. The GitHub App writes only to push a fix to a new branch and to post review results; it cannot change workflows and never merges.
 2. **No long-lived secrets when avoidable**: GitHub App uses short-lived installation tokens; PATs are legacy.
 3. **Ephemeral analysis**: repository analysis clones into temporary workspaces that are destroyed; AI sees findings, not full source.
 4. **Verification before reputation**: unverified noise is not dressed up as confirmed executive risk.

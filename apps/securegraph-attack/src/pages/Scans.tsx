@@ -12,6 +12,7 @@ import { useOperations } from "@sg/operations";
 import { timeAgo, formatDateTime, cx, severityHex, humanize } from "@sg/utils";
 import { useStore } from "@sg/store";
 import type { VerificationStatus, ScanResult, ScanJob } from "@sg/types";
+import { SetupRequired } from "@sg/platformSetup";
 
 
 /** "asset_types: web_app, api" instead of raw JSON, so the scope fits one line. */
@@ -25,7 +26,7 @@ function scopeLabel(filter: unknown): string {
 }
 
 export default function Scans() {
-  const { toast, requireDualControl } = useStore();
+  const { toast, requireDualControl, dualControl } = useStore();
   const { data, loading, error, reload } = useResource(loadScansBundle, {
     scanJobs: [],
     scanResults: [],
@@ -213,6 +214,7 @@ export default function Scans() {
           </>
         }
       />
+      <SetupRequired action="run active scans" needs={dualControl.policy_mode === "off" ? ["database", "verified_domain"] : ["database"]} />
 
       {/* Active job banner */}
       {active && (

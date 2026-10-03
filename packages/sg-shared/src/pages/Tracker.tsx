@@ -17,6 +17,7 @@ import {
 } from "../data";
 import { isDemoMode } from "../api";
 import { useSseStream } from "../useSse";
+import { CrossAppLink } from "../components/CrossAppLink";
 import { useResource } from "../useResource";
 import { useStore } from "../store";
 import { cx, humanize, normalizeTrackerVerification, timeAgo, titleCase, TRACKER_STATUSES } from "../utils";
@@ -144,6 +145,8 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
     | "verified"
     | "all";
   const owner = params.get("owner") ?? "all";
+  // Where a finding came from: GRC audits project their findings here too.
+  const source = params.get("source") ?? "all";
   const highlightKey = params.get("key") ?? "";
   const [sortKey, sortDir] = (() => {
     const [k, d] = (params.get("sort") ?? "severity:desc").split(":");
@@ -205,6 +208,8 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
       if (severity !== "all" && f.severity !== severity) return false;
       if (!inEvidence(f, evidence)) return false;
       if (owner === "unassigned" && f.owner) return false;
+      if (source === "audit" && f.source_store !== "compliance_audit") return false;
+      if (source === "testing" && f.source_store === "compliance_audit") return false;
       if (
         needle &&
         ![f.finding_key, f.title, f.asset_value, f.owner ?? "", f.campaign_name].some((v) => String(v || "").toLowerCase().includes(needle))
@@ -477,6 +482,13 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
               <option key={s} value={s}>{titleCase(s)} ({findings.filter((f) => f.severity === s).length})</option>
             ))}
           </select>
+          {findings.some((f) => f.source_store === "compliance_audit") && (
+            <select className="input !w-auto !py-1.5 !pr-8 text-[13px]" aria-label="Source" value={source} onChange={(e) => update({ source: e.target.value === "all" ? null : e.target.value })}>
+              <option value="all">Any source</option>
+              <option value="audit">Audits ({findings.filter((f) => f.source_store === "compliance_audit").length})</option>
+              <option value="testing">Scans and testing</option>
+            </select>
+          )}
           <button
             type="button"
             onClick={() => update({ owner: owner === "unassigned" ? null : "unassigned" })}
@@ -569,8 +581,16 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                             className="block truncate font-medium text-slate-100"
                             title={[f.title, f.campaign_name, f.priority, f.surface ? humanize(f.surface) : ""].filter(Boolean).join(" · ")}
                           >
+                            {f.source_store === "compliance_audit" && (
+                              <span className="mr-1.5 rounded border border-gold-400/40 bg-gold-400/10 px-1.5 py-0.5 text-[11px] font-semibold text-gold-300" title="Raised in a GRC audit">Audit</span>
+                            )}
                             {f.title}
                             {f.campaign_name && <span className="ml-2 font-normal text-slate-500">{f.campaign_name}</span>}
+                            {f.source_store === "compliance_audit" && /^AUDIT-\d+$/.test(f.finding_key) && (
+                              <CrossAppLink app="core" to={`/assurance/findings/${f.finding_key}`} className="ml-2 text-[12px] font-normal text-gold-400 hover:text-gold-300">
+                                Open in audit
+                              </CrossAppLink>
+                            )}
                           </span>
                         </td>
                         <td className="td whitespace-nowrap"><SeverityBadge severity={f.severity} /></td>

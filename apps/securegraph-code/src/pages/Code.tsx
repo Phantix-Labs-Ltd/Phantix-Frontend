@@ -28,6 +28,7 @@ import type { IntegrationConnector, IntegrationInstallation } from "@sg/types";
 import { useStore } from "@sg/store";
 import { cx, timeAgo, humanize } from "@sg/utils";
 import DocLink from "@sg/components/DocLink";
+import { PlatformSetupLink } from "@sg/platformSetup";
 import { UpsellBanner } from "@sg/components/UpgradeGate";
 import {
   SCM_HUB_PROVIDERS,
@@ -316,7 +317,12 @@ export default function Code() {
           ) : reposError ? (
             <EmptyState icon={<AlertTriangle size={22} />} title="Repositories unavailable" body={reposError} action={<button className="btn-secondary" onClick={() => void load()}>Retry</button>} />
           ) : repos.length === 0 ? (
-            <EmptyState icon={<Github size={22} />} title="No repositories" body="Install the GitHub App or sync repositories from the platform portal." />
+            <EmptyState
+              icon={<Github size={22} />}
+              title="No repositories yet"
+              body="Install the GitHub App and choose which repos SecureGraph can see."
+              action={<PlatformSetupLink task={{ kind: "install_github" }} variant="primary"><Github size={15} /> Install the GitHub App</PlatformSetupLink>}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">

@@ -4,6 +4,9 @@ import {
   AlertTriangle,
   BarChart3,
   BookOpen,
+  ClipboardCheck,
+  Globe2,
+  Radar,
   Bot,
   Boxes,
   FileText,
@@ -16,6 +19,7 @@ import {
   Network,
   Plug,
   ScrollText,
+  ShieldCheck,
   UserCheck,
 } from "lucide-react";
 import type { NavSection } from "@sg/shell/types";
@@ -65,6 +69,16 @@ export function coreNav({ isAuthorizer = false }: { isAuthorizer?: boolean } = {
       items: [
         { to: "/assets", label: "Assets", icon: <Boxes size={17} /> },
         { to: "/integrations", label: "Integrations hub", icon: <Plug size={17} /> },
+      ],
+    },
+    {
+      label: "Assurance",
+      icon: <ShieldCheck size={17} />,
+      items: [
+        { to: "/assurance", label: "Engagements", icon: <ClipboardCheck size={17} /> },
+        { to: "/assurance/regimes", label: "Regulatory profile", icon: <Globe2 size={17} /> },
+        { to: "/assurance/reports", label: "Attestations", icon: <FileText size={17} /> },
+        { to: "/assurance/monitoring", label: "Continuous assurance", icon: <Radar size={17} /> },
       ],
     },
     governance,

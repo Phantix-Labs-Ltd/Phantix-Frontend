@@ -31,7 +31,7 @@ import { ThemeToggle } from "../ThemeToggle";
 import { BrandMark, BrandWordmark } from "../components/BrandLogo";
 import { BrandLoader } from "../components/BrandLoader";
 import { PageSkeleton } from "../ui";
-import { NotificationBell, NotificationProvider } from "../components/AlertNotifications";
+import AlertNotifications, { ConnectionWatch, NotificationBell, NotificationProvider } from "../components/AlertNotifications";
 import AgiNotifications from "../components/AgiNotifications";
 import { toggleAssistant } from "../components/assistantEvents";
 import OperationsWidget from "../components/OperationsWidget";
@@ -437,11 +437,16 @@ export function ApplicationShell({
     setSwitcherOpen(false);
   }, [location.pathname]);
 
-  // One group open at a time; landing on a page opens the group it lives in.
+  // Any number of groups can be open; landing on a page also opens the group
+  // it lives in, without closing the others.
   const activeGroup = useMemo(() => activeGroupLabel(nav, location.pathname), [nav, location.pathname]);
-  const [openGroup, setOpenGroup] = useState<string | null>(activeGroup);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(
+    () => new Set(activeGroup ? [activeGroup] : []),
+  );
   useEffect(() => {
-    if (activeGroup) setOpenGroup(activeGroup);
+    if (activeGroup) {
+      setOpenGroups((open) => (open.has(activeGroup) ? open : new Set(open).add(activeGroup)));
+    }
   }, [activeGroup]);
 
   // Tell components mounted outside this shell (e.g. the global AgiDrawer) that
@@ -584,10 +589,16 @@ export function ApplicationShell({
       <NavGroup
         key={section.label}
         section={section}
-        open={openGroup === section.label}
+        open={openGroups.has(section.label)}
         active={activeGroup === section.label}
         collapsible={collapsible}
-        onToggle={() => setOpenGroup((g) => (g === section.label ? null : section.label))}
+        onToggle={() =>
+          setOpenGroups((open) => {
+            const next = new Set(open);
+            if (!next.delete(section.label)) next.add(section.label);
+            return next;
+          })
+        }
       />
     ));
   }
@@ -632,6 +643,14 @@ export function ApplicationShell({
           {/* Dual-control widget — present on every page of every application. */}
           <div className="sg-hide-collapsed border-t border-phantix-700/60 p-2">
             <div className="rounded-md border border-phantix-700 bg-phantix-900 p-2">
+              {dualControl.policy_mode === "off" ? (
+                <div>
+                  <p className="text-[13px] font-semibold text-slate-500">Solo mode</p>
+                  <p className="mt-0.5 text-[12px] leading-4 text-slate-600">
+                    You act on your own. Sensitive actions ask for a code.
+                  </p>
+                </div>
+              ) : (<>
               <div className="flex items-center justify-between">
                 <p className="text-[13px] font-semibold text-slate-500">Dual control</p>
                 {operate.unlocked ? (
@@ -698,10 +717,10 @@ export function ApplicationShell({
                         Reports and views work without it. Mutations require setup on the Platform.
                       </p>
                       <a
-                        href={PLATFORM_IDENTITY_URL}
+                        href={`${PLATFORM_IDENTITY_URL}#dual-control`}
                         className="btn-secondary mt-1 w-full !px-3 !py-1 !text-[13px]"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                       >
                         <Lock size={12} /> Configure on Platform
                       </a>
@@ -709,6 +728,7 @@ export function ApplicationShell({
                   )}
                 </div>
               )}
+              </>)}
             </div>
           </div>
 
@@ -978,8 +998,10 @@ export function ApplicationShell({
                 <nav className="space-y-0.5 px-2.5 py-3">{renderNav(false)}</nav>
                 <div className="border-t border-phantix-700/40 px-2.5 pb-3">
                   <div className="rounded-md border border-phantix-700 bg-phantix-900 p-2">
-                    <p className="text-[13px] font-semibold text-slate-500">Dual control</p>
-                    {operate.unlocked ? (
+                    <p className="text-[13px] font-semibold text-slate-500">{dualControl.policy_mode === "off" ? "Solo mode" : "Dual control"}</p>
+                    {dualControl.policy_mode === "off" ? (
+                      <p className="mt-1 text-[13px] text-slate-500">Sensitive actions ask for a code.</p>
+                    ) : operate.unlocked ? (
                       <p className="mt-1 text-xs font-medium text-emerald-300">
                         Operating as {shortName(operate.actingUser ?? session?.userName)}
                       </p>
@@ -1085,6 +1107,13 @@ export function ApplicationShell({
       {/* Long-running Pentest Agent: durable inbox into the bell + the global
           approval popup, wherever the operator is in the app. */}
       <AgiNotifications application={application} />
+
+      {/* Org-wide alert feed (finished scans, campaigns, audits, reports and
+          criticals) and the offline / server-down notice. Both were lost when
+          the Command Centre monolith was retired: only the bell was mounted,
+          so nothing ever reached it. */}
+      <AlertNotifications />
+      <ConnectionWatch />
 
       {/* A stored session the backend no longer accepts (expired/revoked while
           the operator was away): hold the page and offer sign-in, rather than

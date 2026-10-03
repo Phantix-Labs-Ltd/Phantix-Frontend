@@ -112,7 +112,53 @@ export const tokens = {
   set device(v: string | null) { writeToken("app_device_token", v); },
   get staff() { return readToken("staff_access_token"); },
   set staff(v: string | null) { writeToken("staff_access_token", v); },
+  /** Solo-mode step-up token (dual control off): per tab, dropped once expired. */
+  get stepUp() {
+    const exp = Number(readSessionToken("platform_step_up_exp") || 0);
+    if (exp && exp <= Date.now()) {
+      writeSessionToken("platform_step_up", null);
+      writeSessionToken("platform_step_up_exp", null);
+      return null;
+    }
+    return readSessionToken("platform_step_up");
+  },
+  set stepUp(v: string | null) { writeSessionToken("platform_step_up", v); if (!v) writeSessionToken("platform_step_up_exp", null); },
 };
+
+/** Store a step-up token with its lifetime (seconds) from the verify response. */
+export function setStepUpToken(token: string, expiresInSec: number): void {
+  tokens.stepUp = token;
+  writeSessionToken("platform_step_up_exp", String(Date.now() + Math.max(30, expiresInSec - 15) * 1000));
+}
+
+/**
+ * Solo mode: when the backend answers a sensitive action with
+ * `step_up_required`, the client asks this handler (the store's step-up
+ * prompt) for a fresh code and retries the request once on success.
+ */
+let stepUpHandler: ((reason: string) => Promise<boolean>) | null = null;
+export function setStepUpHandler(fn: ((reason: string) => Promise<boolean>) | null): void {
+  stepUpHandler = fn;
+}
+
+/**
+ * IP targets (C11): the org's acceptance of the current AUP is the proof of
+ * authorization. When the backend answers `aup_acceptance_required`, the
+ * client asks this handler (the store's AUP prompt) and retries once on accept.
+ */
+let aupHandler: ((detail: Record<string, unknown>) => Promise<boolean>) | null = null;
+export function setAupHandler(fn: ((detail: Record<string, unknown>) => Promise<boolean>) | null): void {
+  aupHandler = fn;
+}
+
+async function errorDetailOf(res: Response): Promise<Record<string, unknown> | null> {
+  try {
+    const d = (await res.clone().json())?.detail;
+    return d && typeof d === "object" ? d as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
 
 export function deviceId(): string {
   let id = localStorage.getItem("phantix_device_id");
@@ -550,6 +596,8 @@ async function request<T>(
     // session. Stale/expired tokens are handled separately (the backend rejects the
     // mutation, not the org/app session — see the 401 handling below).
     const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+    const stepUp = tokens.stepUp;
+    if (isMutation && stepUp) headers["X-Step-Up-Token"] = stepUp;
     if (opts.dualControl && tokens.dualControl) {
       headers["X-Dual-Control-Session"] = tokens.dualControl;
     } else if (isMutation && tokens.dualControl) {
@@ -582,6 +630,9 @@ async function request<T>(
       if (err instanceof DOMException && err.name === "AbortError") {
         throw new ApiError(408, "Request timed out");
       }
+      // A network-level failure (no response at all): let the connection
+      // watch check whether we're offline or the server is down.
+      if (err instanceof TypeError) window.dispatchEvent(new CustomEvent("phantix:network-error"));
       throw err;
     } finally {
       if (timer != null) window.clearTimeout(timer);
@@ -604,11 +655,31 @@ async function request<T>(
     res = await doFetch();
   }
 
+  // Solo mode: a sensitive action needs a fresh identity check. Ask once, then
+  // retry with the step-up token the prompt stored.
+  if (res.status === 403 && stepUpHandler) {
+    const d = await errorDetailOf(res);
+    if (d?.code === "step_up_required") {
+      tokens.stepUp = null;
+      if (await stepUpHandler(typeof d.message === "string" ? d.message : "")) res = await doFetch();
+    }
+  }
+  // After a step-up retry, the same action can still need the AUP confirmation.
+  if (res.status === 403 && aupHandler) {
+    const d = await errorDetailOf(res);
+    if (d?.code === "aup_acceptance_required" && (await aupHandler(d))) res = await doFetch();
+  }
+
   // The operate session is an *idle* session on the backend: every successful
   // mutation that used it counts as activity and slides the FE expiry forward so
   // the user is not asked for another code while still working.
   if (res.ok && sentDualControl) {
     window.dispatchEvent(new CustomEvent("phantix:operate-activity"));
+  }
+
+  // The proxy answers 502/503/504 when the backend itself is down.
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    window.dispatchEvent(new CustomEvent("phantix:network-error"));
   }
 
   if (!res.ok) {
@@ -632,6 +703,10 @@ async function request<T>(
       /service[ -_]?key/.test(msg);
     if (res.status === 403 && serviceKeyRequired) {
       window.dispatchEvent(new CustomEvent("phantix:service-key-required"));
+    }
+    // Active testing on a target whose ownership is not verified yet.
+    if (res.status === 403 && detailObj?.code === "target_unverified") {
+      window.dispatchEvent(new CustomEvent("phantix:target-unverified", { detail: detailObj }));
     }
     // Explicit main-session invalidation: the backend is saying the org/app JWT
     // itself is dead. Only this should tear down the signed-in session.
@@ -776,6 +851,9 @@ function buildAuthHeaders(method: string): Record<string, string> {
   }
   if (method !== "GET" && tokens.dualControl) {
     headers["X-Dual-Control-Session"] = tokens.dualControl;
+  }
+  if (method !== "GET" && tokens.stepUp) {
+    headers["X-Step-Up-Token"] = tokens.stepUp!;
   }
   return headers;
 }

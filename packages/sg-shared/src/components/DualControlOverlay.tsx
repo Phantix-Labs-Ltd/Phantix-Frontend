@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ShieldCheck, Mail, KeyRound, Smartphone, Loader2, X, Lock } from "lucide-react";
 import { useStore } from "../store";
 import { listenDeviceConfirmed } from "../deviceConfirm";
+import StepUpPrompt, { AupAcceptPrompt, TargetUnverifiedNotice } from "./StepUpPrompt";
 
 function maskEmail(email: string): string {
   return email.replace(/(.{2}).+(@.+)/, "$1***$2");
@@ -13,7 +14,7 @@ function maskEmail(email: string): string {
  * Opens via requireDualControl() whenever a mutation needs an operate session.
  * Flow: email → OTP (purpose=dual_control) → optional new-device confirm.
  */
-export default function DualControlOverlay() {
+function OperateUnlockOverlay() {
   const {
     dualControlPrompt,
     closeDualControlPrompt,
@@ -380,5 +381,21 @@ export default function DualControlOverlay() {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Every app mounts this once. Alongside the dual-control unlock it carries the
+ * solo-mode step-up prompt and the "verify the target first" notice, so no app
+ * has to mount those separately.
+ */
+export default function DualControlOverlay() {
+  return (
+    <>
+      <OperateUnlockOverlay />
+      <StepUpPrompt />
+      <TargetUnverifiedNotice />
+      <AupAcceptPrompt />
+    </>
   );
 }

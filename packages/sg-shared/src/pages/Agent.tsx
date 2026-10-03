@@ -224,10 +224,10 @@ export default function Agent({ initialMode = "agent", allowAgi = false }: { ini
             <h2 className="mt-5 font-display text-2xl font-bold text-white">SecureGraph Agent is disabled</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
               Your organization has turned off the SecureGraph Agent. Ask an administrator to enable it from the
-              the AI settings of the Platform to start chatting with your security data.
+              AI settings of the Platform to start chatting with your security data.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <a href={PLATFORM_AI_URL} className="btn-primary"><Sparkles size={15} /> Enable on Platform</a>
+              <a href={PLATFORM_AI_URL} className="btn-primary" target="_blank" rel="noopener noreferrer"><Sparkles size={15} /> Enable on Platform</a>
             </div>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[13px] text-slate-500">
               <span className="chip border-phantix-600/50 bg-phantix-800/60"><Lock size={10} className="mr-1 inline" /> Admin-gated</span>
@@ -360,6 +360,7 @@ function AgentChat({
   requireDualControl: (reason?: string) => Promise<boolean>;
   toast: (kind: "success" | "error" | "info" | "warning", title: string, body?: string) => void;
 }) {
+  const soloMode = useStore().dualControl.policy_mode === "off";
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [followUps, setFollowUps] = useState<string[]>([]);
@@ -628,10 +629,10 @@ function AgentChat({
           <span
             className={cx(
               "ml-auto flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium",
-              operate.unlocked ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-severity-medium/30 bg-severity-medium/10 text-severity-medium",
+              operate.unlocked || soloMode ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-severity-medium/30 bg-severity-medium/10 text-severity-medium",
             )}
           >
-            <Lock size={10} /> {operate.unlocked ? "Operate unlocked" : "Dual-control required"}
+            <Lock size={10} /> {operate.unlocked ? "Operate unlocked" : soloMode ? "Solo mode" : "Dual-control required"}
           </span>
           <button onClick={() => { setMessages([]); resetLive(); try { localStorage.removeItem(storageKey); } catch { /* ignore */ } }} className="rounded-md p-2 text-slate-500 hover:bg-phantix-800/70 hover:text-slate-300" title="Clear conversation" aria-label="Clear conversation"><Trash2 size={15} /></button>
         </div>

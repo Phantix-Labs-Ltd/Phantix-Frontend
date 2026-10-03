@@ -27,6 +27,7 @@ import { useSseStream } from "@sg/useSse";
 import { timeAgo, cx, titleCase } from "@sg/utils";
 import { useStore } from "@sg/store";
 import type { CommandCenter } from "@sg/types";
+import OnboardingChecklist from "@sg/components/OnboardingChecklist";
 import {
   AreaTrend, ColumnTrend, Delta, Donut, KpiTile, MiniTable, Panel, PanelEmpty, RankedBars, ViewAll,
   type Column,
@@ -101,7 +102,7 @@ function str(v: unknown, fallback = "Not set"): string {
 }
 
 export default function Dashboard() {
-  const { org: storeOrg, operate, requireDualControl, session } = useStore();
+  const { org: storeOrg, operate, requireDualControl, session, dualControl } = useStore();
   const { data, loading, error, reload, setData } = useResource(loadCommandCenter, emptyDash, "command-center");
 
   /* Posture and findings for the chart row. Loaded alongside the command centre
@@ -476,6 +477,7 @@ export default function Dashboard() {
   return (
     <div>
       {data.securityDbBlocked && <SecurityDbBanner message={data.error} />}
+      <OnboardingChecklist />
 
       {/* Greeting */}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
@@ -826,7 +828,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {!operate.unlocked && (
+      {!operate.unlocked && dualControl.policy_mode !== "off" && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -186,6 +186,7 @@ export const orgUsers: OrgUser[] = [
 export const dualControl: DualControlState = {
   configured: true,
   require_dual_control: true,
+  policy_mode: "on",
   initiator: { id: 1, full_name: "Ada Okonkwo", email: "ada@acme.ng", title: "IT Admin" },
   authorizer: { id: 2, full_name: "Chidi Eze", email: "chidi@acme.ng", title: "CISO" },
 };

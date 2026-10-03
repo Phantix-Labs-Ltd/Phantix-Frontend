@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from "lucide-react";
-import { tokens, isDemoMode, isDemoFlagSet, enterDemoMode, exitDemoMode, API_BASE, delay, api, deviceId, clearCorrelationId } from "./api";
+import { tokens, isDemoMode, isDemoFlagSet, enterDemoMode, exitDemoMode, API_BASE, delay, api, deviceId, clearCorrelationId, setStepUpHandler, setAupHandler } from "./api";
 import {
   emptyDualControl,
   emptyOrganization,
@@ -76,6 +76,14 @@ type Store = {
   withOperate: <T>(reason: string, fn: () => Promise<T>) => Promise<T | null>;
   dualControlPrompt: { open: boolean; reason: string };
   closeDualControlPrompt: (success: boolean) => void;
+  /** Solo-mode identity check for sensitive actions (see StepUpPrompt). */
+  stepUpPrompt: { open: boolean; reason: string };
+  closeStepUpPrompt: (success: boolean) => void;
+  /** C11: confirm the current AUP (authorization for IP targets). */
+  aupPrompt: { open: boolean; target: string; version: string };
+  closeAupPrompt: (accepted: boolean) => void;
+  /** Open the AUP confirmation; resolves true once accepted. */
+  requestAupAcceptance: (target?: string) => Promise<boolean>;
   requestDualControlOtp: (email: string) => Promise<{ destinationMasked: string; devOtp: string }>;
   verifyDualControlOtp: (code: string) => Promise<{ deviceRequired: boolean }>;
   confirmDualControlDevice: () => Promise<{ done: boolean }>;
@@ -199,6 +207,49 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     reason: "",
   });
   const dcPromptResolve = useRef<((ok: boolean) => void) | null>(null);
+  const [stepUpPrompt, setStepUpPrompt] = useState<{ open: boolean; reason: string }>({ open: false, reason: "" });
+  const [aupPrompt, setAupPrompt] = useState<{ open: boolean; target: string; version: string }>({ open: false, target: "", version: "" });
+  const aupResolve = useRef<((ok: boolean) => void) | null>(null);
+  const closeAupPrompt = useCallback((accepted: boolean) => {
+    setAupPrompt({ open: false, target: "", version: "" });
+    const resolve = aupResolve.current;
+    aupResolve.current = null;
+    resolve?.(accepted);
+    if (accepted) window.dispatchEvent(new CustomEvent("phantix:aup-accepted"));
+  }, []);
+  const requestAupAcceptance = useCallback((target = "", version = "") => {
+    if (aupResolve.current) return Promise.resolve(false);
+    return new Promise<boolean>((resolve) => {
+      aupResolve.current = resolve;
+      setAupPrompt({ open: true, target, version });
+    });
+  }, []);
+  useEffect(() => {
+    setAupHandler((d) => requestAupAcceptance(
+      typeof d.target === "string" ? d.target : "",
+      typeof d.version === "string" ? d.version : "",
+    ));
+    return () => setAupHandler(null);
+  }, [requestAupAcceptance]);
+  const stepUpResolve = useRef<((ok: boolean) => void) | null>(null);
+  const closeStepUpPrompt = useCallback((success: boolean) => {
+    setStepUpPrompt({ open: false, reason: "" });
+    const resolve = stepUpResolve.current;
+    stepUpResolve.current = null;
+    resolve?.(success);
+  }, []);
+  // The API client calls this when a sensitive action answers step_up_required,
+  // then retries the request once the code is confirmed.
+  useEffect(() => {
+    setStepUpHandler((reason) => {
+      if (stepUpResolve.current) return Promise.resolve(false);
+      return new Promise<boolean>((resolve) => {
+        stepUpResolve.current = resolve;
+        setStepUpPrompt({ open: true, reason });
+      });
+    });
+    return () => setStepUpHandler(null);
+  }, []);
   const dcEmail = useRef("");
   const dcMfaToken = useRef("");
   const dcDeviceToken = useRef("");
@@ -593,6 +644,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         });
         return Promise.resolve(true);
       }
+      // Solo mode: no approver to unlock. The backend asks for a step-up code
+      // on the sensitive actions itself (handled in the API client).
+      if (dualControl.policy_mode === "off") return Promise.resolve(true);
       // The backend idle window is authoritative — we only lock when the backend
       // actually rejects a mutation with a dual-control session error, or when the
       // token is genuinely gone. A stale local clock must not force a re-code.
@@ -905,6 +959,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       withOperate,
       dualControlPrompt,
       closeDualControlPrompt,
+      stepUpPrompt,
+      closeStepUpPrompt,
+      aupPrompt,
+      closeAupPrompt,
+      requestAupAcceptance,
       requestDualControlOtp,
       verifyDualControlOtp,
       confirmDualControlDevice,
@@ -916,7 +975,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [
       session, org, dualControl, operate, securityDbReady, billingEntitlements, creditsBalance, sessionExpired, expireSession, clearSessionExpired, toasts, toast, dismissToast,
       login, verifyMfa, completeAppLogin, logout, unlockOperateStable, lockOperate, withOperate, enterDemo, switchToRealOrg,
-      requireDualControl, dualControlPrompt, closeDualControlPrompt,
+      requireDualControl, dualControlPrompt, closeDualControlPrompt, stepUpPrompt, closeStepUpPrompt, aupPrompt, closeAupPrompt, requestAupAcceptance,
       requestDualControlOtp, verifyDualControlOtp, confirmDualControlDevice, demoTick,
     ],
   );

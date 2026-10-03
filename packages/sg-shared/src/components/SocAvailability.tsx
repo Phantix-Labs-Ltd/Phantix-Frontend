@@ -395,7 +395,7 @@ export default function SocAvailability() {
           {" · "}
           {agentCatalog?.authHint ?? "Create a service key on Platform. Never paste a personal sign-in token on the server."}
           {" "}
-          <a href={PLATFORM_URL} className="font-semibold text-gold-400 hover:text-gold-300">Platform →</a>
+          <a href={`${PLATFORM_URL}/identity`} className="font-semibold text-gold-400 hover:text-gold-300" target="_blank" rel="noopener noreferrer">Create a service key →</a>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {(agentCatalog?.downloads ?? [
