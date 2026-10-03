@@ -179,7 +179,7 @@ function NavGroup({
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className={`overflow-hidden ${collapsible ? "sg-hide-collapsed" : ""}`}
           >
-            <div className="ml-[1.1rem] mt-0.5 space-y-0.5 border-l border-phantix-700/50 pl-2">
+            <div className="ml-[1.1rem] mb-1 mt-1 space-y-1 border-l border-phantix-700/50 pl-2.5">
               {section.items.map((item) => (
                 <NavLeafLink key={item.to} item={item} collapsible={collapsible} />
               ))}
@@ -638,7 +638,7 @@ export function ApplicationShell({
             </div>
           </div>
 
-          <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-3">{renderNav(true)}</nav>
+          <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 pb-4 pt-1">{renderNav(true)}</nav>
 
           {/* Dual-control widget — present on every page of every application. */}
           <div className="sg-hide-collapsed border-t border-phantix-700/60 p-2">
@@ -995,7 +995,7 @@ export function ApplicationShell({
                 exit={{ opacity: 0, height: 0 }}
                 className="fixed inset-x-0 top-[57px] z-40 max-h-[calc(100vh-57px)] overflow-y-auto border-b border-phantix-700/60 bg-phantix-950 shadow-card lg:hidden"
               >
-                <nav className="space-y-0.5 px-2.5 py-3">{renderNav(false)}</nav>
+                <nav className="space-y-1.5 px-3 py-4">{renderNav(false)}</nav>
                 <div className="border-t border-phantix-700/40 px-2.5 pb-3">
                   <div className="rounded-md border border-phantix-700 bg-phantix-900 p-2">
                     <p className="text-[13px] font-semibold text-slate-500">{dualControl.policy_mode === "off" ? "Solo mode" : "Dual control"}</p>
