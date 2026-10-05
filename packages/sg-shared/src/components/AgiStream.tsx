@@ -13,6 +13,7 @@ import { personaForChunk, PHASE_ACTIVITY, PHASE_ACTIVITY_BY_ID, activityFor, typ
 import type { AgiTranscriptChunk, Severity } from "../types";
 import { cx, humanize } from "../utils";
 import CrossAppLink from "./CrossAppLink";
+import { AutofixToolCard, autofixFromChunk } from "./AgiAutofix";
 
 // ── Shared live-stream primitives for the Autonomous Pentest Agent console ────
 // Used by the fullscreen operator console (AgiConsole) and the compact drawer
@@ -282,6 +283,8 @@ function ToolCallCard({ t, dense = false }: { t: AgiTranscriptChunk; dense?: boo
 
   const pretty = useMemo(() => (body ? prettyJson(body) : null), [body]);
   const output = pretty ?? body;
+  const autofixes = useMemo(() => autofixFromChunk(t), [t]);
+  if (autofixes.length > 0) return <AutofixToolCard fixes={autofixes} dense={dense} />;
 
   return (
     <div className="group relative min-w-0">
@@ -363,6 +366,13 @@ export function ToolGroupCard({
       }),
     [runs],
   );
+  // Autofix results carry steps and a before/after example; the raw JSON box
+  // cut them off, so they get their own card with a full overlay.
+  const autofixes = useMemo(
+    () => (tool === "autofix_subagent" ? runs.flatMap((r) => autofixFromChunk(r)) : []),
+    [tool, runs],
+  );
+  if (autofixes.length > 0) return <AutofixToolCard fixes={autofixes} dense={dense} />;
   if (!hasPayload) return null;
   return (
     <div className="group relative min-w-0 overflow-hidden rounded-xl border border-phantix-700/40 bg-phantix-950/70">
@@ -902,6 +912,18 @@ export const StreamMessage = memo(function StreamMessage({ t, last = false, dens
         className="flex justify-start"
       >
         <PiHelperCard t={t} dense={dense} observe />
+      </motion.div>
+    );
+  }
+
+  if (t.role === "system" && t.meta?.kind === "autofix") {
+    const fixes = autofixFromChunk(t);
+    if (fixes.length === 0) return null;
+    return (
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: "easeOut" }}>
+        <div className={cx("min-w-0", dense ? "w-full" : "max-w-[94%]")}>
+          <AutofixToolCard fixes={fixes} dense={dense} />
+        </div>
       </motion.div>
     );
   }

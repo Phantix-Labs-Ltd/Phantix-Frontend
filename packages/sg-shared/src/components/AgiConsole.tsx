@@ -1,13 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowDown, Ban, BrainCircuit, CheckCircle2, ChevronDown, Clock, CornerUpLeft, Crosshair, FileCode2,
-  Globe2, Loader2, Lock, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen,
+  ArrowDown, Ban, BrainCircuit, CheckCircle2, ChevronDown, Clock, CornerUpLeft, Crosshair,
+  Globe2, Loader2, Lock, Maximize2, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen,
   Pause, Play, Plus, Radar, Send, ShieldAlert, ShieldCheck, Sparkles, Square,
   Terminal, XCircle,
 } from "lucide-react";
 import { AgentActivityLine, ApprovalNotice, ClarificationAsk, CopyBtn, QueuedPromptStrip, StreamEmpty, StreamMessage, ToolGroupCard, TypingIndicator, type QueuedPrompt } from "./AgiStream";
-import { Menu, MenuItem, SeverityBadge } from "../ui";
+import { createPortal } from "react-dom";
+import { Menu, MenuItem, Modal, SeverityBadge } from "../ui";
+import {
+  AutofixFixView, AutofixModal, autofixFromChunk, autofixLabel, autofixMatchesFinding, normalizeAutofixFix,
+  type AgiAutofixFix,
+} from "./AgiAutofix";
 import { VerificationBadge, verificationBadge } from "./VerificationBadge";
 import { groupStreamRows } from "../agiStreamGroup";
 import type { AgiClarification } from "../agiStreamGroup";
@@ -122,6 +127,17 @@ function toAgiFinding(raw: Record<string, unknown>): AgiFinding {
       hash: pick("hash"),
       notes: pick("notes") ?? (raw.description != null ? String(raw.description) : undefined),
     },
+    autofix: normalizeAutofixFix(raw.autofix) ?? undefined,
+    description: raw.description != null && raw.description !== "" ? String(raw.description) : undefined,
+    remediation: raw.remediation != null && raw.remediation !== "" ? String(raw.remediation) : undefined,
+    remediation_replay:
+      raw.remediation_replay && typeof raw.remediation_replay === "object"
+        ? (raw.remediation_replay as Record<string, unknown>)
+        : undefined,
+    category: raw.category != null && raw.category !== "" ? String(raw.category) : undefined,
+    tags: Array.isArray(raw.tags) ? raw.tags.map((x) => String(x)) : undefined,
+    tool: raw.tool != null && raw.tool !== "" ? String(raw.tool) : undefined,
+    created_at: raw.created_at != null ? String(raw.created_at) : undefined,
   };
 }
 
@@ -213,28 +229,231 @@ function NodeInspector({ node }: { node: AttackNode }) {
   );
 }
 
-function EvidenceDrawer({
+/** The finding's verification, target, request/response and notes. */
+function FindingEvidence({
   finding,
-  onClose,
-  sessionId,
   onVerify,
+  full = false,
 }: {
   finding: AgiFinding;
-  onClose: () => void;
-  sessionId?: number;
   onVerify?: (verdict: "confirmed" | "rejected", note?: string) => Promise<boolean>;
+  /** Overlay layout: larger type and no line caps. */
+  full?: boolean;
 }) {
-  const [tab, setTab] = useState<"evidence" | "autofix">("evidence");
   const [verifying, setVerifying] = useState<"confirmed" | "rejected" | null>(null);
   const v = finding.verification;
   const badge = verificationBadge(v);
-
   const humanVerify = async (verdict: "confirmed" | "rejected") => {
     if (!onVerify) return;
     setVerifying(verdict);
     await onVerify(verdict);
     setVerifying(null);
   };
+  const small = full ? "text-[12px]" : "wb-2xs";
+  const body = full ? "text-[13px]" : "wb-xs";
+  const pre = cx(
+    "whitespace-pre-wrap break-words rounded-lg border border-phantix-700/40 bg-phantix-950/70 font-mono leading-relaxed text-slate-300",
+    full ? "wb-scroll max-h-[40vh] overflow-auto p-3 text-[12.5px]" : "wb-2xs p-2",
+  );
+  const replay = finding.remediation_replay;
+  return (
+    <div className={full ? "space-y-4" : "space-y-2"}>
+      {/* Verification layer */}
+      <div className="rounded-lg border border-phantix-700/40 bg-phantix-900/40 p-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={cx("inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-medium", badge.cls)}>
+            {badge.icon} {badge.label}
+          </span>
+          {v?.verifier && (
+            <span className={cx(small, "font-mono text-slate-500")}>
+              {String(v.verifier).toLowerCase() === "agi_verifier" ? "Verifier" : humanize(v.verifier)}
+            </span>
+          )}
+          {typeof v?.confidence === "number" && <span className={cx(small, "text-slate-500")}>conf {v.confidence.toFixed(2)}</span>}
+          {v?.needs_review && (
+            <span className={cx(small, "rounded border border-severity-medium/30 bg-severity-medium/10 px-1.5 py-0.5 text-severity-medium")}>
+              needs review
+            </span>
+          )}
+          {v?.by && <span className={cx(small, "text-slate-600")}>by {v.by}</span>}
+        </div>
+        {v?.reason && <p className={cx(small, "mt-1.5 leading-relaxed text-slate-400")}>{v.reason}</p>}
+        {v?.evidence && full && <pre className={cx(pre, "mt-2")}>{v.evidence}</pre>}
+        {(v?.decided_at || v?.attempted_at) && (
+          <p className={cx(small, "mt-1 text-slate-600")}>
+            checked {new Date((v.decided_at || v.attempted_at) as string).toLocaleString()}
+          </p>
+        )}
+        {onVerify && finding.status !== "validated" && finding.status !== "rejected" && (
+          <div className="mt-2 flex gap-1.5">
+            <button onClick={() => void humanVerify("confirmed")} disabled={verifying !== null} className={cx("btn-primary flex-1 !py-1", small)}>
+              {verifying === "confirmed" ? <Loader2 size={11} className="mr-1 inline animate-spin" /> : <CheckCircle2 size={11} className="mr-1 inline" />}
+              Verify
+            </button>
+            <button onClick={() => void humanVerify("rejected")} disabled={verifying !== null} className={cx("btn-ghost flex-1 !py-1 text-severity-critical", small)}>
+              {verifying === "rejected" ? <Loader2 size={11} className="mr-1 inline animate-spin" /> : <XCircle size={11} className="mr-1 inline" />}
+              Dismiss
+            </button>
+          </div>
+        )}
+      </div>
+
+      <p className={cx(small, "break-all font-mono text-slate-500")}>{finding.target}</p>
+
+      {full && (finding.business_impact || finding.impact_level) && (
+        <div className="rounded-lg border border-phantix-700/40 bg-phantix-900/40 p-2.5">
+          <p className="wb-pane-title mb-1">Business impact{finding.impact_level ? ` · ${humanize(finding.impact_level)}` : ""}</p>
+          {finding.business_impact && <p className={cx(body, "leading-relaxed text-slate-300")}>{finding.business_impact}</p>}
+        </div>
+      )}
+      {full && finding.description && finding.description !== finding.evidence.notes && (
+        <p className={cx(body, "leading-relaxed text-slate-300")}>{finding.description}</p>
+      )}
+
+      {finding.evidence.request && (
+        <div className="group relative">
+          <p className="wb-pane-title mb-1">Request <CopyBtn text={finding.evidence.request} className="ml-1" /></p>
+          <pre className={pre}>{finding.evidence.request}</pre>
+        </div>
+      )}
+      {finding.evidence.response && (
+        <div className="group relative">
+          <p className="wb-pane-title mb-1">Response <CopyBtn text={finding.evidence.response} className="ml-1" /></p>
+          <pre className={pre}>{finding.evidence.response}</pre>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-1.5 text-slate-500">
+        {finding.evidence.hash && <span className={cx("chip !px-1.5 !py-0 font-mono", small)}>{finding.evidence.hash}</span>}
+        <span className={cx("chip !px-1.5 !py-0 capitalize", small)}>{humanize(finding.status)}</span>
+        {full && finding.category && <span className={cx("chip !px-1.5 !py-0", small)}>{humanize(finding.category)}</span>}
+        {full && finding.tool && <span className={cx("chip !px-1.5 !py-0 font-mono", small)}>{finding.tool}</span>}
+        {full && (finding.tags ?? []).map((tag) => <span key={tag} className={cx("chip !px-1.5 !py-0", small)}>{tag}</span>)}
+      </div>
+      {finding.evidence.notes && <p className={cx(body, "leading-relaxed text-slate-400")}>{finding.evidence.notes}</p>}
+
+      {full && finding.remediation && (
+        <div>
+          <p className="wb-pane-title mb-1">Remediation</p>
+          <p className={cx(body, "whitespace-pre-wrap leading-relaxed text-slate-300")}>{finding.remediation}</p>
+        </div>
+      )}
+      {full && replay && (
+        <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] p-2.5">
+          <p className="wb-pane-title mb-1">Remediation re-test</p>
+          <p className={cx(body, "leading-relaxed text-slate-300")}>
+            {String(replay.verdict ?? replay.status ?? replay.summary ?? "Re-run recorded")}
+            {replay.reason ? ` · ${String(replay.reason)}` : ""}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Autofix for a finding: its own patch plus any agent autofix that names it. */
+function FindingAutofix({ fixes, full = false }: { fixes: AgiAutofixFix[]; full?: boolean }) {
+  const [open, setOpen] = useState<number | null>(null);
+  if (fixes.length === 0) {
+    return (
+      <p className={cx(full ? "text-[13px]" : "wb-xs", "text-slate-500")}>
+        No autofix for this finding yet. Ask the agent to "suggest a fix for this finding" to run the autofix subagent.
+      </p>
+    );
+  }
+  if (full) {
+    return (
+      <div className="space-y-6">
+        {fixes.map((f, i) => (
+          <div key={i} className={cx(i > 0 && "border-t border-phantix-700/40 pt-5")}>
+            <AutofixFixView fix={f} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {fixes.map((f, i) => (
+        <div key={i} className="rounded-lg border border-gold-400/20 bg-phantix-950/60 p-2.5">
+          <p className="wb-xs line-clamp-3 text-slate-300">{f.summary ?? autofixLabel(f)}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {f.stack && <span className="chip !px-1.5 !py-0 wb-2xs font-mono text-slate-400">{f.stack}</span>}
+            {f.steps.length > 0 && <span className="wb-2xs text-slate-500">{f.steps.length} steps</span>}
+            {f.example && <span className="wb-2xs text-emerald-400/80">before/after</span>}
+            <button type="button" onClick={() => setOpen(i)} className="btn-ghost ml-auto !px-2 !py-0.5 wb-2xs">
+              <Maximize2 size={10} className="mr-1 inline" /> Full autofix
+            </button>
+          </div>
+        </div>
+      ))}
+      <AutofixModal open={open !== null} onClose={() => setOpen(null)} fixes={fixes} initial={open ?? 0} />
+    </div>
+  );
+}
+
+/** Full finding in an overlay: evidence, impact, remediation and every autofix. */
+function FindingDetailModal({
+  finding,
+  fixes,
+  open,
+  onClose,
+  onVerify,
+}: {
+  finding: AgiFinding;
+  fixes: AgiAutofixFix[];
+  open: boolean;
+  onClose: () => void;
+  onVerify?: (verdict: "confirmed" | "rejected", note?: string) => Promise<boolean>;
+}) {
+  const [tab, setTab] = useState<"evidence" | "autofix">("evidence");
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <Modal
+      open={open}
+      onClose={onClose}
+      wide
+      title={
+        <span className="flex min-w-0 items-center gap-2">
+          <SeverityBadge severity={finding.severity} />
+          <span className="min-w-0 truncate">{finding.title}</span>
+          {finding.cve && <span className="chip !px-1.5 !py-0 font-mono text-[11px] text-gold-300">{finding.cve}</span>}
+        </span>
+      }
+    >
+      <div className="space-y-4">
+        <div className="flex w-fit rounded-lg border border-phantix-700/40 p-0.5">
+          <button onClick={() => setTab("evidence")} className={cx("rounded-md px-3 py-1 text-xs", tab === "evidence" ? "bg-phantix-800 text-white" : "text-slate-500")}>Evidence</button>
+          <button onClick={() => setTab("autofix")} className={cx("rounded-md px-3 py-1 text-xs", tab === "autofix" ? "bg-phantix-800 text-white" : "text-slate-500")}>
+            Autofix{fixes.length ? ` · ${fixes.length}` : ""}
+          </button>
+        </div>
+        {tab === "evidence" ? <FindingEvidence finding={finding} onVerify={onVerify} full /> : <FindingAutofix fixes={fixes} full />}
+      </div>
+    </Modal>,
+    document.body,
+  );
+}
+
+function EvidenceDrawer({
+  finding,
+  onClose,
+  onVerify,
+  agentFixes = [],
+}: {
+  finding: AgiFinding;
+  onClose: () => void;
+  sessionId?: number;
+  onVerify?: (verdict: "confirmed" | "rejected", note?: string) => Promise<boolean>;
+  /** Autofix subagent results from this session's transcript. */
+  agentFixes?: AgiAutofixFix[];
+}) {
+  const [tab, setTab] = useState<"evidence" | "autofix">("evidence");
+  const [expanded, setExpanded] = useState(false);
+  const fixes = useMemo(() => {
+    const own = finding.autofix ? normalizeAutofixFix(finding.autofix) : null;
+    const matched = agentFixes.filter((f) => autofixMatchesFinding(f, finding.title));
+    return own ? [own, ...matched] : matched;
+  }, [finding.autofix, finding.title, agentFixes]);
 
   return (
     <motion.div
@@ -245,98 +464,23 @@ function EvidenceDrawer({
     >
       <div className="wb-pad-x wb-pad-y flex items-center gap-2 border-b border-phantix-700/30">
         <SeverityBadge severity={finding.severity} />
-        <p className="wb-sm min-w-0 flex-1 truncate font-semibold text-white">{finding.title}</p>
+        <p className="wb-sm min-w-0 flex-1 truncate font-semibold text-white" title={finding.title}>{finding.title}</p>
         {finding.cve && <span className="chip !px-1.5 !py-0 wb-2xs font-mono text-gold-300">{finding.cve}</span>}
         <div className="flex shrink-0 rounded-lg border border-phantix-700/40 p-0.5">
           <button onClick={() => setTab("evidence")} className={cx("wb-2xs rounded-md px-2 py-0.5", tab === "evidence" ? "bg-phantix-800 text-white" : "text-slate-500")}>Evidence</button>
-          <button onClick={() => setTab("autofix")} className={cx("wb-2xs rounded-md px-2 py-0.5", tab === "autofix" ? "bg-phantix-800 text-white" : "text-slate-500")}>Autofix</button>
+          <button onClick={() => setTab("autofix")} className={cx("wb-2xs rounded-md px-2 py-0.5", tab === "autofix" ? "bg-phantix-800 text-white" : "text-slate-500")}>
+            Autofix{fixes.length ? ` · ${fixes.length}` : ""}
+          </button>
         </div>
+        <button onClick={() => setExpanded(true)} className="shrink-0 rounded p-1 text-slate-500 hover:text-slate-200" title="Open the full finding" aria-label="Open the full finding">
+          <Maximize2 size={13} />
+        </button>
         <button onClick={onClose} className="shrink-0 rounded p-1 text-slate-500 hover:text-slate-200" aria-label="Close evidence"><XCircle size={14} /></button>
       </div>
       <div className="wb-scroll min-h-0 flex-1 overflow-y-auto wb-pad">
-        {tab === "evidence" ? (
-          <div className="space-y-2">
-            {/* Verification layer */}
-            <div className="rounded-lg border border-phantix-700/40 bg-phantix-900/40 p-2.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={cx("inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-medium", badge.cls)}>
-                  {badge.icon} {badge.label}
-                </span>
-                {v?.verifier && (
-                  <span className="wb-2xs font-mono text-slate-500">
-                    {String(v.verifier).toLowerCase() === "agi_verifier" ? "Verifier" : humanize(v.verifier)}
-                  </span>
-                )}
-                {typeof v?.confidence === "number" && (
-                  <span className="wb-2xs text-slate-500">conf {v.confidence.toFixed(2)}</span>
-                )}
-                {v?.needs_review && (
-                  <span className="wb-2xs rounded border border-severity-medium/30 bg-severity-medium/10 px-1.5 py-0.5 text-severity-medium">
-                    needs review
-                  </span>
-                )}
-                {v?.by && <span className="wb-2xs text-slate-600">by {v.by}</span>}
-              </div>
-              {v?.reason && <p className="wb-2xs mt-1.5 leading-relaxed text-slate-400">{v.reason}</p>}
-              {(v?.decided_at || v?.attempted_at) && (
-                <p className="wb-2xs mt-1 text-slate-600">
-                  checked {new Date((v.decided_at || v.attempted_at) as string).toLocaleString()}
-                </p>
-              )}
-              {onVerify && finding.status !== "validated" && finding.status !== "rejected" && (
-                <div className="mt-2 flex gap-1.5">
-                  <button
-                    onClick={() => void humanVerify("confirmed")}
-                    disabled={verifying !== null}
-                    className="btn-primary flex-1 !py-1 wb-2xs"
-                  >
-                    {verifying === "confirmed" ? <Loader2 size={11} className="mr-1 inline animate-spin" /> : <CheckCircle2 size={11} className="mr-1 inline" />}
-                    Verify
-                  </button>
-                  <button
-                    onClick={() => void humanVerify("rejected")}
-                    disabled={verifying !== null}
-                    className="btn-ghost flex-1 !py-1 wb-2xs text-severity-critical"
-                  >
-                    {verifying === "rejected" ? <Loader2 size={11} className="mr-1 inline animate-spin" /> : <XCircle size={11} className="mr-1 inline" />}
-                    Dismiss
-                  </button>
-                </div>
-              )}
-            </div>
-            <p className="wb-2xs break-all font-mono text-slate-500">{finding.target}</p>
-            {finding.evidence.request && (
-              <div className="group relative">
-                <p className="wb-pane-title mb-1">Request <CopyBtn text={finding.evidence.request} className="ml-1" /></p>
-                <pre className="wb-2xs whitespace-pre-wrap rounded-lg border border-phantix-700/40 bg-phantix-950/70 p-2 font-mono leading-relaxed text-slate-300">{finding.evidence.request}</pre>
-              </div>
-            )}
-            {finding.evidence.response && (
-              <div className="group relative">
-                <p className="wb-pane-title mb-1">Response <CopyBtn text={finding.evidence.response} className="ml-1" /></p>
-                <pre className="wb-2xs whitespace-pre-wrap rounded-lg border border-phantix-700/40 bg-phantix-950/70 p-2 font-mono leading-relaxed text-slate-300">{finding.evidence.response}</pre>
-              </div>
-            )}
-            <div className="flex flex-wrap gap-1.5 text-slate-500">
-              {finding.evidence.hash && <span className="chip !px-1.5 !py-0 wb-2xs font-mono">{finding.evidence.hash}</span>}
-              <span className="chip !px-1.5 !py-0 wb-2xs capitalize">{humanize(finding.status)}</span>
-            </div>
-            {finding.evidence.notes && <p className="wb-xs leading-relaxed text-slate-400">{finding.evidence.notes}</p>}
-          </div>
-        ) : finding.autofix ? (
-          <div className="space-y-2">
-            <p className="wb-xs text-slate-400">{finding.autofix.summary}</p>
-            <p className="wb-2xs font-mono text-gold-300">{finding.autofix.file}</p>
-            <div className="group relative">
-              <pre className="wb-2xs whitespace-pre-wrap rounded-lg border border-gold-400/20 bg-phantix-950/70 p-2.5 font-mono leading-relaxed text-slate-200">{finding.autofix.preview}</pre>
-              <CopyBtn text={finding.autofix.preview} className="absolute right-2 top-2" />
-            </div>
-            <button className="btn-primary w-full !py-1.5 wb-xs"><FileCode2 size={12} className="mr-1 inline" /> Stage pull request</button>
-          </div>
-        ) : (
-          <p className="wb-xs text-slate-500">No autofix preview for this finding.</p>
-        )}
+        {tab === "evidence" ? <FindingEvidence finding={finding} onVerify={onVerify} /> : <FindingAutofix fixes={fixes} />}
       </div>
+      <FindingDetailModal finding={finding} fixes={fixes} open={expanded} onClose={() => setExpanded(false)} onVerify={onVerify} />
     </motion.div>
   );
 }
@@ -524,6 +668,12 @@ export default function AgiConsole({
   // thinking indicator (e.g. "recon_dns" → "Enumerating subdomains & DNS").
   const livePhaseId = nodes.find((n) => n.status === "active" || n.status === "blocked")?.phaseId ?? null;
   const openFinding = findings.find((f) => f.id === findingId) ?? null;
+  // Every autofix subagent result in this session, so a finding's drawer can
+  // show the fix the agent suggested for it.
+  const agentFixes = useMemo(
+    () => transcript.flatMap((t) => autofixFromChunk(t)),
+    [transcript],
+  );
   const allowlist = engagement?.scope_definition.target_allowlist ?? [];
   const forbidden = engagement?.scope_definition.forbidden_actions ?? [];
   const filtered = useMemo(
@@ -672,6 +822,7 @@ export default function AgiConsole({
                         <p className={cx("wb-2xs truncate text-center font-semibold uppercase tracking-wider", stat?.live ? "text-gold-300" : "text-slate-500")} title={phase.label}>
                           <span className="at-long">{phase.label}</span>
                           <span className="at-short">{phase.short}</span>
+                          <span className="at-tiny">{phase.tiny}</span>
                         </p>
                         <div className="mt-0.5 h-0.5 overflow-hidden rounded-full bg-phantix-700/40" title={`${stat?.done ?? 0}/${stat?.total ?? 0} nodes complete`}>
                           <div
@@ -700,14 +851,17 @@ export default function AgiConsole({
                               key={n.id}
                               onClick={() => setSelectedId(n.id)}
                               title={n.tool ? `${n.label} · ${n.tool}` : n.label}
-                              className={cx("flex min-h-[46px] flex-1 flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1 text-center transition-all duration-200", NODE_RING[n.status], selected?.id === n.id && "ring-1 ring-gold-400/40")}
+                              className={cx("at-card flex min-h-[46px] w-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-md border px-1 py-1 text-center transition-all duration-200", NODE_RING[n.status], selected?.id === n.id && "ring-1 ring-gold-400/40")}
                             >
-                              <span className={cx("h-1.5 w-1.5 rounded-full", NODE_DOT[n.status])} title={`${n.label} · ${n.status}`} />
-                              <span className="wb-2xs line-clamp-2 leading-tight text-slate-200">
+                              <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", NODE_DOT[n.status])} title={`${n.label} · ${n.status}`} />
+                              {/* Three label tiers follow the pane width (see .at-* in index.css);
+                                  overflow-wrap is the last guard so a word never leaves its card. */}
+                              <span className="wb-2xs line-clamp-2 w-full min-w-0 leading-tight text-slate-200 [overflow-wrap:anywhere]">
                                 <span className="at-long">{n.label}</span>
                                 <span className="at-short">{n.short}</span>
+                                <span className="at-tiny">{n.tiny}</span>
                               </span>
-                              {n.tool && <span className="wb-2xs max-w-full truncate font-mono text-slate-500">{n.tool}</span>}
+                              {n.tool && <span className="at-tool wb-2xs w-full min-w-0 truncate font-mono text-slate-500">{n.tool}</span>}
                             </button>
                           ) : (
                             <div key={`${phase.id}-empty-${i}`} className="min-h-[46px] flex-1 rounded-md border border-dashed border-phantix-700/30" />
@@ -1083,6 +1237,7 @@ export default function AgiConsole({
                     onClose={() => setFindingId(null)}
                     sessionId={session?.id}
                     onVerify={(verdict) => handleFindingVerify(openFinding, verdict)}
+                    agentFixes={agentFixes}
                   />
                 )}
               </AnimatePresence>
