@@ -17,6 +17,8 @@ export interface AttackNode {
   label: string;
   /** Compact label for narrow attack-tree panes. */
   short: string;
+  /** One-word tag for the narrowest panes, where a card is ~30px wide. */
+  tiny: string;
   /** Group the node belongs to (drives the column layout). */
   phase: AttackPhase;
   status: NodeStatus;
@@ -40,11 +42,26 @@ export interface AgiFinding {
     hash?: string;
     notes?: string;
   };
+  /** Legacy file/preview patch, plus the autofix subagent's steps and before/after example. */
   autofix?: {
-    file: string;
-    preview: string;
-    summary: string;
+    file?: string;
+    preview?: string;
+    summary?: string;
+    vuln_class?: string | null;
+    steps?: string[];
+    stack?: string | null;
+    tailored?: boolean;
+    remediable?: boolean;
+    example?: { language?: string; note?: string; vulnerable?: string; fixed?: string } | null;
   };
+  description?: string;
+  remediation?: string;
+  /** Re-test of the fix (runner remediation replay): did the vulnerable signal go away. */
+  remediation_replay?: Record<string, unknown>;
+  category?: string;
+  tags?: string[];
+  tool?: string;
+  created_at?: string;
   nodeId?: string;
   highlight?: boolean;
   report_highlight?: boolean;
@@ -66,13 +83,13 @@ export interface AgiFinding {
 }
 
 /** Engagement groups → column labels. */
-export const PHASES: { id: AttackPhase; label: string; short: string }[] = [
-  { id: "recon", label: "Recon", short: "Recon" },
-  { id: "discovery", label: "Discovery", short: "Disc" },
-  { id: "vuln", label: "Vuln confirmation", short: "Vuln" },
-  { id: "exploit", label: "Exploit and verify", short: "Exploit" },
-  { id: "auth", label: "Authenticated", short: "Auth" },
-  { id: "report", label: "Report", short: "Report" },
+export const PHASES: { id: AttackPhase; label: string; short: string; tiny: string }[] = [
+  { id: "recon", label: "Recon", short: "Recon", tiny: "Rec" },
+  { id: "discovery", label: "Discovery", short: "Disc", tiny: "Disc" },
+  { id: "vuln", label: "Vuln confirmation", short: "Vuln", tiny: "Vuln" },
+  { id: "exploit", label: "Exploit and verify", short: "Exploit", tiny: "Expl" },
+  { id: "auth", label: "Authenticated", short: "Auth", tiny: "Auth" },
+  { id: "report", label: "Report", short: "Report", tiny: "Rep" },
 ];
 
 export const PERSONAS: { id: AgentPersona | "all"; label: string }[] = [
@@ -213,44 +230,61 @@ export function shortLabel(label: string): string {
   return out.replace(/\s{2,}/g, " ").trim();
 }
 
+// One-word tags for the narrowest attack-tree pane (≤ 6 characters each).
+const TINY_BY_ID: Record<string, string> = {
+  recon_scope: "Scope", recon_dns: "DNS", recon_ports: "Ports", recon_fingerprint: "Tech", recon_crawl: "Crawl", recon_js: "JS",
+  disc_paths: "Paths", disc_api: "API", disc_cors: "CORS", disc_email: "Email", disc_cloud: "Cloud",
+  vuln_sig: "Sigs", vuln_inject: "Inject", vuln_ssrf: "SSRF", vuln_idor: "IDOR", vuln_auth: "Auth", vuln_upload: "Upload",
+  vuln_deser: "RCE", vuln_race: "Race", vuln_ws: "WS", vuln_cms: "CMS",
+  exp_subdomain: "Subdom", exp_redirect: "Redir", exp_verify: "PoC", exp_chain: "Chain", exp_mobile: "APK", exp_creds: "Creds",
+  auth_flow: "App", auth_accounts: "Roles",
+  report_draft: "Evid", report_remediation: "Fix", report_final: "Final",
+};
+
+/** One-word tag for a node: the catalog tag, else the first word of its short label. */
+export function tinyLabel(label: string, id?: string): string {
+  if (id && TINY_BY_ID[id]) return TINY_BY_ID[id];
+  return shortLabel(label).split(/[\s,·/]+/).find((w) => w && !/^(and|the|of)$/i.test(w)) ?? label;
+}
+
 const CATALOG: CatalogPhase[] = [
   // ── RECON ─────────────────────────────────────────────────────────────
   { id: "recon_scope", group: "recon", label: "Scope and target resolution", short: "Scope and target", sigs: ["whois", "resolve", "scope", "target resolution", "dns_lookup"], tool: "dns_lookup" },
-  { id: "recon_dns", group: "recon", label: "Subdomain and DNS enumeration", short: "Subdomain and DNS enumeration", sigs: ["subfinder", "amass", "sublist3r", "assetfinder", "dnsrecon", "dnsx", "dig", "subdomain"], tool: "subfinder" },
-  { id: "recon_ports", group: "recon", label: "Port and service discovery", short: "Port and service discovery", sigs: ["nmap", "masscan", "naabu", "rustscan", "port scan", "open port"], tool: "nmap" },
-  { id: "recon_fingerprint", group: "recon", label: "Technology fingerprinting", short: "Tech fingerprint", sigs: ["httpx", "whatweb", "wappalyzer", "fingerprint", "technology", "server:"], tool: "httpx" },
-  { id: "recon_crawl", group: "recon", label: "URL crawl and parameter discovery", short: "URL crawl and parameters", sigs: ["katana", "gau", "wayback", "gospider", "hakrawler", "crawl", "param"], tool: "katana" },
-  { id: "recon_js", group: "recon", label: "JavaScript and source analysis", short: "JavaScript and source", sigs: ["browser_js", "js file", "javascript", "source map", "linkfinder", "secret in js"], tool: "browser_js" },
+  { id: "recon_dns", group: "recon", label: "Subdomain and DNS enumeration", short: "DNS enum", sigs: ["subfinder", "amass", "sublist3r", "assetfinder", "dnsrecon", "dnsx", "dig", "subdomain"], tool: "subfinder" },
+  { id: "recon_ports", group: "recon", label: "Port and service discovery", short: "Ports and services", sigs: ["nmap", "masscan", "naabu", "rustscan", "port scan", "open port"], tool: "nmap" },
+  { id: "recon_fingerprint", group: "recon", label: "Technology fingerprinting", short: "Tech stack", sigs: ["httpx", "whatweb", "wappalyzer", "fingerprint", "technology", "server:"], tool: "httpx" },
+  { id: "recon_crawl", group: "recon", label: "URL crawl and parameter discovery", short: "URL crawl", sigs: ["katana", "gau", "wayback", "gospider", "hakrawler", "crawl", "param"], tool: "katana" },
+  { id: "recon_js", group: "recon", label: "JavaScript and source analysis", short: "JS source", sigs: ["browser_js", "js file", "javascript", "source map", "linkfinder", "secret in js"], tool: "browser_js" },
   // ── DISCOVERY ─────────────────────────────────────────────────────────
-  { id: "disc_paths", group: "discovery", label: "Directory and file discovery", short: "Directory and file discovery", sigs: ["ffuf", "gobuster", "dirb", "feroxbuster", "dirsearch", "/.git", "/.env", "directory"], tool: "ffuf" },
+  { id: "disc_paths", group: "discovery", label: "Directory and file discovery", short: "Dirs and files", sigs: ["ffuf", "gobuster", "dirb", "feroxbuster", "dirsearch", "/.git", "/.env", "directory"], tool: "ffuf" },
   { id: "disc_api", group: "discovery", label: "API and GraphQL surface", short: "API and GraphQL", sigs: ["graphql", "swagger", "openapi", "/api/", "postman", "rest api"], tool: "http_get" },
   { id: "disc_cors", group: "discovery", label: "CORS and cookie analysis", short: "CORS and cookies", sigs: ["cors", "access-control-allow", "cookie", "origin"], tool: "http_get" },
   { id: "disc_email", group: "discovery", label: "Email security testing", short: "Email security", sigs: ["spf", "dmarc", "smtp", "email security", "mail record"], tool: "dns_lookup" },
-  { id: "disc_cloud", group: "discovery", label: "Cloud and infrastructure exposure", short: "Cloud and infrastructure", sigs: ["s3", "bucket", "aws", "gcp", "azure", "cloud storage"], tool: "shell" },
+  { id: "disc_cloud", group: "discovery", label: "Cloud and infrastructure exposure", short: "Cloud infra", sigs: ["s3", "bucket", "aws", "gcp", "azure", "cloud storage"], tool: "shell" },
   // ── VULN ──────────────────────────────────────────────────────────────
   { id: "vuln_sig", group: "vuln", label: "Signature scanning", short: "Sig scanning", sigs: ["nuclei", "nikto", "cve-", "signature"], tool: "nuclei" },
   { id: "vuln_inject", group: "vuln", label: "Injection testing", short: "Injection", sigs: ["sqlmap", "sqli", "xss", "ssti", "nosql", "injection", "command injection"], tool: "sqlmap" },
   { id: "vuln_ssrf", group: "vuln", label: "SSRF testing", short: "SSRF", sigs: ["ssrf", "oob", "169.254", "collaborator", "interactsh", "metadata"], tool: "shell" },
-  { id: "vuln_idor", group: "vuln", label: "IDOR and broken access control", short: "IDOR and access control", sigs: ["idor", "uuid", "access control", "authorization", "object reference"], tool: "authenticated_get" },
-  { id: "vuln_auth", group: "vuln", label: "Authentication and session testing", short: "Authentication and session", sigs: ["login", "auth", "session", "password", "jwt", "oauth", "credential"], tool: "auth_login" },
+  { id: "vuln_idor", group: "vuln", label: "IDOR and broken access control", short: "IDOR and access", sigs: ["idor", "uuid", "access control", "authorization", "object reference"], tool: "authenticated_get" },
+  { id: "vuln_auth", group: "vuln", label: "Authentication and session testing", short: "Auth and session", sigs: ["login", "auth", "session", "password", "jwt", "oauth", "credential"], tool: "auth_login" },
   { id: "vuln_upload", group: "vuln", label: "File upload testing", short: "File upload", sigs: ["upload", "multipart", "webshell", "file upload"], tool: "shell" },
-  { id: "vuln_deser", group: "vuln", label: "Deserialization and RCE", short: "Deserialization and RCE", sigs: ["ysoserial", "deserialize", "rce", "pickle", "serial", "remote code"], tool: "shell" },
-  { id: "vuln_race", group: "vuln", label: "Race conditions and business logic", short: "Race conditions and logic", sigs: ["race condition", "business logic", "pricing", "replay", "toctou"], tool: "shell" },
+  { id: "vuln_deser", group: "vuln", label: "Deserialization and RCE", short: "RCE and deserial", sigs: ["ysoserial", "deserialize", "rce", "pickle", "serial", "remote code"], tool: "shell" },
+  { id: "vuln_race", group: "vuln", label: "Race conditions and business logic", short: "Race and logic", sigs: ["race condition", "business logic", "pricing", "replay", "toctou"], tool: "shell" },
   { id: "vuln_ws", group: "vuln", label: "WebSocket testing", short: "WebSocket", sigs: ["websocket", "ws://", "socket.io"], tool: "shell" },
   { id: "vuln_cms", group: "vuln", label: "CMS-specific testing", short: "CMS testing", sigs: ["wp-", "wordpress", "joomla", "drupal", "cms", "plugin"], tool: "shell" },
   // ── EXPLOIT ───────────────────────────────────────────────────────────
   { id: "exp_subdomain", group: "exploit", label: "Subdomain takeover", short: "Subdom takeover", sigs: ["takeover", "dangling", "cname"], tool: "shell" },
   { id: "exp_redirect", group: "exploit", label: "Open redirect testing", short: "Open redirect", sigs: ["redirect", "open redirect", "returnurl", "next="], tool: "http_get" },
   { id: "exp_verify", group: "exploit", label: "Exploit verification (PoC)", short: "Exploit verify", sigs: ["exploit", "poc", "verify", "proof", "confirm", "payload"], tool: "shell" },
-  { id: "exp_chain", group: "exploit", label: "Attack chaining and novel discovery", short: "Chaining and novelty", sigs: ["chain", "novel", "combo", "correlation", "lateral"], tool: "shell" },
+  { id: "exp_chain", group: "exploit", label: "Attack chaining and novel discovery", short: "Chaining", sigs: ["chain", "novel", "combo", "correlation", "lateral"], tool: "shell" },
   { id: "exp_mobile", group: "exploit", label: "Mobile (APK) analysis", short: "Mobile and APK", sigs: ["apk", "jadx", "frida", "android", "mobsf", "mobile"], tool: "shell" },
-  { id: "exp_creds", group: "exploit", label: "Credential and secret validation", short: "Credentials and secrets", sigs: ["credential", "secret", "api_key", "token", "leak", "api key"], tool: "shell" },
+  { id: "exp_creds", group: "exploit", label: "Credential and secret validation", short: "Creds and secrets", sigs: ["credential", "secret", "api_key", "token", "leak", "api key"], tool: "shell" },
   // ── AUTH ──────────────────────────────────────────────────────────────
   { id: "auth_flow", group: "auth", label: "Authenticated app testing", short: "Auth app test", sigs: ["authenticated_get", "authenticated", "session cookie"], tool: "authenticated_get" },
-  { id: "auth_accounts", group: "auth", label: "Multi-account and privilege testing", short: "Multi-account and privilege", sigs: ["account", "privilege", "role", "user a", "user b", "admin"], tool: "auth_login" },
+  { id: "auth_accounts", group: "auth", label: "Multi-account and privilege testing", short: "Roles and privs", sigs: ["account", "privilege", "role", "user a", "user b", "admin"], tool: "auth_login" },
   // ── REPORT ────────────────────────────────────────────────────────────
   { id: "report_draft", group: "report", label: "Evidence consolidation", short: "Evidence", sigs: ["consolidate", "evidence", "findings summary", "collect"], tool: "shell" },
-  { id: "report_remediation", group: "report", label: "Remediation and fix mapping", short: "Remediation and fix", sigs: ["remediation", "fix", "mitigation", "risk treatment"], tool: "engine_call" },
+  { id: "report_remediation", group: "report", label: "Remediation and fix mapping", short: "Fix mapping", sigs: ["remediation", "fix", "mitigation", "risk treatment"], tool: "engine_call" },
   { id: "report_final", group: "report", label: "Final report generation", short: "Final report", sigs: ["report", "final", "job_done", "summary"], tool: "engine_call" },
 ];
 
@@ -337,6 +371,7 @@ function catalogToNode(p: CatalogPhase): AttackNode {
     phaseId: p.id,
     label: p.label,
     short: p.short,
+    tiny: tinyLabel(p.short, p.id),
     phase: p.group,
     status: "pending",
     commands: [],
@@ -411,7 +446,8 @@ function seedNodes(phases?: SessionPhase[]): AttackNode[] {
           id: s.id || cat?.id || `${group}_${i + 1}`,
           phaseId: s.id || cat?.id || `${group}_${i + 1}`,
           label,
-          short: shortLabel(label),
+          short: cat?.short ?? shortLabel(label),
+          tiny: tinyLabel(label, cat?.id),
           phase: group,
           status: "pending",
           commands: [],
@@ -436,6 +472,7 @@ function seedNodes(phases?: SessionPhase[]): AttackNode[] {
       phaseId: p.id,
       label,
       short: shortLabel(label),
+      tiny: tinyLabel(label, p.id),
       phase: group,
       status: "pending",
       commands: [],

@@ -891,22 +891,33 @@ p {
 }
 
 /* ── Attack-tree adaptive labels ──────────────────────────────────────────────
-   Long node/phase labels collapse to their compact form as the attack-tree pane
-   narrows. The pane is a CSS size container (`.wb-pane`), so `@container pane`
-   resolves against the actual pane width — resize the pane or shrink the window
-   and the tree re-labels itself (e.g. "reconnaissance" → "recon",
-   "authentication" → "auth", "authorization" → "authz"). */
+   Node/phase labels have three tiers that follow the attack-tree pane width, in
+   both directions as the pane is dragged. The pane is a CSS size container
+   (`.wb-pane`), so `@container pane` resolves against the actual pane width:
+     ≥ 520px   full label        "Authentication and session testing"
+     420–519px short label       "Auth and session"
+     < 420px   one-word tag      "Auth" (the tool line is hidden too)
+   Cards also clip and wrap, so no tier can push text outside its card. */
 .at-long { display: inline; }
-.at-short { display: none; }
-@container pane (max-width: 520px) {
+.at-short,
+.at-tiny { display: none; }
+@container pane (max-width: 519.98px) {
   .at-long { display: none; }
   .at-short { display: inline; }
 }
+@container pane (max-width: 419.98px) {
+  .at-short,
+  .at-tool { display: none; }
+  .at-tiny { display: inline; }
+  .at-card { padding-inline: 2px; }
+}
 @media (max-width: 420px) {
   /* Very small viewports force the tree pane narrow even before the user drags
-     the handle; collapse labels there too as a fallback. */
-  .at-long { display: none; }
-  .at-short { display: inline; }
+     the handle; use the one-word tags there too as a fallback. */
+  .at-long,
+  .at-short,
+  .at-tool { display: none; }
+  .at-tiny { display: inline; }
 }
 
 /* Respect users who prefer less motion across all workbench transitions. */

@@ -942,6 +942,8 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     };
     const refreshActions = () => { void loadAgiPendingActions(session.id).then(setActions).catch(() => {}); };
     const refreshFindings = () => { void loadAgiFindings(session.id).then((fs) => setDrawerFindings(Array.isArray(fs) ? fs : [])).catch(() => {}); };
+    // Finding titles per fix index for the autofix run in progress.
+    let autofixTitles: Record<number, string> = {};
 
     void streamAgiSession(session.id, (event, data) => {
       try {
@@ -1027,6 +1029,23 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         }
         if (event === "loop_paused") { setPaused(true); pushLive(`paused-${Date.now()}`, "Operator paused the agent.", { kind: "loop_paused", event }); return; }
         if (event === "loop_resumed") { setPaused(false); pushLive(`resumed-${Date.now()}`, "Operator resumed the agent.", { kind: "loop_resumed", event }); return; }
+        if (event === "autofix_subagent") {
+          // The runner streams `fix` frames (finding title per index) and then a
+          // `completed` frame with the full fixes: steps, stack and the
+          // before/after example. The tool row only keeps 1500 chars of that
+          // JSON, so the live frame is what gets painted.
+          const p = JSON.parse(data) as { status?: string; index?: number; title?: string; fixes?: unknown[] };
+          if (p.status === "started") { autofixTitles = {}; return; }
+          if (p.status === "fix" && typeof p.index === "number" && p.title) { autofixTitles[p.index] = p.title; return; }
+          if (p.status === "completed" && Array.isArray(p.fixes) && p.fixes.length) {
+            const fixes = p.fixes.map((f, i) =>
+              f && typeof f === "object" && autofixTitles[i] ? { ...(f as Record<string, unknown>), title: autofixTitles[i] } : f,
+            );
+            const sig = fixes.map((f) => String((f as { summary?: unknown } | null)?.summary ?? "")).join("|").slice(0, 240);
+            pushLive(`autofix-${fixes.length}-${sig}`, `Autofix: ${fixes.length} fix${fixes.length === 1 ? "" : "es"} suggested.`, { kind: "autofix", event, fixes });
+          }
+          return;
+        }
         if (event === "campaign_done") {
           const p = JSON.parse(data) as { found?: number; assets?: number; summary?: { elapsed?: number; categories?: string[] } };
           pushLive(
@@ -1351,155 +1370,10 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
               <div className="overflow-hidden rounded-xl border border-phantix-700/40 bg-phantix-900/40">
                 <div className="flex items-center justify-between border-b border-phantix-700/40 px-3 py-2">
                   <p className="wb-pane-title">1 · Choose an engagement</p>
-                  <button onClick={() => setCreateOpen((v) => !v)} className="btn-ghost !px-2 !py-1 wb-xs"><Plus size={12} className="mr-1 inline" /> New</button>
+                  <button onClick={() => setCreateOpen(true)} className="btn-ghost !px-2 !py-1 wb-xs"><Plus size={12} className="mr-1 inline" /> New</button>
                 </div>
 
                 <div className="wb-scroll max-h-[min(45vh,380px)] overflow-y-auto p-2">
-                  {createOpen && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-2 space-y-2 rounded-xl border border-phantix-700/40 bg-phantix-900/50 p-3">
-                  <p className="wb-pane-title">New engagement</p>
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-slate-400">Engagement name</span>
-                    <input
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      placeholder="e.g. Lab external web"
-                      className="wb-sm w-full rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40"
-                    />
-                  </label>
-                  <div className="rounded-lg border border-phantix-700/50 bg-phantix-950/60 p-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="wb-pane-title">Target assets</p>
-                        <p className="mt-0.5 text-[12px] leading-4 text-slate-500">
-                          Pick the assets this engagement may touch. Only selected assets become allowlist targets.
-                        </p>
-                      </div>
-                      <label className="wb-xs flex shrink-0 cursor-pointer items-center gap-1.5 pt-0.5 text-slate-400">
-                        <input
-                          type="checkbox"
-                          checked={selectAllAssets}
-                          onChange={(e) => setSelectAllAssets(e.target.checked)}
-                          className="h-3 w-3 accent-gold-400"
-                        />
-                        Select all
-                      </label>
-                    </div>
-                    <input
-                      value={assetSearch}
-                      onChange={(e) => setAssetSearch(e.target.value)}
-                      placeholder={selectAllAssets ? "All assets selected" : "Search assets…"}
-                      disabled={selectAllAssets}
-                      className="wb-xs mt-1.5 w-full rounded-md border border-phantix-700/50 bg-phantix-950/70 px-2 py-1.5 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40 disabled:opacity-50"
-                    />
-                    {assetLoading ? (
-                      <p className="wb-xs py-3 text-center text-slate-500"><Loader2 size={11} className="mr-1 animate-spin inline" /> Loading assets…</p>
-                    ) : orgAssets.length === 0 ? (
-                      <p className="wb-xs py-3 text-center text-slate-500">No assets in your inventory yet. Add assets first, then create an engagement.</p>
-                    ) : (
-                      <div className="wb-scroll mt-2 max-h-64 space-y-3 overflow-y-auto pr-1">
-                        {assetGroups.map((group) => {
-                          const visible = selectAllAssets
-                            ? group.assets
-                            : group.assets.filter((a) => !assetSearch.trim() || a.value.toLowerCase().includes(assetSearch.toLowerCase()) || a.name.toLowerCase().includes(assetSearch.toLowerCase()));
-                          if (visible.length === 0) return null;
-                          const allSelected = selectAllAssets || visible.every((a) => selectedAssetIds.has(a.id));
-                          return (
-                            <div key={group.name}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (selectAllAssets) return;
-                                  setSelectedAssetIds((prev) => {
-                                    const next = new Set(prev);
-                                    for (const a of visible) {
-                                      if (allSelected) next.delete(a.id); else next.add(a.id);
-                                    }
-                                    return next;
-                                  });
-                                }}
-                                className="mb-1 flex w-full items-center gap-2 text-left"
-                              >
-                                <span className={cx("flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[12px]", allSelected ? "border-gold-400/50 bg-gold-400/20 text-gold-300" : "border-phantix-600 text-transparent")}>
-                                  {allSelected ? "✓" : ""}
-                                </span>
-                                <span className="wb-2xs font-semibold uppercase tracking-wider text-slate-400">{group.name}</span>
-                                <span className="wb-2xs text-slate-600">{visible.length} asset{visible.length === 1 ? "" : "s"}</span>
-                              </button>
-                              <div className="space-y-1 pl-5">
-                                {visible.map((a) => (
-                                  <label
-                                    key={a.id}
-                                    className={cx(
-                                      "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
-                                      selectAllAssets ? "opacity-60" : "hover:bg-phantix-800/50",
-                                      selectedAssetIds.has(a.id) && !selectAllAssets && "bg-phantix-800/40",
-                                    )}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectAllAssets || selectedAssetIds.has(a.id)}
-                                      disabled={selectAllAssets}
-                                      onChange={(e) => {
-                                        setSelectedAssetIds((prev) => {
-                                          const next = new Set(prev);
-                                          if (e.target.checked) next.add(a.id); else next.delete(a.id);
-                                          return next;
-                                        });
-                                      }}
-                                      className="h-3 w-3 shrink-0 accent-gold-400"
-                                    />
-                                    <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", a.criticality === "critical" ? "bg-severity-critical" : a.criticality === "high" ? "bg-severity-high" : a.criticality === "medium" ? "bg-severity-medium" : "bg-severity-low")} />
-                                    <span className="wb-xs min-w-0 flex-1 truncate font-mono text-slate-200">{a.value}</span>
-                                    <span className="wb-2xs shrink-0 uppercase tracking-wider text-slate-500">{humanize(a.asset_type)}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <p className="wb-2xs mt-1.5 text-slate-600">
-                      {selectAllAssets
-                        ? `${orgAssets.length} asset${orgAssets.length === 1 ? "" : "s"} selected (all)`
-                        : `${selectedAssetIds.size} of ${orgAssets.length} selected`}
-                    </p>
-                  </div>
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-slate-400">Rules of engagement</span>
-                    <input
-                      value={newRoe}
-                      onChange={(e) => setNewRoe(e.target.value)}
-                      placeholder="e.g. Business hours only, no destructive actions"
-                      className="wb-sm w-full rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40"
-                    />
-                    <span className="mt-1 block text-[12px] leading-4 text-slate-600">Optional. Defaults to authorized targets only, no destructive actions.</span>
-                  </label>
-                  <div className="space-y-2">
-                    <span className="block text-xs font-semibold text-slate-400">Testing mode</span>
-                    <TestingModePicker value={newMode} onChange={setNewMode} disabled={creating} />
-                    <span className="block text-[12px] leading-4 text-slate-600">
-                      {TESTING_MODES.find((m) => m.id === newMode)?.description}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="block text-xs font-semibold text-slate-400">
-                      Engagement context. This answers the agent up front, so it does not stop to ask.
-                    </span>
-                    <EngagementContextFields
-                      mode={newMode}
-                      values={engContext}
-                      onChange={setEngContext}
-                      disabled={creating}
-                    />
-                  </div>
-                  <button onClick={() => void createEngagement()} disabled={creating} className="btn-primary w-full !py-2 wb-sm">
-                    {creating ? <Loader2 size={12} className="mr-1 animate-spin inline" /> : <Plus size={12} className="mr-1 inline" />} Create engagement
-                  </button>
-                </motion.div>
-              )}
-
               {engLoading ? (
                 <div className="space-y-2">
                   <div className="skeleton h-16 rounded-xl" />
@@ -1507,8 +1381,13 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {engagements.length === 0 && !createOpen && (
-                    <p className="wb-sm rounded-xl border border-dashed border-phantix-700/50 px-3 py-4 text-center text-slate-500">No engagements yet. Create one with a tight allowlist to start.</p>
+                  {engagements.length === 0 && (
+                    <div className="wb-sm rounded-xl border border-dashed border-phantix-700/50 px-3 py-4 text-center text-slate-500">
+                      <p>No engagements yet. Create one with a tight allowlist to start.</p>
+                      <button onClick={() => setCreateOpen(true)} className="btn-primary mt-3 !px-3 !py-1.5 wb-xs">
+                        <Plus size={12} className="mr-1 inline" /> New engagement
+                      </button>
+                    </div>
                   )}
                   {engagements.map((e) => (
                     <div key={e.id} className="relative">
@@ -1975,6 +1854,171 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
             </div>
           );
         })()}
+      </Modal>
+
+      {/* New engagement. An overlay rather than an inline form, so the asset
+          picker and context fields get room; closing keeps the draft. */}
+      <Modal open={createOpen} onClose={() => !creating && setCreateOpen(false)} title="New engagement" wide>
+        <div className="space-y-5">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-slate-400">Engagement name</span>
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Lab external web"
+                  className="wb-sm w-full rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-slate-400">Rules of engagement</span>
+                <textarea
+                  value={newRoe}
+                  onChange={(e) => setNewRoe(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Business hours only, no destructive actions"
+                  className="wb-sm w-full resize-y rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40"
+                />
+                <span className="mt-1 block text-[12px] leading-4 text-slate-600">Optional. Defaults to authorized targets only, no destructive actions.</span>
+              </label>
+              <div className="space-y-2">
+                <span className="block text-xs font-semibold text-slate-400">Testing mode</span>
+                <TestingModePicker value={newMode} onChange={setNewMode} disabled={creating} />
+                <span className="block text-[12px] leading-4 text-slate-600">
+                  {TESTING_MODES.find((m) => m.id === newMode)?.description}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex min-h-0 flex-col rounded-lg border border-phantix-700/50 bg-phantix-950/60 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="wb-pane-title">Target assets</p>
+                  <p className="mt-0.5 text-[12px] leading-4 text-slate-500">
+                    Pick the assets this engagement may touch. Only selected assets become allowlist targets.
+                  </p>
+                </div>
+                <label className="wb-xs flex shrink-0 cursor-pointer items-center gap-1.5 pt-0.5 text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={selectAllAssets}
+                    onChange={(e) => setSelectAllAssets(e.target.checked)}
+                    className="h-3 w-3 accent-gold-400"
+                  />
+                  Select all
+                </label>
+              </div>
+              <input
+                value={assetSearch}
+                onChange={(e) => setAssetSearch(e.target.value)}
+                placeholder={selectAllAssets ? "All assets selected" : "Search assets…"}
+                disabled={selectAllAssets}
+                className="wb-xs mt-2 w-full rounded-md border border-phantix-700/50 bg-phantix-950/70 px-2 py-1.5 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40 disabled:opacity-50"
+              />
+              {assetLoading ? (
+                <p className="wb-xs py-3 text-center text-slate-500"><Loader2 size={11} className="mr-1 animate-spin inline" /> Loading assets…</p>
+              ) : orgAssets.length === 0 ? (
+                <p className="wb-xs py-3 text-center text-slate-500">No assets in your inventory yet. Add assets first, then create an engagement.</p>
+              ) : (
+                <div className="wb-scroll mt-2 max-h-[min(40vh,360px)] min-h-[160px] space-y-3 overflow-y-auto pr-1">
+                  {assetGroups.map((group) => {
+                    const visible = selectAllAssets
+                      ? group.assets
+                      : group.assets.filter((a) => !assetSearch.trim() || a.value.toLowerCase().includes(assetSearch.toLowerCase()) || a.name.toLowerCase().includes(assetSearch.toLowerCase()));
+                    if (visible.length === 0) return null;
+                    const allSelected = selectAllAssets || visible.every((a) => selectedAssetIds.has(a.id));
+                    return (
+                      <div key={group.name}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectAllAssets) return;
+                            setSelectedAssetIds((prev) => {
+                              const next = new Set(prev);
+                              for (const a of visible) {
+                                if (allSelected) next.delete(a.id); else next.add(a.id);
+                              }
+                              return next;
+                            });
+                          }}
+                          className="mb-1 flex w-full items-center gap-2 text-left"
+                        >
+                          <span className={cx("flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[12px]", allSelected ? "border-gold-400/50 bg-gold-400/20 text-gold-300" : "border-phantix-600 text-transparent")}>
+                            {allSelected ? "✓" : ""}
+                          </span>
+                          <span className="wb-2xs font-semibold uppercase tracking-wider text-slate-400">{group.name}</span>
+                          <span className="wb-2xs text-slate-600">{visible.length} asset{visible.length === 1 ? "" : "s"}</span>
+                        </button>
+                        <div className="space-y-1 pl-5">
+                          {visible.map((a) => (
+                            <label
+                              key={a.id}
+                              className={cx(
+                                "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
+                                selectAllAssets ? "opacity-60" : "hover:bg-phantix-800/50",
+                                selectedAssetIds.has(a.id) && !selectAllAssets && "bg-phantix-800/40",
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectAllAssets || selectedAssetIds.has(a.id)}
+                                disabled={selectAllAssets}
+                                onChange={(e) => {
+                                  setSelectedAssetIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked) next.add(a.id); else next.delete(a.id);
+                                    return next;
+                                  });
+                                }}
+                                className="h-3 w-3 shrink-0 accent-gold-400"
+                              />
+                              <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", a.criticality === "critical" ? "bg-severity-critical" : a.criticality === "high" ? "bg-severity-high" : a.criticality === "medium" ? "bg-severity-medium" : "bg-severity-low")} />
+                              <span className="wb-xs min-w-0 flex-1 truncate font-mono text-slate-200">{a.value}</span>
+                              <span className="wb-2xs shrink-0 uppercase tracking-wider text-slate-500">{humanize(a.asset_type)}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="wb-2xs mt-2 text-slate-600">
+                {selectAllAssets
+                  ? `${orgAssets.length} asset${orgAssets.length === 1 ? "" : "s"} selected (all)`
+                  : `${selectedAssetIds.size} of ${orgAssets.length} selected`}
+                {` · max ${access?.agi.limits.max_allowlist_targets ?? 10} targets`}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-phantix-700/40 pt-4">
+            <span className="block text-xs font-semibold text-slate-400">
+              Engagement context. This answers the agent up front, so it does not stop to ask.
+            </span>
+            <EngagementContextFields
+              mode={newMode}
+              values={engContext}
+              onChange={setEngContext}
+              disabled={creating}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-phantix-700/40 pt-4">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(false)}
+              disabled={creating}
+              className="wb-sm rounded-lg border border-phantix-700/50 px-3 py-2 text-slate-300 hover:border-phantix-500/50"
+            >
+              Cancel
+            </button>
+            <button type="button" onClick={() => void createEngagement()} disabled={creating} className="btn-primary wb-sm">
+              {creating ? <Loader2 size={12} className="mr-1 animate-spin inline" /> : <Plus size={12} className="mr-1 inline" />} Create engagement
+            </button>
+          </div>
+        </div>
       </Modal>
 
       <Modal open={!!editEng} onClose={() => setEditEng(null)} title={`Engagement settings · ${editEng?.name ?? ""}`} wide>
