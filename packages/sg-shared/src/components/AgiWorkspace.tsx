@@ -18,6 +18,7 @@ import { groupStreamRows, openClarificationFrom } from "../agiStreamGroup";
 import { activityFor } from "../agiGraph";
 import { AgentActivityLine, QueuedPromptStrip, type QueuedPrompt } from "./AgiStream";
 import { loadAssetsBundle, loadAiUsage } from "../data";
+import { PlatformSetupLink, isIpLike, suggestDomain, useAupStatus, useVerifiedDomains } from "../platformSetup";
 import { tokens, isDemoMode } from "../api";
 import type { Asset } from "../types";
 import {
@@ -211,6 +212,16 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
   const [assetSearch, setAssetSearch] = useState("");
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<number>>(new Set());
   const [selectAllAssets, setSelectAllAssets] = useState(false);
+  // Only assets under a verified domain (or IPs covered by the AUP attestation)
+  // may enter an allowlist; the backend refuses anything else with
+  // `allowlist_unverified`, so the picker locks them up front.
+  const { coveredBy } = useVerifiedDomains();
+  const aupStatus = useAupStatus();
+  const assetAllowed = useCallback(
+    (a: Asset) => (isIpLike(a.value) ? Boolean(aupStatus.status?.covers_ip_targets) : Boolean(coveredBy(a.value))),
+    [coveredBy, aupStatus.status?.covers_ip_targets],
+  );
+  const allowedAssets = useMemo(() => orgAssets.filter(assetAllowed), [orgAssets, assetAllowed]);
 
   // Group the inventory by its first asset tag so the picker reads like the
   // asset inventory does — tagged groups first, untagged assets at the end.
@@ -405,8 +416,8 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
   const createEngagement = async () => {
     const max = access?.agi.limits.max_allowlist_targets ?? 10;
     const picked = selectAllAssets
-      ? orgAssets
-      : orgAssets.filter((a) => selectedAssetIds.has(a.id));
+      ? allowedAssets
+      : allowedAssets.filter((a) => selectedAssetIds.has(a.id));
     const targets = picked.map((a) => a.value.trim()).filter(Boolean).slice(0, max);
     if (!newName.trim() || targets.length === 0) {
       toast("error", selectAllAssets && orgAssets.length === 0 ? "No assets available yet. Add assets first." : "Name and at least one target asset are required");
@@ -442,6 +453,9 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     } catch (e) {
       const code = (e as any)?.detail?.code;
       if (code === "allowlist_too_large") toast("error", "Too many targets", `Reduce the allowlist (max ${max}).`);
+      else if (code === "allowlist_unverified") {
+        toast("error", "Verify the domain first", (e as any)?.detail?.message || "Every target must sit under a domain you have verified.");
+      }
       else toast("error", "Create failed", e instanceof Error ? e.message : "");
     } finally {
       setCreating(false);
@@ -1927,7 +1941,8 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                       ? group.assets
                       : group.assets.filter((a) => !assetSearch.trim() || a.value.toLowerCase().includes(assetSearch.toLowerCase()) || a.name.toLowerCase().includes(assetSearch.toLowerCase()));
                     if (visible.length === 0) return null;
-                    const allSelected = selectAllAssets || visible.every((a) => selectedAssetIds.has(a.id));
+                    const selectable = visible.filter(assetAllowed);
+                    const allSelected = selectable.length > 0 && (selectAllAssets || selectable.every((a) => selectedAssetIds.has(a.id)));
                     return (
                       <div key={group.name}>
                         <button
@@ -1936,7 +1951,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                             if (selectAllAssets) return;
                             setSelectedAssetIds((prev) => {
                               const next = new Set(prev);
-                              for (const a of visible) {
+                              for (const a of selectable) {
                                 if (allSelected) next.delete(a.id); else next.add(a.id);
                               }
                               return next;
@@ -1951,19 +1966,22 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                           <span className="wb-2xs text-slate-600">{visible.length} asset{visible.length === 1 ? "" : "s"}</span>
                         </button>
                         <div className="space-y-1 pl-5">
-                          {visible.map((a) => (
+                          {visible.map((a) => {
+                            const allowed = assetAllowed(a);
+                            return (
                             <label
                               key={a.id}
+                              title={allowed ? undefined : "Outside your verified domains. Verify the domain to test it."}
                               className={cx(
-                                "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
-                                selectAllAssets ? "opacity-60" : "hover:bg-phantix-800/50",
-                                selectedAssetIds.has(a.id) && !selectAllAssets && "bg-phantix-800/40",
+                                "flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
+                                !allowed ? "cursor-not-allowed opacity-50" : selectAllAssets ? "cursor-pointer opacity-60" : "cursor-pointer hover:bg-phantix-800/50",
+                                allowed && selectedAssetIds.has(a.id) && !selectAllAssets && "bg-phantix-800/40",
                               )}
                             >
                               <input
                                 type="checkbox"
-                                checked={selectAllAssets || selectedAssetIds.has(a.id)}
-                                disabled={selectAllAssets}
+                                checked={allowed && (selectAllAssets || selectedAssetIds.has(a.id))}
+                                disabled={selectAllAssets || !allowed}
                                 onChange={(e) => {
                                   setSelectedAssetIds((prev) => {
                                     const next = new Set(prev);
@@ -1975,9 +1993,18 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                               />
                               <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", a.criticality === "critical" ? "bg-severity-critical" : a.criticality === "high" ? "bg-severity-high" : a.criticality === "medium" ? "bg-severity-medium" : "bg-severity-low")} />
                               <span className="wb-xs min-w-0 flex-1 truncate font-mono text-slate-200">{a.value}</span>
-                              <span className="wb-2xs shrink-0 uppercase tracking-wider text-slate-500">{humanize(a.asset_type)}</span>
+                              {!allowed && !isIpLike(a.value) ? (
+                                <PlatformSetupLink task={{ kind: "verify_domain", domain: suggestDomain(a.value) }} className="wb-2xs shrink-0">
+                                  Verify
+                                </PlatformSetupLink>
+                              ) : !allowed ? (
+                                <span className="wb-2xs shrink-0 text-slate-500">needs AUP</span>
+                              ) : (
+                                <span className="wb-2xs shrink-0 uppercase tracking-wider text-slate-500">{humanize(a.asset_type)}</span>
+                              )}
                             </label>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -1986,8 +2013,9 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
               )}
               <p className="wb-2xs mt-2 text-slate-600">
                 {selectAllAssets
-                  ? `${orgAssets.length} asset${orgAssets.length === 1 ? "" : "s"} selected (all)`
-                  : `${selectedAssetIds.size} of ${orgAssets.length} selected`}
+                  ? `${allowedAssets.length} verified asset${allowedAssets.length === 1 ? "" : "s"} selected (all)`
+                  : `${allowedAssets.filter((a) => selectedAssetIds.has(a.id)).length} of ${allowedAssets.length} verified selected`}
+                {orgAssets.length > allowedAssets.length && ` · ${orgAssets.length - allowedAssets.length} locked until verified`}
                 {` · max ${access?.agi.limits.max_allowlist_targets ?? 10} targets`}
               </p>
             </div>
