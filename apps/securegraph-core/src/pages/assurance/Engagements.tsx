@@ -122,7 +122,7 @@ export default function AssuranceHome() {
               <ul className="mt-3 divide-y divide-phantix-700/40">
                 {[...intel.controls_at_risk].sort((a, b) => Number(b.correlated) - Number(a.correlated) || b.source_count - a.source_count).slice(0, 10).map((c) => (
                   <li key={`${c.framework_id}:${c.control_id}`} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <span className="min-w-0 flex-1 font-mono text-sm text-slate-200">{c.framework_id} · {c.control_id}</span>
+                    <span className="min-w-[12rem] flex-1 font-mono text-sm text-slate-200">{c.framework_id} · {c.control_id}</span>
                     <SourceChips sources={c.sources} correlated={c.correlated} />
                     <span className="w-36 text-right text-xs text-slate-500">{c.audit_findings} audit · {c.peer_findings} other</span>
                   </li>
@@ -152,7 +152,7 @@ function NoAudits({ programs, regimes }: { programs: AuditProgram[]; regimes: Re
       {regimes && (regimes.source === "none" || regimes.source === "browser_locale") && (
         <Card className="mb-5 flex flex-wrap items-center gap-3">
           <Globe2 size={18} className="text-gold-400" />
-          <p className="min-w-0 flex-1 text-sm text-slate-300">
+          <p className="min-w-[12rem] flex-1 text-sm text-slate-300">
             {regimes.detected_country
               ? <>We guessed you're in <strong className="text-white">{regimes.detected_country}</strong> from your browser. Confirm it so we suggest the right laws.</>
               : "Tell us where you operate so we can suggest the laws and standards that apply."}

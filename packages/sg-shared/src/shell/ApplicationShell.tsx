@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import { useSidebarCollapsed } from "../useSidebarCollapsed";
 import { useApplicationNav } from "./useApplicationNav";
+import { MobileMoreSheet, MobileTabBar, SHEET_ROW, usePhoneTitle } from "./MobileShell";
+import { useTableCards } from "../useTableCards";
 import { ThemeToggle } from "../ThemeToggle";
 import { BrandMark, BrandWordmark } from "../components/BrandLogo";
 import { BrandLoader } from "../components/BrandLoader";
@@ -337,6 +339,13 @@ export function ApplicationShell({
     [backendNav, sandboxEnrolled],
   );
   const location = useLocation();
+  // Phones: bottom tab bar + "More" sheet, page title in the app bar, and data
+  // tables rendered as lists (labels copied from the column headers).
+  const [moreOpen, setMoreOpen] = useState(false);
+  const closeMore = useCallback(() => setMoreOpen(false), []);
+  const phoneTitle = usePhoneTitle(nav, APPLICATION_LABEL[application]);
+  const [mainEl, setMainEl] = useState<HTMLElement | null>(null);
+  useTableCards(mainEl);
   const [cards, setCards] = useState<ApplicationCard[] | null>(null);
   const [opening, setOpening] = useState<ApplicationKey | "">("");
   // Nothing (not even the shell) renders until identity + this application's
@@ -786,14 +795,18 @@ export function ApplicationShell({
           }`}
         >
           {/* Topbar */}
-          <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-phantix-700/60 bg-phantix-950 px-4 py-3 sm:px-6">
+          <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-phantix-700/60 bg-phantix-950 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-3 sm:px-6">
+            {/* Phones navigate with the bottom tab bar; the dropdown stays for tablets. */}
             <button
               onClick={() => setMobileNav((v) => !v)}
               aria-label={mobileNav ? "Close navigation" : "Open navigation"}
-              className="rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white lg:hidden"
+              className="hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:inline-flex lg:hidden"
             >
               {mobileNav ? <X size={18} /> : <Menu size={18} />}
             </button>
+            {/* Phone app bar: brand mark + the current page. */}
+            <BrandMark className="h-7 w-7 shrink-0 md:hidden" />
+            <span className="min-w-0 flex-1 truncate font-display text-[17px] font-bold text-white md:hidden">{phoneTitle}</span>
 
             <button
               onClick={toggle}
@@ -827,7 +840,7 @@ export function ApplicationShell({
                 <CoreLink
                   path="/sandbox"
                   title="BETA sandbox"
-                  className="relative rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
+                  className="relative hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:block"
                 >
                   <FlaskConical size={16} />
                   <span className="absolute -right-1 -top-1 rounded-full bg-gold-400 px-1 font-mono text-[12px] font-bold leading-[1.2] text-phantix-950">
@@ -835,12 +848,15 @@ export function ApplicationShell({
                   </span>
                 </CoreLink>
               )}
-              <ThemeToggle />
+              {/* Phones: theme and issue reporting live in the More sheet. */}
+              <span className="hidden md:contents">
+                <ThemeToggle />
+              </span>
               <button
                 onClick={() => openFeedbackReporter()}
                 title="Report an issue"
                 aria-label="Report an issue"
-                className="rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
+                className="hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:inline-flex"
               >
                 <MessageSquareWarning size={16} />
               </button>
@@ -870,10 +886,15 @@ export function ApplicationShell({
 
               <div className="relative">
                 <button
-                  onClick={() => setUserMenu((v) => !v)}
+                  onClick={() => {
+                    // Phones: the account lives in the More sheet.
+                    if (window.matchMedia("(max-width: 767px)").matches) setMoreOpen(true);
+                    else setUserMenu((v) => !v);
+                  }}
                   aria-haspopup="menu"
                   aria-expanded={userMenu}
-                  className="flex items-center gap-2.5 rounded-md border border-phantix-700 bg-phantix-900 py-1.5 pl-1.5 pr-2.5 transition-colors hover:border-phantix-600"
+                  aria-label="Account"
+                  className="flex items-center gap-2.5 rounded-md border border-phantix-700 bg-phantix-900 p-1.5 transition-colors hover:border-phantix-600 md:pr-2.5"
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 font-display text-xs font-bold text-gold-300">
                     {(session?.userName ?? me?.full_name ?? "A").slice(0, 1).toUpperCase()}
@@ -886,7 +907,7 @@ export function ApplicationShell({
                       {org.name || me?.organization_name || APPLICATION_LABEL[application]}
                     </span>
                   </span>
-                  <ChevronDown size={14} className="text-slate-500" />
+                  <ChevronDown size={14} className="hidden text-slate-500 md:block" />
                 </button>
                 <AnimatePresence>
                   {userMenu && (
@@ -990,10 +1011,24 @@ export function ApplicationShell({
           <AnimatePresence>
             {mobileNav && (
               <motion.div
+                key="mobile-nav-scrim"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileNav(false)}
+                aria-hidden="true"
+                className="fixed inset-x-0 bottom-0 top-[57px] z-30 hidden bg-black/75 backdrop-blur-sm md:block lg:hidden"
+              />
+            )}
+            {mobileNav && (
+              // Tablets only (phones use the tab bar): an opaque, raised panel over
+              // a dimmed page, so it never reads as drawn onto the content.
+              <motion.div
+                key="mobile-nav-panel"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="fixed inset-x-0 top-[57px] z-40 max-h-[calc(100vh-57px)] overflow-y-auto border-b border-phantix-700/60 bg-phantix-950 shadow-card lg:hidden"
+                className="fixed inset-x-0 top-[57px] z-40 hidden max-h-[calc(100vh-57px)] overflow-y-auto border-b border-phantix-600/60 bg-[rgb(var(--surface-card))] shadow-2xl md:block lg:hidden"
               >
                 <nav className="space-y-1.5 px-3 py-4">{renderNav(false)}</nav>
                 <div className="border-t border-phantix-700/40 px-2.5 pb-3">
@@ -1056,7 +1091,10 @@ export function ApplicationShell({
           {/* The window scrolls, so the footer sits after the content instead of
               being pinned to the viewport. A page that asks for h-full still
               fills the space left between the header and the footer. */}
-          <main className="flex min-w-0 flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8">
+          <main
+            ref={setMainEl}
+            className="flex min-w-0 flex-1 flex-col px-4 pb-[calc(88px+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:py-6 lg:px-8"
+          >
             {/* The one content measure, defined here so page, skeleton and
                 shell cannot drift apart. 1600px is a backstop: an ultrawide
                 display should not stretch a table across a metre of glass. */}
@@ -1075,7 +1113,7 @@ export function ApplicationShell({
             </div>
           </main>
 
-          <footer className="flex items-center justify-between border-t border-phantix-700/60 px-6 py-4 text-[13px] text-slate-600 lg:px-8">
+          <footer className="hidden items-center justify-between border-t border-phantix-700/60 px-6 py-4 text-[13px] text-slate-600 md:flex lg:px-8">
             <span>
               Phantix Labs Ltd
               <span className="block">
@@ -1088,6 +1126,114 @@ export function ApplicationShell({
           </footer>
         </div>
       </div>
+
+      {/* Phone shell: bottom tabs from this app's nav, and the More sheet. */}
+      <MobileTabBar nav={nav} moreOpen={moreOpen} onMore={() => setMoreOpen((v) => !v)} />
+      <MobileMoreSheet
+        open={moreOpen}
+        onClose={closeMore}
+        nav={nav}
+        account={
+          <div className="flex items-center gap-3 rounded-2xl border border-phantix-700/50 bg-phantix-900/60 p-3.5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold-400/40 bg-phantix-850 font-display text-base font-bold text-gold-300">
+              {(session?.userName ?? me?.full_name ?? "A").slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-100">{session?.userName ?? me?.full_name ?? "Guest"}</p>
+              <p className="truncate text-xs text-slate-500">{org.name || me?.organization_name || APPLICATION_LABEL[application]}</p>
+              {me?.effective_role && (
+                <p className="mt-0.5 truncate font-mono text-[11px] uppercase tracking-wider text-slate-600">
+                  {me.effective_role === "no_session" ? "view only · no operate session" : me.effective_role}
+                </p>
+              )}
+            </div>
+            <span className="chip shrink-0 border-gold-400/30 bg-gold-400/10 text-[12px] text-gold-300">{APPLICATION_LABEL[application]}</span>
+          </div>
+        }
+        status={
+          <div className="rounded-2xl border border-phantix-700/50 bg-phantix-900/60 p-3.5">
+            <p className="text-[13px] font-semibold text-slate-400">{dualControl.policy_mode === "off" ? "Solo mode" : "Dual control"}</p>
+            {dualControl.policy_mode === "off" ? (
+              <p className="mt-1 text-[13px] text-slate-500">Sensitive actions ask for a code.</p>
+            ) : operate.unlocked ? (
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-emerald-300">Operating as {shortName(operate.actingUser ?? session?.userName)}</p>
+                <button onClick={() => lockOperate()} className="btn-ghost !px-2.5 !py-1 !text-xs"><Lock size={12} /> Lock</button>
+              </div>
+            ) : dualControl.configured ? (
+              <button
+                onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}
+                className="btn-primary mt-2 w-full justify-center !py-2.5 !text-sm"
+              >
+                <Unlock size={14} /> Unlock operate
+              </button>
+            ) : (
+              <p className="mt-1 text-[13px] text-slate-500">Not set up. Configure it on the Platform</p>
+            )}
+          </div>
+        }
+        apps={
+          <div className="grid grid-cols-2 gap-2">
+            {switcherItems.map((card) => (
+              <button
+                key={card.key}
+                type="button"
+                onClick={() => { closeMore(); openApp(card); }}
+                disabled={!card.accessible || opening === card.key || card.key === application}
+                className={`tap flex min-h-[52px] items-center justify-between gap-2 rounded-2xl border px-3.5 text-left text-sm ${
+                  card.key === application
+                    ? "border-gold-400/50 bg-gold-400/10 text-gold-300"
+                    : card.accessible
+                      ? "border-phantix-700/50 bg-phantix-900/60 text-slate-200"
+                      : "border-phantix-700/40 bg-phantix-900/40 text-slate-600"
+                }`}
+              >
+                <span className="flex items-center gap-2"><LayoutGrid size={15} /> {card.label}</span>
+                {card.key === application ? (
+                  <span className="text-[11px] uppercase">open</span>
+                ) : opening === card.key ? (
+                  <span className="text-[11px] uppercase text-slate-500">opening</span>
+                ) : !card.accessible ? (
+                  <Lock size={12} className="shrink-0" />
+                ) : null}
+              </button>
+            ))}
+          </div>
+        }
+        actions={
+          <>
+            {demoActive && (
+              <button
+                onClick={() => { closeMore(); switchToRealOrg(); window.location.assign(coreLoginUrl()); }}
+                className={`${SHEET_ROW} font-medium text-gold-300`}
+              >
+                <Building2 size={17} /> Switch to real organization
+              </button>
+            )}
+            <button onClick={() => { closeMore(); setPaletteOpen(true); }} className={`${SHEET_ROW} text-slate-200`}>
+              <Search size={17} /> Search
+            </button>
+            <a href={PLATFORM_IDENTITY_URL} className={`${SHEET_ROW} text-slate-200`}>
+              <ExternalLink size={17} /> Platform settings
+            </a>
+            <CoreLink path="/settings/privacy" title="Privacy and data requests" className={`${SHEET_ROW} text-slate-200`}>
+              <ShieldCheck size={17} /> Privacy and data requests
+            </CoreLink>
+            <CoreLink path="/docs" title="Documentation" className={`${SHEET_ROW} text-slate-200`}>
+              <BookOpen size={17} /> Documentation
+            </CoreLink>
+            <CoreLink path="/support" title="Support" className={`${SHEET_ROW} text-slate-200`}>
+              <LifeBuoy size={17} /> Support
+            </CoreLink>
+            <button onClick={() => { closeMore(); openFeedbackReporter(); }} className={`${SHEET_ROW} text-slate-200`}>
+              <MessageSquareWarning size={17} /> Report an issue
+            </button>
+            <button onClick={() => { closeMore(); signOut(); }} className={`${SHEET_ROW} text-severity-critical`}>
+              <LogOut size={17} /> Sign out
+            </button>
+          </>
+        }
+      />
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} index={searchIndex} />
 

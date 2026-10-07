@@ -836,12 +836,12 @@ export default function Dashboard() {
           className="mt-6 flex flex-wrap items-center gap-3 rounded-md border border-gold-400/30 bg-phantix-950 px-5 py-3.5"
         >
           <Zap size={16} className="shrink-0 text-gold-400" />
-          <p className="min-w-0 flex-1 text-xs leading-5 text-slate-400">
+          <p className="min-w-[12rem] flex-1 text-xs leading-5 text-slate-400">
             You&apos;re browsing read-only. Unlock operate mode for changes (tracker updates, report generation, intel refresh) when dual-control is configured.
           </p>
           <button
             type="button"
-            className="btn-primary !py-2 !text-xs"
+            className="btn-primary w-full justify-center !py-2 !text-xs sm:w-auto"
             onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}
           >
             Unlock operate

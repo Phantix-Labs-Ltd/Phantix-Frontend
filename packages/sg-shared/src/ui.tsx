@@ -132,7 +132,7 @@ export function CardHeader({
 }) {
   return (
     <div className="mb-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-      <div className="min-w-0 flex-1 basis-[12rem]">
+      <div className="min-w-[12rem] flex-1 basis-[12rem]">
         <h3 className="font-display text-[15px] font-semibold leading-snug text-slate-100">{title}</h3>
         {subtitle && <p className="mt-1 text-xs leading-5 text-slate-400 break-words">{subtitle}</p>}
       </div>
@@ -165,7 +165,7 @@ export function PageHeader({
     >
       {/* The basis keeps the title column readable: when the actions do not fit
           beside it, they wrap underneath instead of squeezing the text. */}
-      <div className="min-w-0 flex-1 basis-[18rem]">
+      <div className="min-w-[12rem] flex-1 basis-[18rem]">
         <h1 className="font-display text-[24px] font-bold leading-tight tracking-tight text-white">{title}</h1>
         {description && <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{description}</p>}
       </div>

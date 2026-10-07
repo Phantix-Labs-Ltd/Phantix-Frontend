@@ -57,7 +57,7 @@ export default function AssuranceRegimes() {
       <Card className="mb-5">
         <div className="flex flex-wrap items-start gap-4">
           <Globe2 size={20} className="mt-0.5 text-gold-400" />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-[12rem] flex-1">
             <p className="text-sm text-slate-300">
               {data.detected_country
                 ? <>Showing regimes for <strong className="text-white">{data.detected_country}</strong>{data.detected_region ? ` (${data.detected_region})` : ""}, from {SOURCE_COPY[data.source]}.</>

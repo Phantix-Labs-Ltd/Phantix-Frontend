@@ -95,7 +95,7 @@ export function UpsellBanner({
       )}
     >
       <Sparkle size={14} className="shrink-0 text-gold-300" />
-      <p className="min-w-0 flex-1 text-[13px] leading-5 text-gold-100/90">
+      <p className="min-w-[12rem] flex-1 text-[13px] leading-5 text-gold-100/90">
         <span className="font-semibold text-gold-200">{label}.</span> {detail}
       </p>
       <span className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-gold-300">
