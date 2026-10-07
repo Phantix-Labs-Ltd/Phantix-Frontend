@@ -9,14 +9,20 @@ import { useStore } from "@sg/store";
 import { ApiError } from "@sg/api";
 import {
   ANSWER_CHOICES,
+  ANSWER_STATUS_CHOICES,
+  ANSWER_STATUS_LABELS,
+  CLOUD_SERVICE_CHOICES,
+  CLOUD_SERVICE_LABELS,
   EMPTY_PROGRESS,
   loadQuestionnaire,
   rebuildQuestionnaire,
   startAnswererSession,
   submitAnswer,
   type AnswererAudit,
+  type AnswerStatus,
   type QuestionnaireList,
   type QuestionnaireQuestion,
+  type ScoreBreakdownRow,
 } from "@sg/complianceGrc";
 import { cx, humanize } from "@sg/utils";
 import DocLink from "@sg/components/DocLink";
@@ -99,12 +105,15 @@ export default function ComplianceQuestionnaire() {
   const [saving, setSaving] = useState<number | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
   const [audit, setAudit] = useState<QuestionnaireQuestion | null>(null);
+  // Cloud service scope: an NDPA cloud instrument only evaluates the services
+  // the organization actually operates. Empty means "no service filter".
+  const [services, setServices] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setData(await loadQuestionnaire());
+      setData(await loadQuestionnaire(undefined, undefined, services));
     } catch (e) {
       setError(
         e instanceof ApiError && e.status === 409
@@ -116,7 +125,7 @@ export default function ComplianceQuestionnaire() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [services]);
 
   useEffect(() => {
     void load();
@@ -217,9 +226,38 @@ export default function ComplianceQuestionnaire() {
       await submitAnswer({ sessionId, questionId: question.id, answerValue: value, notes });
       if (advance) next();
       // Progress, attestation score and colleagues' answers move together.
-      void loadQuestionnaire().then(setData).catch(() => {});
+      void loadQuestionnaire(undefined, undefined, services).then(setData).catch(() => {});
     } catch (e) {
       toast("error", "Answer not saved", e instanceof Error ? e.message : undefined);
+      void load();
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  // Remediation workflow state, kept separate from the answer value: the answer
+  // records the fact, the status records what is being done about it.
+  const setAnswerStatus = async (question: QuestionnaireQuestion, status: string) => {
+    const value = question.my_answer?.answer_value;
+    if (!sessionId || !value) return;
+    setSaving(question.id);
+    setData((d) => ({
+      ...d,
+      items: d.items.map((q) =>
+        q.id === question.id && q.my_answer ? { ...q, my_answer: { ...q.my_answer, answer_status: status } } : q,
+      ),
+    }));
+    try {
+      await submitAnswer({
+        sessionId,
+        questionId: question.id,
+        answerValue: value,
+        notes: question.my_answer?.notes ?? undefined,
+        answerStatus: status as AnswerStatus,
+      });
+      void loadQuestionnaire(undefined, undefined, services).then(setData).catch(() => {});
+    } catch (e) {
+      toast("error", "Status not saved", e instanceof Error ? e.message : undefined);
       void load();
     } finally {
       setSaving(null);
@@ -373,6 +411,53 @@ export default function ComplianceQuestionnaire() {
               </div>
             )}
 
+            <div className="mt-4 border-t border-phantix-700/40 pt-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                Cloud services you operate
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Only questions for the services you select are evaluated. Controls that are not
+                service-specific always apply.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setServices([])}
+                  aria-pressed={services.length === 0}
+                  className={cx(
+                    "chip transition-colors",
+                    services.length === 0
+                      ? "border-gold-400/40 bg-gold-400/10 text-gold-200"
+                      : "border-phantix-700 text-slate-400 hover:text-slate-200",
+                  )}
+                >
+                  All services
+                </button>
+                {CLOUD_SERVICE_CHOICES.map((svc) => {
+                  const on = services.includes(svc);
+                  return (
+                    <button
+                      key={svc}
+                      type="button"
+                      aria-pressed={on}
+                      title={CLOUD_SERVICE_LABELS[svc] ?? svc}
+                      onClick={() =>
+                        setServices((prev) => (prev.includes(svc) ? prev.filter((s) => s !== svc) : [...prev, svc]))
+                      }
+                      className={cx(
+                        "chip uppercase transition-colors",
+                        on
+                          ? "border-gold-400/40 bg-gold-400/10 text-gold-200"
+                          : "border-phantix-700 text-slate-400 hover:text-slate-200",
+                      )}
+                    >
+                      {svc}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <ul className="mt-4 space-y-1.5 text-sm text-slate-400">
               <li className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-emerald-400" />Each answer saves when you choose it. You can stop and come back at any time.</li>
               <li className="flex gap-2"><Flag size={15} className="mt-0.5 shrink-0 text-gold-300" />Not sure? Flag the question and return to it from the review screen.</li>
@@ -403,6 +488,61 @@ export default function ComplianceQuestionnaire() {
               </>
             )}
           </Card>
+
+          {(p.risk_band?.score != null || (p.by_service?.length ?? 0) > 0) && (
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="font-display text-[15px] font-semibold text-slate-100">Where the posture is weak</h3>
+                {p.risk_band?.score != null && (
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-2xl font-semibold text-white">{p.risk_band.score}</span>
+                    <span
+                      className={cx(
+                        "chip !py-0.5 uppercase",
+                        p.risk_band.id === "low"
+                          ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+                          : p.risk_band.id === "medium"
+                            ? "border-severity-medium/50 bg-severity-medium/10 text-severity-medium"
+                            : "border-severity-critical/50 bg-severity-critical/10 text-severity-critical",
+                      )}
+                    >
+                      {p.risk_band.label}
+                    </span>
+                    {p.ndpc?.cap_applied && (
+                      <span className="chip !py-0.5 border-phantix-700 text-slate-400" title={`Uncapped score ${p.uncapped_score ?? ""}`}>
+                        NDPC capped
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {([
+                ["By service", p.by_service],
+                ["By control domain", p.category_breakdown],
+              ] as [string, ScoreBreakdownRow[] | undefined][]).map(
+                ([heading, rows]) =>
+                  (rows?.length ?? 0) > 0 && (
+                    <div key={heading} className="mt-4">
+                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{heading}</p>
+                      <div className="mt-2 space-y-1.5">
+                        {rows!.map((row) => (
+                          <div key={row.key} className="flex items-center gap-3">
+                            <span className="w-40 shrink-0 truncate text-sm text-slate-300">{row.label}</span>
+                            <div className="min-w-0 flex-1">
+                              <ProgressBar value={row.score ?? 0} />
+                            </div>
+                            <span className="w-12 shrink-0 text-right font-mono text-sm text-slate-200">
+                              {row.score == null ? "—" : `${row.score}%`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ),
+              )}
+            </Card>
+          )}
 
           {(p.disclaimer || data.disclaimer) && (
             <p className="flex items-start gap-2 text-xs leading-5 text-slate-500">
@@ -448,6 +588,7 @@ export default function ComplianceQuestionnaire() {
               flagged={flags.has(current.id)}
               canAnswer={Boolean(sessionId)}
               onAnswer={(v, notes, advance) => void answer(current, v, notes, advance)}
+              onStatus={(s) => void setAnswerStatus(current, s)}
               onFlag={() => toggleFlag(current.id)}
               onShowAudit={() => setAudit(current)}
               onNeedRole={() => setRoleOpen(true)}
@@ -610,7 +751,7 @@ function Navigator({
 // ── One question ─────────────────────────────────────────────────────────────
 
 function QuestionCard({
-  question, number, total, section, saving, flagged, canAnswer, onAnswer, onFlag, onShowAudit, onNeedRole,
+  question, number, total, section, saving, flagged, canAnswer, onAnswer, onStatus, onFlag, onShowAudit, onNeedRole,
 }: {
   question: QuestionnaireQuestion;
   number: number;
@@ -620,6 +761,7 @@ function QuestionCard({
   flagged: boolean;
   canAnswer: boolean;
   onAnswer: (value: Choice, notes?: string, advance?: boolean) => void;
+  onStatus: (status: AnswerStatus) => void;
   onFlag: () => void;
   onShowAudit: () => void;
   onNeedRole: () => void;
@@ -655,6 +797,11 @@ function QuestionCard({
       <h2 className="mt-2 font-display text-lg font-semibold leading-snug text-slate-100">{question.prompt}</h2>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {question.service && (
+          <span className="chip !py-0.5 border-phantix-600 bg-phantix-800/60 uppercase text-slate-200">
+            {question.service}
+          </span>
+        )}
         {question.framework_ids.map((f) => (
           <span key={f} className="chip !py-0.5 border-phantix-700 uppercase text-phantix-300">{f.replace(/_/g, " ")}</span>
         ))}
@@ -665,6 +812,42 @@ function QuestionCard({
           </button>
         )}
       </div>
+
+      {question.remediation && (
+        <p className="mt-3 rounded-md border border-gold-400/25 bg-gold-400/[0.06] px-3 py-2 text-[13px] leading-5 text-slate-300">
+          <span className="font-semibold uppercase tracking-wider text-gold-300">Remediation </span>
+          {question.remediation}
+        </p>
+      )}
+
+      {question.my_answer && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Remediation status</span>
+          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Remediation status">
+            {ANSWER_STATUS_CHOICES.map((s) => {
+              const on = ((question.my_answer?.answer_status as string) ?? "open") === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  disabled={saving}
+                  onClick={() => !on && onStatus(s)}
+                  className={cx(
+                    "chip !py-0.5 transition-colors disabled:opacity-60",
+                    on
+                      ? "border-gold-400/40 bg-gold-400/10 text-gold-200"
+                      : "border-phantix-700 text-slate-400 hover:text-slate-200",
+                  )}
+                >
+                  {ANSWER_STATUS_LABELS[s]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {question.help_text && (
         <div className="mt-3">

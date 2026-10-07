@@ -9,7 +9,7 @@ import { publicErrorMessage } from "../api";
 import { highlightCode } from "../highlighter";
 import {
   loadCodeBlob, loadCodeFinding, loadCodeFindingFiles, loadCodeFindings,
-  explainCodeFinding, openCodeAutofixPr, setCodeFindingStatus,
+  explainCodeFinding, openCodeAutofixPr, resourceOf, setCodeFindingStatus,
 } from "../codeOps";
 import type {
   CodeAiExplanation, CodeBlob, CodeFinding, CodeFindingFile, CodeSeverityCounts, Repo,
@@ -17,6 +17,7 @@ import type {
 import { useStore } from "../store";
 import { cx, timeAgo } from "../utils";
 import type { Severity } from "../types";
+import SeverityCounts from "./SeverityCounts";
 
 // ── Code review — the GitHub-style finding view ──────────────────────────────
 // Files on the left, the selected file's findings beneath them, and on the right
@@ -35,6 +36,11 @@ const LAYER_LABEL: Record<string, string> = {
   pipeline: "Pipeline",
   malware: "Malware",
 };
+
+/**
+ * The cloud resource a finding concerns — shared with the scan detail table via
+ * `codeOps.resourceOf`, so both read the same two shapes.
+ */
 
 /** Literal classes — Tailwind only generates what it can see in the source, so
  *  these cannot be built from a template string. */
@@ -331,6 +337,11 @@ function FindingDetail({
               {finding.cwe && (
                 <span className="chip text-[12px] border-phantix-600/40 bg-phantix-800/50 text-slate-300">{finding.cwe}</span>
               )}
+              {finding.rule_id && (
+                <span className="chip text-[12px] border-phantix-600/40 bg-phantix-800/50 font-mono text-slate-300" title="Rule id">
+                  {finding.rule_id}
+                </span>
+              )}
               {finding.status === "dismissed" && (
                 <span className="chip text-[12px] border-amber-400/30 bg-amber-400/10 text-amber-300">dismissed</span>
               )}
@@ -344,6 +355,12 @@ function FindingDetail({
               {finding.occurrences && finding.occurrences > 1 ? ` · seen in ${finding.occurrences} runs` : ""}
               {finding.last_seen_at ? ` · ${timeAgo(finding.last_seen_at)}` : ""}
             </p>
+            {resourceOf(finding) && (
+              <p className="mt-1 truncate font-mono text-xs text-slate-500" title="Cloud resource">
+                <span className="text-slate-600">resource </span>
+                {resourceOf(finding)}
+              </p>
+            )}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             <button className="btn-ghost !py-1.5 !text-xs" disabled={statusBusy} onClick={() => void toggleStatus()}>
@@ -551,14 +568,7 @@ export default function CodeReview({ repos }: { repos: Repo[] }) {
           <option value="all">All</option>
         </select>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          {(["critical", "high", "medium", "low"] as const).map((sev) =>
-            counts[sev] ? (
-              <span key={sev} className="chip text-[12px] border-phantix-600/40 bg-phantix-800/50 text-slate-300">
-                <span className={cx("mr-1 inline-block h-1.5 w-1.5 rounded-full", SEV_DOT[sev])} />
-                {counts[sev]} {sev}
-              </span>
-            ) : null,
-          )}
+          <SeverityCounts counts={counts} severities={["critical", "high", "medium", "low"]} />
           <button className="btn-ghost !px-2 !py-1.5 !text-xs" onClick={refreshAll} title="Refresh">
             <RefreshCw size={12} className={cx("inline", loading && "animate-spin")} />
           </button>
