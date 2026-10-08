@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import type { AnimationItem } from "lottie-web/build/player/lottie_svg";
+import type { AnimationItem } from "lottie-web/build/player/lottie_light";
 
 interface LottiePlayerProps {
   /** Inline Lottie JSON. */
@@ -39,7 +39,9 @@ export default function LottiePlayer({
     let cancelled = false;
     // The player (~240 KB) is decorative, so it loads with the first animation
     // that mounts instead of riding in every application's first-paint bundle.
-    void import("lottie-web/build/player/lottie_svg").then(({ default: lottie }) => {
+    // The light build has no After Effects expression engine, which runs
+    // expressions through eval() — blocked by the apps' CSP (no unsafe-eval).
+    void import("lottie-web/build/player/lottie_light").then(({ default: lottie }) => {
       if (cancelled) return;
       const anim = lottie.loadAnimation({
         container: el,
