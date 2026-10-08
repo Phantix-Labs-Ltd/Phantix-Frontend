@@ -499,7 +499,7 @@ export default function Vapt() {
           <Card pad="sm" className="border-severity-medium/30 bg-severity-medium/5 !py-2">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <UserCheck size={16} className="shrink-0 text-severity-medium" />
-              <div className="min-w-0 flex-1 text-sm">
+              <div className="min-w-[12rem] flex-1 text-sm">
                 <span className="font-semibold text-slate-100">{pending.length} approval{pending.length > 1 ? "s" : ""} waiting</span>
                 <span className="ml-2 text-xs text-slate-400">
                   {pending[0].step} --- requires the <strong>{pending[0].role_required}</strong>
@@ -953,7 +953,7 @@ export default function Vapt() {
                       <button key={f.id} className="block w-full text-left" onClick={() => setFindingSelected(f)}>
                         <div className="rounded-lg border border-phantix-700/40 bg-phantix-950/50 p-3 transition-colors hover:border-gold-400/30 hover:bg-phantix-900/50">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="min-w-0 flex-1 text-sm text-slate-200 truncate">{f.title}</p>
+                            <p className="min-w-[12rem] flex-1 text-sm text-slate-200 truncate">{f.title}</p>
                             <SeverityBadge severity={f.severity} />
                             <VerificationBadge status={f.verification_status} />
                             {f.impact_level && <ImpactBadge level={f.impact_level} score={f.impact_score} />}
@@ -1003,7 +1003,7 @@ export default function Vapt() {
               <button className="block w-full text-left" onClick={() => setFindingSelected(f)}>
                 <Card hover className="!p-4">
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-[12rem] flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-slate-100">{f.title}</p>
                         {isReportable(f) ? <span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">reportable</span> : <span className="chip text-[12px] border-slate-500/30 bg-slate-500/10 text-slate-500">held</span>}

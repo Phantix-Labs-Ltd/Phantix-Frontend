@@ -105,7 +105,7 @@ export function AssuranceMonitoring() {
             {rows.map((c) => (
               <li key={c.id}>
                 <button className="flex w-full flex-wrap items-center gap-3 px-5 py-3 text-left hover:bg-phantix-800/40" onClick={() => setDetail(c)}>
-                  <span className="min-w-0 flex-1 font-mono text-sm text-slate-200">{c.framework_id} · {c.control_id}</span>
+                  <span className="min-w-[12rem] flex-1 break-all font-mono text-sm text-slate-200">{c.framework_id} · {c.control_id}</span>
                   <span className="text-xs text-slate-500">{c.source}</span>
                   <span className={cx("w-20 text-xs font-semibold", TONE[c.status])}>{LABEL[c.status]}</span>
                   <span className="w-24 text-right text-xs text-slate-500">{c.last_checked_at ? timeAgo(c.last_checked_at) : "never"}</span>

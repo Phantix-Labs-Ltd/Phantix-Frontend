@@ -14,6 +14,32 @@ import * as demo from "./demo-data";
 /** Server-accepted answers for `answer_type: yes_no_partial` questions. */
 export const ANSWER_CHOICES = ["yes", "no", "partial", "na"] as const;
 
+/** Per-question remediation workflow state, separate from the answer value. */
+export const ANSWER_STATUS_CHOICES = ["open", "in_progress", "resolved"] as const;
+export type AnswerStatus = (typeof ANSWER_STATUS_CHOICES)[number];
+
+export const ANSWER_STATUS_LABELS: Record<AnswerStatus, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  resolved: "Resolved",
+};
+
+/**
+ * Cloud services an NDPA cloud instrument can be scoped to. Only questions for
+ * the services an organization operates are evaluated; unscoped controls always
+ * apply.
+ */
+export const CLOUD_SERVICE_CHOICES = ["ec2", "s3", "rds", "sqs", "sns"] as const;
+export type CloudService = (typeof CLOUD_SERVICE_CHOICES)[number];
+
+export const CLOUD_SERVICE_LABELS: Record<string, string> = {
+  ec2: "Elastic Compute (EC2)",
+  s3: "Simple Storage (S3)",
+  rds: "Relational Database (RDS)",
+  sqs: "Simple Queue (SQS)",
+  sns: "Simple Notification (SNS)",
+};
+
 export interface AnswererSession {
   id: number;
   organization_id: number;
@@ -35,6 +61,7 @@ export interface AnswererAudit {
   stated_title: string | null;
   answer_value: string;
   notes: string | null;
+  answer_status?: AnswerStatus | string | null;
   updated_at: string | null;
 }
 
@@ -49,6 +76,10 @@ export interface QuestionnaireQuestion {
   framework_ids: string[];
   source_controls: unknown[];
   sort_order: number;
+  /** Cloud service this control applies to, when the instrument is service-scoped. */
+  service?: string | null;
+  /** One-line prescriptive fix shown against the question. */
+  remediation?: string | null;
   my_answer: AnswererAudit | null;
   answers_from_others: AnswererAudit[];
   answer_count: number;
@@ -62,6 +93,29 @@ export interface ComplianceLevel {
   band: string | null;
 }
 
+/** Regulator-facing three-band view used on NDPA-style reports. */
+export interface RiskBand {
+  id: string;
+  label: string;
+  score: number | null;
+  thresholds?: Record<string, number>;
+}
+
+/** One row of the per-domain or per-service score breakdown. */
+export interface ScoreBreakdownRow {
+  key: string;
+  label: string;
+  score: number | null;
+  risk_band?: RiskBand;
+  level?: ComplianceLevel;
+  questions: number;
+  yes_count: number;
+  no_count: number;
+  partial_count: number;
+  unanswered: number;
+  not_applicable: number;
+}
+
 export interface QuestionnaireProgress {
   organization_id: number;
   applicable_frameworks: string[];
@@ -71,8 +125,22 @@ export interface QuestionnaireProgress {
   percent_complete: number;
   total_answer_events: number;
   by_category: Record<string, unknown>;
+  /** Per-domain rows, worst-first. */
+  category_breakdown?: ScoreBreakdownRow[];
+  /** Per-service rows, worst-first. */
+  by_service?: ScoreBreakdownRow[];
   attestation_score: number | null;
+  /** The raw arithmetic before any NDPC cap. */
+  uncapped_score?: number | null;
   compliance_level: ComplianceLevel;
+  risk_band?: RiskBand;
+  ndpc?: {
+    cap?: number | null;
+    cap_applied?: boolean;
+    uncapped_score?: number | null;
+    /** The score after the cap, which is what `attestation_score` reports. */
+    reported_score?: number | null;
+  };
   yes_count: number;
   no_count: number;
   partial_count: number;
@@ -103,8 +171,13 @@ export const EMPTY_PROGRESS: QuestionnaireProgress = {
   percent_complete: 0,
   total_answer_events: 0,
   by_category: {},
+  category_breakdown: [],
+  by_service: [],
   attestation_score: null,
+  uncapped_score: null,
   compliance_level: EMPTY_LEVEL,
+  risk_band: { id: "unknown", label: "Not assessed", score: null },
+  ndpc: {},
   yes_count: 0,
   no_count: 0,
   partial_count: 0,
@@ -113,11 +186,6 @@ export const EMPTY_PROGRESS: QuestionnaireProgress = {
   disclaimer_short: "Self-attestation only. This is not a substitute for a GRC specialist audit.",
   replaces_certified_audit: false,
 };
-
-function frameworkQuery(frameworks?: string[]): string {
-  const list = (frameworks ?? []).filter(Boolean);
-  return list.length ? `?frameworks=${encodeURIComponent(list.join(","))}` : "";
-}
 
 /**
  * Declare the answering role. The server requires this before any answer is
@@ -142,30 +210,41 @@ export async function startAnswererSession(statedRole: string, statedTitle?: str
   });
 }
 
-export async function loadQuestionnaire(frameworks?: string[], category?: string) {
+export async function loadQuestionnaire(frameworks?: string[], category?: string, services?: string[]) {
   if (isDemoMode()) {
     await delay();
     // The server filters the item list server-side and reports `total` for the
     // filtered set; progress stays org-wide across all applicable frameworks.
-    const items = category
-      ? demo.questionnaire.items.filter((q) => q.category === category)
-      : demo.questionnaire.items;
+    let items = demo.questionnaire.items;
+    if (category) items = items.filter((q) => q.category === category);
+    if (services?.length) {
+      const wanted = new Set(services);
+      items = items.filter((q) => !q.service || wanted.has(String(q.service)));
+    }
     return { ...demo.questionnaire, items, total: items.length };
   }
   const params = new URLSearchParams();
   const fws = (frameworks ?? []).filter(Boolean);
   if (fws.length) params.set("frameworks", fws.join(","));
   if (category) params.set("category", category);
+  const svcs = (services ?? []).filter(Boolean);
+  if (svcs.length) params.set("services", svcs.join(","));
   const qs = params.toString();
   return api.get<QuestionnaireList>(`/compliance/questionnaire/questions${qs ? `?${qs}` : ""}`);
 }
 
-export async function loadProgress(frameworks?: string[]) {
+export async function loadProgress(frameworks?: string[], services?: string[]) {
   if (isDemoMode()) {
     await delay(220);
     return demo.questionnaireProgressSummary;
   }
-  return api.get<QuestionnaireProgress>(`/compliance/questionnaire/progress${frameworkQuery(frameworks)}`);
+  const params = new URLSearchParams();
+  const fws = (frameworks ?? []).filter(Boolean);
+  if (fws.length) params.set("frameworks", fws.join(","));
+  const svcs = (services ?? []).filter(Boolean);
+  if (svcs.length) params.set("services", svcs.join(","));
+  const qs = params.toString();
+  return api.get<QuestionnaireProgress>(`/compliance/questionnaire/progress${qs ? `?${qs}` : ""}`);
 }
 
 export async function submitAnswer(input: {
@@ -173,6 +252,7 @@ export async function submitAnswer(input: {
   questionId: number;
   answerValue: string;
   notes?: string;
+  answerStatus?: AnswerStatus | "";
 }) {
   if (isDemoMode()) {
     await delay(260);
@@ -184,6 +264,7 @@ export async function submitAnswer(input: {
       session_id: input.sessionId,
       question_id: input.questionId,
       answer_value: input.answerValue,
+      ...(input.answerStatus ? { answer_status: input.answerStatus } : {}),
       ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
     },
   );

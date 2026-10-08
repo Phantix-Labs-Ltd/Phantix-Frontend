@@ -214,7 +214,7 @@ export function SetupRequired({ needs, action }: { needs: Prerequisite[]; action
         {missing.map((n, i) => (
           <li key={n} className="flex flex-wrap items-start gap-3">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gold-400/40 text-xs text-gold-300">{i + 1}</span>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-[12rem] flex-1">
               <p className="text-sm text-slate-200">{PREREQ[n].label}</p>
               <p className="mt-0.5 text-[13px] text-slate-400">{PREREQ[n].detail}</p>
             </div>

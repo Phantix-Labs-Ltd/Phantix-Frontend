@@ -496,6 +496,15 @@ export default function AlertNotifications() {
   const pushOn = useRef(false);
   pushOn.current = push_.subscribed;
   const [pinned, setPinned] = useState<AlertNotice[]>([]);
+  // Phones show one notice at a time (the newest; a pinned critical first) so a
+  // burst never buries the screen. Everything still lands in the bell's inbox.
+  const [phone, setPhone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
   const seenRef = useRef<Set<string>>(new Set());
 
   const dismissToast = (n: AlertNotice) => setToasts((s) => s.filter((x) => noticeKey(x) !== noticeKey(n)));
@@ -565,9 +574,9 @@ export default function AlertNotifications() {
   }, [surface]);
 
   return (
-    <div className="pointer-events-none fixed right-4 top-16 z-[90] flex w-[22rem] max-w-[calc(100vw-32px)] flex-col gap-2" aria-live="polite">
+    <div className="pointer-events-none fixed inset-x-3 top-[calc(64px+env(safe-area-inset-top))] z-[90] flex flex-col gap-2 md:inset-x-auto md:right-4 md:top-16 md:w-[22rem] md:max-w-[calc(100vw-32px)]" aria-live="polite">
       <AnimatePresence>
-        {pinned.map((n) => (
+        {(phone ? pinned.slice(0, 1) : pinned).map((n) => (
           <motion.div
             key={`p-${noticeKey(n)}`}
             initial={{ opacity: 0, x: 60 }}
@@ -603,7 +612,7 @@ export default function AlertNotifications() {
             </div>
           </motion.div>
         ))}
-        {toasts.map((n) => {
+        {(phone ? (pinned.length ? [] : toasts.slice(0, 1)) : toasts).map((n) => {
           const meta = SEV_META[n.severity] ?? SEV_META.info;
           const done = /completed|finished|generated|published|ready/i.test(n.eventType) && n.severity !== "high";
           return (

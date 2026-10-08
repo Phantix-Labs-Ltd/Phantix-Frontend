@@ -22,6 +22,8 @@ const ProviderConnect = React.lazy(() => import("./pages/ProviderConnect"));
 const ThreatModels = React.lazy(() => import("./pages/ThreatModels"));
 const ContextProjects = React.lazy(() => import("./pages/ContextProjects"));
 const CiCd = React.lazy(() => import("./pages/CiCd"));
+const ScanHistory = React.lazy(() => import("./pages/ScanHistory"));
+const ScanDetail = React.lazy(() => import("./pages/ScanDetail"));
 
 export default function App() {
   // Per-route SEO: /docs stays indexable, every operator route is noindex.
@@ -41,6 +43,9 @@ export default function App() {
         >
           <Route path="/" element={<Overview application={"code" as ApplicationKey} nav={NAV} />} />
           <Route path="/code-review" element={<Code />} />
+          {/* Before /code-review/:section, or the tab router would swallow them. */}
+          <Route path="/code-review/scans" element={<ScanHistory />} />
+          <Route path="/code-review/scans/:jobId" element={<ScanDetail />} />
           <Route path="/code-review/providers/:provider" element={<ProviderConnect />} />
           <Route path="/code-review/:section" element={<Code />} />
           <Route path="/cicd" element={<CiCd />} />

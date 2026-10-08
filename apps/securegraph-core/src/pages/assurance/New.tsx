@@ -225,7 +225,7 @@ export default function NewEngagement() {
           <ul className="space-y-2">
             {team.map((m, i) => (
               <li key={i} className="flex flex-wrap items-center gap-2">
-                <span className="min-w-0 flex-1 text-sm text-slate-200">{m.principal_name}<span className="ml-2 text-xs text-slate-500">{m.principal_email}</span></span>
+                <span className="min-w-[12rem] flex-1 text-sm text-slate-200">{m.principal_name}<span className="ml-2 text-xs text-slate-500">{m.principal_email}</span></span>
                 <select aria-label="Role" className="input w-40" value={m.role} onChange={(e) => setTeam((cur) => cur.map((x, j) => (j === i ? { ...x, role: e.target.value as TeamRole } : x)))}>
                   {(Object.keys(ROLE_LABEL) as TeamRole[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
                 </select>

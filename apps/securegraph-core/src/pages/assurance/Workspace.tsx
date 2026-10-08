@@ -209,7 +209,7 @@ function Overview({ e }: { e: EngagementSummary }) {
           <ul className="mt-2 divide-y divide-phantix-700/40">
             {intel.controls_at_risk.slice(0, 8).map((c) => (
               <li key={`${c.framework_id}:${c.control_id}`} className="flex flex-wrap items-center gap-3 py-2">
-                <span className="min-w-0 flex-1 font-mono text-sm text-slate-200">{c.framework_id} · {c.control_id}</span>
+                <span className="min-w-[12rem] flex-1 font-mono text-sm text-slate-200">{c.framework_id} · {c.control_id}</span>
                 <SourceChips sources={c.sources} correlated={c.correlated} />
               </li>
             ))}
@@ -324,7 +324,7 @@ function Evidence({ id }: { id: number }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-slate-400">Evidence requested from the organization, one per control. {waived ? `${waived} waived.` : ""}</p>
+        <p className="min-w-[12rem] flex-1 text-sm text-slate-400">Evidence requested from the organization, one per control. {waived ? `${waived} waived.` : ""}</p>
         {can.can_audit && <button className="btn-secondary !py-1.5 text-xs" disabled={busy} onClick={() => void generate()}><ListChecks size={13} /> Generate from controls</button>}
       </div>
       {items.length === 0 ? (
@@ -515,7 +515,7 @@ function Testing({ e }: { e: EngagementSummary }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-slate-400">Design tests check a control is built right; operating tests check it worked over the period.</p>
+        <p className="min-w-[12rem] flex-1 text-sm text-slate-400">Design tests check a control is built right; operating tests check it worked over the period.</p>
         {can.can_audit && (
           <span title={isAuditee ? "You're an auditee on this audit, so you can't test its controls." : undefined}>
             <button className="btn-primary !py-1.5 text-xs" disabled={isAuditee} onClick={() => setRecording(true)}><FlaskConical size={13} /> Record test</button>
@@ -627,7 +627,7 @@ function Findings({ e }: { e: EngagementSummary }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-sm text-slate-400">Audit findings also appear in the risk register and the findings tracker.</p>
+        <p className="min-w-[12rem] flex-1 text-sm text-slate-400">Audit findings also appear in the risk register and the findings tracker.</p>
         {can.can_audit && <button className="btn-secondary !py-1.5 text-xs" onClick={() => setRaising(true)}><Plus size={13} /> Raise finding</button>}
       </div>
       {findings.length === 0 ? (
@@ -946,7 +946,7 @@ function Workpapers({ id }: { id: number }) {
         ) : selected ? (
           <div>
             <div className="flex flex-wrap items-start gap-3">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[12rem] flex-1">
                 <h3 className="font-display text-lg font-semibold text-white">{selected.title}</h3>
                 <p className="text-xs text-slate-500">
                   {SIGN_OFF_LABEL[selected.sign_off_status]}
@@ -1026,7 +1026,7 @@ export function ReportList({ items, showEngagement }: { items: AuditReport[]; sh
           const cross = r.artifact_refs?.cross_audit as Record<string, unknown> | undefined | null;
           return (
             <li key={r.id} className="flex flex-wrap items-start gap-4 px-5 py-4">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[12rem] flex-1">
                 <p className="font-medium text-white">{REPORT_TYPE_LABEL[r.report_type as ReportType] ?? r.report_type} <span className="text-xs font-normal text-slate-500">v{r.version}</span></p>
                 {showEngagement && r.engagement_title && <Link to={`/assurance/${r.engagement_id}?tab=reports`} className="text-xs text-gold-400 hover:text-gold-300">{r.engagement_title}</Link>}
                 {r.executive_summary && <p className="mt-1.5 text-sm text-slate-400">{r.executive_summary}</p>}
@@ -1035,7 +1035,7 @@ export function ReportList({ items, showEngagement }: { items: AuditReport[]; sh
                 )}
                 <p className="mt-1.5 text-xs text-slate-500">{r.published_at ? `Published ${fmtDate(r.published_at)}` : "Draft"}{r.published_by ? ` by ${r.published_by}` : ""}</p>
               </div>
-              <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2 sm:flex-col sm:items-end">
                 <OpinionBadge opinion={r.opinion} />
                 {r.readiness_score != null && <span className="font-mono text-sm text-slate-300">{Math.round(r.readiness_score)}%</span>}
               </div>

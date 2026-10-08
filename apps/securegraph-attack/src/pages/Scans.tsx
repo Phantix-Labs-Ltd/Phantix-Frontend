@@ -225,7 +225,7 @@ export default function Scans() {
                 <Radar size={19} />
                 <span className="absolute inset-0 animate-ping rounded-xl bg-severity-low/20" />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[12rem] flex-1">
                 <div className="flex items-center gap-2.5">
                   <p className="font-semibold text-slate-100">Job #{active.id} --- {(active.tools ?? []).join(" + ")}</p>
                   <StatusBadge status={active.status} />
@@ -264,7 +264,7 @@ export default function Scans() {
                 <Github size={19} />
                 <span className="absolute inset-0 animate-ping rounded-xl bg-phantix-500/20" />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[12rem] flex-1">
                 <div className="flex items-center gap-2.5">
                   <p className="font-semibold text-slate-100">GitHub analysis #{githubActive.id}</p>
                   <StatusBadge status={githubActive.status} />
@@ -409,7 +409,7 @@ export default function Scans() {
                   <Card hover className="!p-4">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: severityHex[r.severity], boxShadow: `0 0 10px ${severityHex[r.severity]}88` }} />
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-[12rem] flex-1">
                         <p className="font-medium text-slate-100">{r.title}</p>
                         <p className="mt-0.5 text-xs text-slate-500">
                           <span className="font-mono">{r.asset_value || "Not set"}</span> · {r.tool} · job #{r.scan_job_id} · {timeAgo(r.created_at)}

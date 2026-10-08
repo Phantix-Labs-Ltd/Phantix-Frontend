@@ -30,7 +30,7 @@ export default function CookieConsent() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-x-0 bottom-0 z-[70] border-t border-phantix-700/60 bg-phantix-900/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur"
+          className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-[70] md:bottom-0 border-t border-phantix-700/60 bg-phantix-900/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur"
         >
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2.5">
             <Cookie size={16} className="shrink-0 text-gold-300" />

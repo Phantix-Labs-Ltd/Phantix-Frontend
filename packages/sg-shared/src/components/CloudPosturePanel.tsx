@@ -84,7 +84,7 @@ export default function CloudPosturePanel({
         <CardHeader title="Posture capabilities" subtitle="Packs, exposure, TLS, host baselines, execution" />
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-severity-medium/30 bg-severity-medium/10 p-3">
           <ShieldAlert size={16} className="shrink-0 text-severity-medium" />
-          <p className="min-w-0 flex-1 text-[13px] leading-5 text-severity-medium">
+          <p className="min-w-[12rem] flex-1 text-[13px] leading-5 text-severity-medium">
             {error
               ? `Could not load posture capabilities: ${error}`
               : "Posture capabilities are unavailable for this organization."}

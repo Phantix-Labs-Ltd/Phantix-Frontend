@@ -9,7 +9,7 @@ export default function SecurityDbBanner({ message }: { message?: string | null 
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-severity-medium/15 text-severity-medium">
         <Database size={18} />
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-[12rem] flex-1">
         <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-100">
           <AlertTriangle size={14} className="text-severity-medium" />
           Security database not ready

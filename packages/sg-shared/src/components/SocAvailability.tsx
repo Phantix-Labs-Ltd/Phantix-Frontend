@@ -283,7 +283,7 @@ export default function SocAvailability() {
             {openIncidents.map((inc) => (
               <div key={inc.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-severity-critical/30 bg-severity-critical/5 p-3.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-severity-critical/15 text-severity-critical"><WifiOff size={16} /></span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[12rem] flex-1">
                   <p className="text-sm font-semibold text-slate-100">{inc.title}</p>
                   <p className="text-xs text-slate-500">Down since {timeAgo(inc.down_at)} · <span className="font-mono text-severity-critical">{formatDuration(inc.elapsed_seconds)}</span> elapsed{inc.source ? ` · ${titleCase(inc.source)}` : ""}</p>
                   {inc.last_error && <p className="mt-0.5 truncate font-mono text-[13px] text-slate-400">{inc.last_error}</p>}
@@ -310,7 +310,7 @@ export default function SocAvailability() {
             {recovered.map((inc) => (
               <div key={inc.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-phantix-700/40 bg-phantix-900/40 p-3.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-400/15 text-emerald-400"><CheckCircle2 size={16} /></span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[12rem] flex-1">
                   <p className="text-sm font-medium text-slate-200">{inc.title}</p>
                   <p className="text-xs text-slate-500">{timeAgo(inc.down_at)} → {inc.recovered_at ? timeAgo(inc.recovered_at) : "Not set"}</p>
                 </div>

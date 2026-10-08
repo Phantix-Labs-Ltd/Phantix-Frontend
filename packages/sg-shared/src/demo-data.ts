@@ -86,6 +86,8 @@ import type {
   QuestionnaireList,
   QuestionnaireProgress,
   QuestionnaireQuestion,
+  RiskBand,
+  ScoreBreakdownRow,
 } from "./complianceGrc";
 import type {
   CorrelationRule,
@@ -113,6 +115,8 @@ import type {
   CodeBlob,
   CodeFinding,
   CodeFindingFile,
+  CodeScanDetail,
+  CodeScanRun,
   CodeSeverityCounts,
   GithubInstallation,
   Repo as GithubRepo,
@@ -1474,7 +1478,7 @@ export const socCloudConnections: SocCloudConnection[] = [
 /** The demo explorer's own org-user id (orgUsers 1-4 are their colleagues). */
 const DEMO_ANSWERER_ID = 5;
 
-function myAnswer(value: string, notes: string | null, updatedAt: string): AnswererAudit {
+function myAnswer(value: string, notes: string | null, updatedAt: string, status?: string): AnswererAudit {
   return {
     organization_user_id: DEMO_ANSWERER_ID,
     answered_by_name: "Demo Explorer",
@@ -1483,6 +1487,7 @@ function myAnswer(value: string, notes: string | null, updatedAt: string): Answe
     stated_title: "Head of Governance, Risk and Compliance",
     answer_value: value,
     notes,
+    ...(status ? { answer_status: status } : {}),
     updated_at: updatedAt,
   };
 }
@@ -1792,6 +1797,136 @@ export const questionnaireQuestions: QuestionnaireQuestion[] = [
     answer_count: 1,
     is_seeded: true,
   },
+  // ── NDPA 2023 cloud instrument ──────────────────────────────────────────
+  // Service-scoped, mirroring the CloudComply instrument: only the services an
+  // organization operates are evaluated, each question carries the statutory
+  // control it discharges, and each carries a one-line prescriptive fix.
+  {
+    id: 1101,
+    question_key: "ndpa_cloud_ec2_sg_admin",
+    prompt: "Are EC2 security groups configured to block unrestricted administrative SSH (port 22) and RDP (port 3389) from 0.0.0.0/0?",
+    help_text: "An ingress rule open to the world on a management port lets anyone reach the host.",
+    category: "Access Control & Network Perimeter Boundary",
+    risk: "critical",
+    service: "ec2",
+    remediation: "Restrict Security Group 22/3389 to corporate CIDRs, or replace open SSH access with AWS Systems Manager Session Manager.",
+    answer_type: "yes_no_partial",
+    framework_ids: ["ndpa_2023"],
+    source_controls: [{ framework_id: "ndpa_2023", control_id: "NDPA-34", title: "Security of processing" }],
+    sort_order: 200,
+    my_answer: myAnswer("no", "The bastion group still allows 0.0.0.0/0 on 22.", "2026-09-11T11:02:00Z", "in_progress"),
+    answers_from_others: [],
+    answer_count: 1,
+    is_seeded: true,
+  },
+  {
+    id: 1102,
+    question_key: "ndpa_cloud_ec2_imdsv2",
+    prompt: "Is Instance Metadata Service Version 2 (IMDSv2) enforced on all running EC2 instances to prevent SSRF credential theft?",
+    help_text: "IMDSv1 lets a server-side request forgery read the instance role credentials directly.",
+    category: "Access Control & Network Perimeter Boundary",
+    risk: "high",
+    service: "ec2",
+    remediation: "aws ec2 modify-instance-metadata-options --http-tokens required --http-endpoint enabled",
+    answer_type: "yes_no_partial",
+    framework_ids: ["ndpa_2023"],
+    source_controls: [{ framework_id: "ndpa_2023", control_id: "NDPA-34", title: "Security of processing" }],
+    sort_order: 210,
+    my_answer: myAnswer("partial", "Enforced on new instances; the legacy fleet is being rebuilt.", "2026-09-11T11:06:00Z", "in_progress"),
+    answers_from_others: [],
+    answer_count: 1,
+    is_seeded: true,
+  },
+  {
+    id: 1103,
+    question_key: "ndpa_cloud_s3_public",
+    prompt: "Do all S3 buckets block public access at both the account and the bucket level?",
+    help_text: "Account-level Block Public Access plus per-bucket blocks, with no public ACLs or policies.",
+    category: "Access Control & Network Perimeter Boundary",
+    risk: "critical",
+    service: "s3",
+    remediation: "Enable Block Public Access on the account and every bucket; remove public ACLs and bucket policies.",
+    answer_type: "yes_no_partial",
+    framework_ids: ["ndpa_2023"],
+    source_controls: [{ framework_id: "ndpa_2023", control_id: "NDPA-34", title: "Security of processing" }],
+    sort_order: 220,
+    my_answer: myAnswer("no", "The marketing bucket still serves objects publicly by ACL.", "2026-09-11T11:09:00Z", "in_progress"),
+    answers_from_others: [],
+    answer_count: 1,
+    is_seeded: true,
+  },
+  {
+    id: 1104,
+    question_key: "ndpa_cloud_s3_encryption",
+    prompt: "Is default encryption with a customer-managed KMS key enabled on every S3 bucket holding personal data?",
+    help_text: "SSE-KMS with a customer-managed key, not SSE-S3, so key use is auditable and revocable.",
+    category: "Data Encryption at Rest & In Transit",
+    risk: "high",
+    service: "s3",
+    remediation: "Set the bucket default encryption to SSE-KMS and apply a customer-managed key with rotation enabled.",
+    answer_type: "yes_no_partial",
+    framework_ids: ["ndpa_2023"],
+    source_controls: [{ framework_id: "ndpa_2023", control_id: "NDPA-34", title: "Security of processing" }],
+    sort_order: 230,
+    my_answer: myAnswer("yes", "All buckets default to SSE-KMS under the ledger key.", "2026-09-11T11:12:00Z", "resolved"),
+    answers_from_others: [],
+    answer_count: 1,
+    is_seeded: true,
+  },
+  {
+    id: 1105,
+    question_key: "ndpa_cloud_rds_encryption",
+    prompt: "Are RDS instances encrypted at rest and unreachable from the public internet?",
+    help_text: "StorageEncrypted on the instance, and PubliclyAccessible set to false.",
+    category: "Data Encryption at Rest & In Transit",
+    risk: "high",
+    service: "rds",
+    remediation: "Set StorageEncrypted to true and PubliclyAccessible to false; reach the database through a private subnet.",
+    answer_type: "yes_no_partial",
+    framework_ids: ["ndpa_2023"],
+    source_controls: [{ framework_id: "ndpa_2023", control_id: "NDPA-34", title: "Security of processing" }],
+    sort_order: 240,
+    my_answer: myAnswer("partial", "Production is encrypted and private; the reporting replica is not.", "2026-09-11T11:15:00Z", "in_progress"),
+    answers_from_others: [],
+    answer_count: 1,
+    is_seeded: true,
+  },
+  {
+    id: 1106,
+    question_key: "ndpa_cloud_sqs_encryption",
+    prompt: "Are SQS queues encrypted with a customer-managed KMS key and free of public queue policies?",
+    help_text: "Queue policies that grant a wildcard principal are readable and writable by anyone.",
+    category: "Data Encryption at Rest & In Transit",
+    risk: "medium",
+    service: "sqs",
+    remediation: "Enable SSE-KMS on the queue with a customer-managed key, and remove any wildcard principal from the queue policy.",
+    answer_type: "yes_no_partial",
+    framework_ids: ["ndpa_2023"],
+    source_controls: [{ framework_id: "ndpa_2023", control_id: "NDPA-34", title: "Security of processing" }],
+    sort_order: 250,
+    my_answer: myAnswer("yes", "All queues use the ledger KMS key; no public policies.", "2026-09-11T11:18:00Z", "resolved"),
+    answers_from_others: [],
+    answer_count: 1,
+    is_seeded: true,
+  },
+  {
+    id: 1107,
+    question_key: "ndpa_cloud_sns_encryption",
+    prompt: "Are SNS topics encrypted with a customer-managed KMS key and restricted to known publishers?",
+    help_text: "An unencrypted topic leaks message bodies to anyone with read access to the transport.",
+    category: "Data Encryption at Rest & In Transit",
+    risk: "medium",
+    service: "sns",
+    remediation: "Set KmsMasterKeyId on the topic and scope the topic policy to the publishing accounts.",
+    answer_type: "yes_no_partial",
+    framework_ids: ["ndpa_2023"],
+    source_controls: [{ framework_id: "ndpa_2023", control_id: "NDPA-34", title: "Security of processing" }],
+    sort_order: 260,
+    my_answer: myAnswer("partial", "Alerting topics are encrypted; the legacy notification topic is not.", "2026-09-11T11:21:00Z", "open"),
+    answers_from_others: [],
+    answer_count: 1,
+    is_seeded: true,
+  },
 ];
 
 /** The answer that counts for a question: yours, else the earliest colleague's. */
@@ -1824,16 +1959,99 @@ function questionnaireProgress(items: QuestionnaireQuestion[]): QuestionnairePro
     if (q.answer_count > 0) byCategory[key].answered += 1;
   }
 
+  // Regulator-facing views, mirroring the engine's reporting shape: a three-band
+  // risk reading, the NDPC cap, and per-domain / per-service breakdowns.
+  const rounded = (n: number) => Math.round(n * 10) / 10;
+  const BAND_THRESHOLDS = { low: 85, medium: 60, high: 0 };
+  const riskBand = (score: number | null): RiskBand =>
+    score == null
+      ? { id: "unknown", label: "Not assessed", score: null, thresholds: BAND_THRESHOLDS }
+      : score >= 85
+        ? { id: "low", label: "Low risk", score: rounded(score), thresholds: BAND_THRESHOLDS }
+        : score >= 60
+          ? { id: "medium", label: "Medium risk", score: rounded(score), thresholds: BAND_THRESHOLDS }
+          : { id: "high", label: "High risk", score: rounded(score), thresholds: BAND_THRESHOLDS };
+
+  // The engine caps an uncorroborated self-declaration at the NDPC ceiling.
+  const NDPC_CAP = 85;
+  const uncapped = attestation == null ? null : rounded(attestation);
+  const capApplied = uncapped != null && uncapped > NDPC_CAP;
+  const reported = capApplied ? NDPC_CAP : uncapped;
+
+  // Five bands, matching `attestation_score.level_from_score` on the engine.
   const level: ComplianceLevel =
-    attestation == null
-      ? { id: "not_started", label: "Not started", score: null, band: null }
-      : attestation >= 85
-        ? { id: "strong", label: "Strong", score: Math.round(attestation * 10) / 10, band: "green" }
-        : attestation >= 65
-          ? { id: "substantial", label: "Substantial", score: Math.round(attestation * 10) / 10, band: "amber" }
-          : attestation >= 40
-            ? { id: "developing", label: "Developing", score: Math.round(attestation * 10) / 10, band: "orange" }
-            : { id: "initial", label: "Initial", score: Math.round(attestation * 10) / 10, band: "red" };
+    reported == null
+      ? { id: "unknown", label: "Not started", score: null, band: null }
+      : reported >= 85
+        ? { id: "mature", label: "Mature", score: reported, band: "mature" }
+        : reported >= 70
+          ? { id: "strong", label: "Strong", score: reported, band: "strong" }
+          : reported >= 50
+            ? { id: "moderate", label: "Moderate", score: reported, band: "moderate" }
+            : reported >= 25
+              ? { id: "developing", label: "Developing", score: reported, band: "developing" }
+              : { id: "critical", label: "Critical", score: reported, band: "critical" };
+
+  const RISK_WEIGHT: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 1 };
+  const titleise = (key: string) => key.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const breakdown = (
+    dimension: (q: QuestionnaireQuestion) => string | null | undefined,
+  ): ScoreBreakdownRow[] => {
+    type Row = {
+      key: string;
+      label: string;
+      earned: number;
+      possible: number;
+      questions: number;
+      yes: number;
+      no: number;
+      partial: number;
+      unanswered: number;
+      na: number;
+    };
+    const rows = new Map<string, Row>();
+    for (const q of items) {
+      const key = (dimension(q) || "uncategorised").trim();
+      const row: Row =
+        rows.get(key) ??
+        { key, label: titleise(key), earned: 0, possible: 0, questions: 0, yes: 0, no: 0, partial: 0, unanswered: 0, na: 0 };
+      const weight = RISK_WEIGHT[(q.risk ?? "medium").toLowerCase()] ?? 2;
+      const value = resolvedAnswer(q);
+      row.questions += 1;
+      if (!q.answer_count || value == null) {
+        row.unanswered += 1;
+        row.possible += weight;
+      } else if (value === "na") {
+        row.na += 1;
+      } else {
+        const points = value === "yes" ? 1 : value === "partial" ? 0.5 : 0;
+        row.earned += points * weight;
+        row.possible += weight;
+        if (points >= 0.99) row.yes += 1;
+        else if (points <= 0.01) row.no += 1;
+        else row.partial += 1;
+      }
+      rows.set(key, row);
+    }
+    return [...rows.values()]
+      .map((r): ScoreBreakdownRow => {
+        const score = r.possible > 0 ? rounded((r.earned / r.possible) * 100) : null;
+        return {
+          key: r.key,
+          label: r.label,
+          score,
+          risk_band: riskBand(score),
+          questions: r.questions,
+          yes_count: r.yes,
+          no_count: r.no,
+          partial_count: r.partial,
+          unanswered: r.unanswered,
+          not_applicable: r.na,
+        };
+      })
+      .sort((a, b) => (a.score ?? 101) - (b.score ?? 101));
+  };
 
   return {
     organization_id: organization.id,
@@ -1844,8 +2062,13 @@ function questionnaireProgress(items: QuestionnaireQuestion[]): QuestionnairePro
     percent_complete: items.length ? Math.round((answered.length / items.length) * 1000) / 10 : 0,
     total_answer_events: items.reduce((n, q) => n + q.answer_count, 0),
     by_category: byCategory,
-    attestation_score: attestation == null ? null : Math.round(attestation * 10) / 10,
+    category_breakdown: breakdown((q) => q.category),
+    by_service: breakdown((q) => q.service),
+    attestation_score: reported,
+    uncapped_score: uncapped,
     compliance_level: level,
+    risk_band: riskBand(reported),
+    ndpc: { cap: NDPC_CAP, cap_applied: capApplied, uncapped_score: uncapped, reported_score: reported },
     yes_count: tally.yes,
     no_count: tally.no,
     partial_count: tally.partial,
@@ -1857,7 +2080,7 @@ function questionnaireProgress(items: QuestionnaireQuestion[]): QuestionnairePro
 }
 
 /** Resolved from the business profile below (NG, financial services, cards). */
-const APPLICABLE_FRAMEWORKS = ["ndpr", "iso27001", "soc2", "pci_dss"];
+const APPLICABLE_FRAMEWORKS = ["ndpa_2023", "ndpr", "iso27001", "soc2", "pci_dss"];
 
 const QUESTIONNAIRE_DISCLAIMER =
   "These answers are the attestation of your own organization. They are recorded against the person and the role they declared, They inform your compliance posture, but SecureGraph does not independently verify them. They do not replace a certified audit by a qualified GRC assessor.";
@@ -2670,17 +2893,90 @@ export const postureDrift: Record<number, PostureDrift> = {
 // "blob" is fixture text rather than a cached copy of anything real.
 
 export const codeFindingCounts: CodeSeverityCounts = {
-  critical: 1,
-  high: 3,
-  medium: 2,
+  critical: 2,
+  high: 4,
+  medium: 3,
   low: 0,
   info: 0,
-  total: 6,
+  total: 9,
 };
+
+export const codeScanRuns: CodeScanRun[] = [
+  {
+    id: 20260911,
+    job_type: "github_analysis",
+    status: "completed",
+    repository: "acme-financial/core-ledger",
+    branch: "main",
+    tools: ["checkov", "gitleaks"],
+    severity_counts: { critical: 1, high: 3, medium: 2, low: 0, info: 0, total: 6 },
+    created_at: "2026-09-11T09:41:00Z",
+    started_at: "2026-09-11T09:41:08Z",
+    completed_at: "2026-09-11T09:41:51Z",
+  },
+  {
+    id: 20260910,
+    job_type: "github_analysis",
+    status: "completed",
+    repository: "acme-financial/payments-api",
+    branch: "feature/idempotency-keys",
+    tools: ["checkov", "semgrep"],
+    severity_counts: { critical: 1, high: 1, medium: 1, low: 0, info: 0, total: 3 },
+    created_at: "2026-09-10T14:22:00Z",
+    started_at: "2026-09-10T14:22:06Z",
+    completed_at: "2026-09-10T14:22:49Z",
+  },
+  {
+    id: 20260909,
+    job_type: "repo_analysis",
+    status: "completed",
+    repository: "acme-financial/core-ledger",
+    branch: "release/2026.09",
+    tools: ["checkov"],
+    severity_counts: { critical: 0, high: 0, medium: 0, low: 0, info: 0, total: 0 },
+    created_at: "2026-09-09T08:03:00Z",
+    completed_at: "2026-09-09T08:03:38Z",
+  },
+  {
+    id: 20260908,
+    job_type: "repo_analysis",
+    status: "failed",
+    repository: "acme-financial/payments-api",
+    branch: "main",
+    tools: ["checkov"],
+    severity_counts: { total: 0 },
+    error_message: "clone failed: the installation no longer has access to this repository",
+    created_at: "2026-09-08T00:55:00Z",
+  },
+];
+
+/**
+ * Detail fixtures reuse the same findings the review tab renders, filtered to the
+ * repository that scan ran against — so the scan table, the scan detail and the
+ * Security review never disagree. A run that found nothing returns nothing.
+ */
+export function codeScanDetail(jobId: number): CodeScanDetail {
+  const run = codeScanRuns.find((s) => s.id === jobId) ?? codeScanRuns[0];
+  const clean = (run.severity_counts.total ?? 0) === 0;
+  const findings = clean ? [] : codeFindings.filter((f) => f.repo === run.repository);
+  return {
+    ...run,
+    result_summary: {
+      layers: findings.reduce<Record<string, number>>((acc, f) => {
+        const layer = f.layer ?? "unknown";
+        acc[layer] = (acc[layer] ?? 0) + 1;
+        return acc;
+      }, {}),
+    },
+    findings,
+  };
+}
 
 export const codeFindingFiles: CodeFindingFile[] = [
   { github_repository_id: 402, repo: "acme-financial/payments-api", path: "app/api/transfers.py", language: "python", findings: 2, worst_severity: "critical", layers: ["sast"], autofix_pr_url: null, sha: "f6e5d4c3b2a19087" },
   { github_repository_id: 401, repo: "acme-financial/core-ledger", path: ".github/workflows/release.yml", language: "yaml", findings: 2, worst_severity: "high", layers: ["pipeline"], autofix_pr_url: "https://github.com/acme-financial/core-ledger/pull/128", sha: "a1b2c3d4e5f60718" },
+  { github_repository_id: 401, repo: "acme-financial/core-ledger", path: "infra/terraform/network.tf", language: "terraform", findings: 1, worst_severity: "critical", layers: ["iac"], autofix_pr_url: null, sha: "a1b2c3d4e5f60718" },
+  { github_repository_id: 401, repo: "acme-financial/core-ledger", path: "infra/cloudformation/ledger-stack.yaml", language: "yaml", findings: 2, worst_severity: "high", layers: ["iac"], autofix_pr_url: null, sha: "a1b2c3d4e5f60718" },
   { github_repository_id: 401, repo: "acme-financial/core-ledger", path: "infra/k8s/ledger-deployment.yaml", language: "yaml", findings: 1, worst_severity: "high", layers: ["iac"], autofix_pr_url: null, sha: "a1b2c3d4e5f60718" },
   { github_repository_id: 402, repo: "acme-financial/payments-api", path: "requirements.txt", language: "text", findings: 1, worst_severity: "medium", layers: ["sca"], autofix_pr_url: null, sha: "f6e5d4c3b2a19087" },
 ];
@@ -2736,7 +3032,50 @@ export const codeFindings: CodeFinding[] = [
     permalink: "https://github.com/acme-financial/core-ledger/blob/a1b2c3d4e5f60718/infra/k8s/ledger-deployment.yaml#L31",
     autofix: { state: "permission_required", detail: "GitHub App write access required: https://github.com/apps/securegraph/installations/new", updated_at: "2026-09-11T09:14:00Z" },
     why: "A privileged container runs with the full capability set and device access of the host.",
+    detail: { resource: "Pod.ledger-api.default" },
     last_seen_at: "2026-09-10T14:22:00Z",
+  },
+  {
+    id: 7107, github_repository_id: 401, repo: "acme-financial/core-ledger", repo_url: "https://github.com/acme-financial/core-ledger",
+    layer: "iac", tool: "checkov", rule_id: "CKV_AWS_24", severity: "critical",
+    title: "Security group allows SSH from 0.0.0.0/0", path: "infra/terraform/network.tf", language: "terraform",
+    start_line: 42, end_line: 46, cwe: "CWE-284", status: "open", reportable: true,
+    sha: "a1b2c3d4e5f60718", ref: "refs/heads/main", occurrences: 1,
+    permalink: "https://github.com/acme-financial/core-ledger/blob/a1b2c3d4e5f60718/infra/terraform/network.tf#L42-L46",
+    autofix: { state: "none" },
+    why: "An ingress rule open to 0.0.0.0/0 lets anyone on the internet reach the administrative port.",
+    fix: "Restrict the CIDR to the corporate range, or replace SSH access with AWS Systems Manager Session Manager.",
+    reference_url: "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-networking-policies/networking-1",
+    detail: { resource: "aws_security_group.ledger_api" },
+    last_seen_at: "2026-09-11T09:41:00Z",
+  },
+  {
+    id: 7108, github_repository_id: 401, repo: "acme-financial/core-ledger", repo_url: "https://github.com/acme-financial/core-ledger",
+    layer: "iac", tool: "checkov", rule_id: "CKV_AWS_16", severity: "high",
+    title: "RDS instance is not encrypted at rest", path: "infra/cloudformation/ledger-stack.yaml", language: "yaml",
+    start_line: 43, end_line: 60, cwe: "CWE-311", status: "open", reportable: true,
+    sha: "a1b2c3d4e5f60718", ref: "refs/heads/main", occurrences: 1,
+    permalink: "https://github.com/acme-financial/core-ledger/blob/a1b2c3d4e5f60718/infra/cloudformation/ledger-stack.yaml#L43-L60",
+    autofix: { state: "none" },
+    why: "Unencrypted storage is readable by anyone who obtains the underlying volume, snapshot or backup.",
+    fix: "Set StorageEncrypted to true on the DBInstance and apply a KMS key.",
+    reference_url: "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-encryption-policies/encryption-7",
+    detail: { resource: "AWS::RDS::DBInstance.LedgerDb" },
+    last_seen_at: "2026-09-11T09:41:00Z",
+  },
+  {
+    id: 7109, github_repository_id: 401, repo: "acme-financial/core-ledger", repo_url: "https://github.com/acme-financial/core-ledger",
+    layer: "iac", tool: "checkov", rule_id: "CKV_AWS_55", severity: "medium",
+    title: "S3 bucket does not ignore public ACLs", path: "infra/cloudformation/ledger-stack.yaml", language: "yaml",
+    start_line: 8, end_line: 20, cwe: "CWE-732", status: "open", reportable: true,
+    sha: "a1b2c3d4e5f60718", ref: "refs/heads/main", occurrences: 1,
+    permalink: "https://github.com/acme-financial/core-ledger/blob/a1b2c3d4e5f60718/infra/cloudformation/ledger-stack.yaml#L8-L20",
+    autofix: { state: "none" },
+    why: "Without IgnorePublicAcls a bucket ACL alone can make objects world-readable, whatever the bucket policy says.",
+    fix: "Add an AWS::S3::BucketPolicy or PublicAccessBlockConfiguration with IgnorePublicAcls: true.",
+    reference_url: "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/s3-2",
+    detail: { resource: "AWS::S3::Bucket.LedgerArchive" },
+    last_seen_at: "2026-09-11T09:41:00Z",
   },
   {
     id: 7106, github_repository_id: 402, repo: "acme-financial/payments-api", repo_url: "https://github.com/acme-financial/payments-api",
@@ -2859,6 +3198,50 @@ const DEMO_BLOB_LINES: Record<number, { first: number; text: string }> = {
       "pydantic==2.9.2",
     ].join("\n"),
   },
+  7107: {
+    first: 36,
+    text: [
+      "resource \"aws_security_group\" \"ledger_api\" {",
+      "  name        = \"ledger-api\"",
+      "  description = \"Ledger API instances\"",
+      "  vpc_id      = aws_vpc.ledger.id",
+      "",
+      "  ingress {",
+      "    description = \"SSH from anywhere\"",
+      "    from_port   = 22",
+      "    to_port     = 22",
+      "    protocol    = \"tcp\"",
+      "    cidr_blocks = [\"0.0.0.0/0\"]",
+      "  }",
+      "}",
+    ].join("\n"),
+  },
+  7108: {
+    first: 40,
+    text: [
+      "  LedgerDb:",
+      "    Type: AWS::RDS::DBInstance",
+      "    Properties:",
+      "      DBInstanceClass: db.t3.medium",
+      "      Engine: postgres",
+      "      AllocatedStorage: 100",
+      "      StorageEncrypted: false",
+      "      BackupRetentionPeriod: 7",
+      "      PubliclyAccessible: false",
+    ].join("\n"),
+  },
+  7109: {
+    first: 6,
+    text: [
+      "  LedgerArchive:",
+      "    Type: AWS::S3::Bucket",
+      "    Properties:",
+      "      BucketName: ledger-archive",
+      "      VersioningConfiguration:",
+      "        Status: Enabled",
+      "      # No PublicAccessBlockConfiguration: IgnorePublicAcls",
+    ].join("\n"),
+  },
 };
 
 export function codeFindingDetail(id: number): CodeFinding {
@@ -2867,10 +3250,12 @@ export function codeFindingDetail(id: number): CodeFinding {
     ...base,
     description: `${base.title} matched in ${base.path}`,
     why: DEMO_WHY[base.id] ?? base.why ?? null,
-    fix: DEMO_FIX[base.id] ?? null,
-    reference_url: "https://cheatsheetseries.owasp.org/",
+    fix: DEMO_FIX[base.id] ?? base.fix ?? null,
+    reference_url: base.reference_url ?? "https://cheatsheetseries.owasp.org/",
     guidance_specific: true,
-    detail: { rule_id: base.rule_id, layer: base.layer },
+    // Preserve anything the layer carried in `detail` — the cloud resource for
+    // IaC findings, for instance — while keeping the rule/layer keys the page reads.
+    detail: { ...(base.detail ?? {}), rule_id: base.rule_id, layer: base.layer },
     ai_explanation: null,
     ai_explained_at: null,
   };

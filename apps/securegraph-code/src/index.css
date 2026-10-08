@@ -1069,3 +1069,118 @@ p {
 .sg-sidebar[data-collapsed]:focus-within nav {
   overflow-x: visible;
 }
+
+/* ── Phone feel ────────────────────────────────────────────────────────────
+   App-style press feedback for the mobile shell (tab bar, More tiles). */
+.tap {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 0.12s ease;
+}
+.tap:active {
+  transform: scale(0.95);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /* No grey flash on tap, no double-tap zoom delay. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
+  }
+  /* Buttons answer the finger like native controls. */
+  .btn-primary:active,
+  .btn-secondary:active,
+  .btn-ghost:active,
+  .btn-danger:active {
+    transform: scale(0.98);
+  }
+  /* 16px keeps iOS Safari from zooming the page when a field is focused. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ── Tables as lists on phones ──────────────────────────────────────────────
+   lib/useTableCards.ts labels every cell with its column header and adds
+   .sg-cards; below md each row becomes a list item of "LABEL  value" lines,
+   instead of a table the finger has to scroll sideways. */
+@media (max-width: 767px) {
+  table.sg-cards {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+  }
+  table.sg-cards thead {
+    display: none;
+  }
+  table.sg-cards tbody {
+    display: block;
+  }
+  table.sg-cards tr {
+    display: block;
+    height: auto !important; /* rows set a fixed table-row height */
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgb(var(--border-subtle) / 0.45);
+  }
+  table.sg-cards tr:last-child {
+    border-bottom: 0;
+  }
+  table.sg-cards td {
+    display: flex;
+    height: auto !important;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0 !important;
+    border: 0 !important;
+    text-align: right;
+    white-space: normal !important;
+    min-width: 0;
+  }
+  table.sg-cards td > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  table.sg-cards td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    padding-top: 0.15rem;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgb(var(--slate-500));
+  }
+  /* First cell reads as the row title; empty-label cells (actions, full-width
+     notes and empty states) take the whole line. */
+  table.sg-cards td:first-child {
+    justify-content: flex-start;
+    text-align: left;
+    font-weight: 600;
+  }
+  table.sg-cards td:first-child::before {
+    display: none;
+  }
+  table.sg-cards td[data-label=""] {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  table.sg-cards td[data-label=""]::before {
+    display: none;
+  }
+  table.sg-cards td:empty {
+    display: none;
+  }
+}

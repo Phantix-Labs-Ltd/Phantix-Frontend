@@ -821,7 +821,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                 <span className={cx("flex h-9 w-9 items-center justify-center rounded-xl", j.status === "running" ? "bg-severity-low/20 text-severity-low" : j.status === "completed" ? "bg-emerald-400/20 text-emerald-400" : j.status === "failed" ? "bg-severity-critical/20 text-severity-critical" : "bg-phantix-800/70 text-gold-400")}>
                   <Radar size={16} className={j.status === "running" ? "animate-pulse-soft" : ""} />
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[12rem] flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-display text-sm font-semibold text-slate-100">{titleCase(j.job_type)}</p>
                     <span className="text-xs font-mono text-slate-500">#{j.id}</span>

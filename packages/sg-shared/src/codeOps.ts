@@ -132,6 +132,8 @@ export interface CodeFinding {
   layer?: string;
   tool?: string;
   rule_id?: string;
+  /** Cloud resource address for IaC findings (e.g. AWS::S3::Bucket.MarketingBucket). */
+  resource?: string | null;
   severity: CodeSeverity;
   title: string;
   path: string;
@@ -281,6 +283,65 @@ export async function loadCodeBlob(id: number, context = 12) {
     return demo.codeFindingBlob(id);
   }
   return api.get<CodeBlob>(`/github/code/findings/${id}/blob?context=${context}`);
+}
+
+/**
+ * The cloud resource a finding concerns.
+ *
+ * Checkov reports it at the top level; for every other detector it persists inside
+ * `detail`. One helper so the review card and the scan detail table read it the
+ * same way.
+ */
+export function resourceOf(finding: Pick<CodeFinding, "resource" | "detail"> | null | undefined): string {
+  if (!finding) return "";
+  const fromDetail = (finding.detail as Record<string, unknown> | undefined)?.resource;
+  return String(finding.resource ?? fromDetail ?? "").trim();
+}
+
+// ── Repository scan history (the "IaC scans" surface) ────────────────────────
+//
+// A scan run is an immutable audit record: what was scanned, when, with which
+// tool, and what it found. Remediation status belongs to the finding, never to
+// the run.
+
+export interface CodeScanRun {
+  id: number;
+  job_type: string;
+  status: string;
+  repository: string;
+  branch: string;
+  tools: string[];
+  severity_counts: CodeSeverityCounts;
+  error_message?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface CodeScanDetail extends CodeScanRun {
+  result_summary?: Record<string, unknown>;
+  findings: CodeFinding[];
+}
+
+/** Statuses a scan run can end in — the filter chips on the history table. */
+export const SCAN_STATUS_CHOICES = ["queued", "running", "completed", "failed"] as const;
+
+export async function loadCodeScans(limit = 50) {
+  if (isDemoMode()) {
+    await delay();
+    return { total: demo.codeScanRuns.length, scans: demo.codeScanRuns };
+  }
+  return api.get<{ organization_id: number; total: number; scans: CodeScanRun[] }>(
+    `/github/code/scans?limit=${limit}`,
+  );
+}
+
+export async function loadCodeScan(jobId: number) {
+  if (isDemoMode()) {
+    await delay();
+    return demo.codeScanDetail(jobId);
+  }
+  return api.get<CodeScanDetail>(`/github/code/scans/${jobId}`);
 }
 
 /** Paid, explicit enrichment — the rule-based why/fix is already on the finding. */

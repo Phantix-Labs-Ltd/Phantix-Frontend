@@ -64,7 +64,9 @@ export default function AgiDrawer() {
     <>
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("phantix:agi-open"))}
-        className="fixed right-0 top-1/2 z-[70] -translate-y-1/2 flex items-center gap-2 rounded-l-xl border border-r-0 border-phantix-700/50 bg-phantix-900/90 px-2.5 py-3 text-gold-300 shadow-card backdrop-blur-xl transition-colors hover:border-gold-400/40 hover:bg-phantix-800/90"
+        // Phones: a floating action button above the tab bar. Wider: the edge tab.
+        aria-label="Open the Pentest Agent"
+        className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-3 z-[70] flex items-center gap-2 rounded-full border border-gold-400/40 bg-phantix-900/95 p-3.5 text-gold-300 shadow-card backdrop-blur-xl transition-colors hover:border-gold-400/40 hover:bg-phantix-800/90 md:bottom-auto md:right-0 md:top-1/2 md:-translate-y-1/2 md:rounded-none md:rounded-l-xl md:border-r-0 md:border-phantix-700/50 md:bg-phantix-900/90 md:px-2.5 md:py-3"
         title={live ? "Pentest Agent: session running" : "Autonomous Pentest Agent"}
       >
         <span className="relative">
@@ -138,7 +140,8 @@ export default function AgiDrawer() {
 }
 
 function cxPanel(fullscreen: boolean, open: boolean): string {
-  const base = "fixed z-[85] flex flex-col overflow-hidden bg-phantix-950/95 shadow-card border-l border-phantix-700/40 transition-transform duration-300";
+  // Phones: the agent takes the whole screen like a native app view.
+  const base = "fixed z-[85] flex flex-col overflow-hidden bg-phantix-950/95 shadow-card border-l border-phantix-700/40 transition-transform duration-300 max-md:left-0 max-md:!w-auto max-md:border-l-0 max-md:pt-[env(safe-area-inset-top)]";
   const hidden = open ? "" : "pointer-events-none translate-x-full";
   if (fullscreen) return cx(base, "inset-0 !border-l-0", hidden);
   return cx(base, "right-0 top-0 bottom-0", hidden);
