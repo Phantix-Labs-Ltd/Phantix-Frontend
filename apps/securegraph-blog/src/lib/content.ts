@@ -11,10 +11,23 @@ import type { IssueMeta, Post, PostSummary, PostsResponse } from "./types";
  *  - live: `VITE_BLOG_API_URL` points at the admin backend (absolute URL, or
  *    "/api/v1" when a same-origin rewrite proxies it). The blog then calls
  *    GET {base}/posts and GET {base}/posts/{slug}.
+ *
+ * In live mode, while the API has no published posts at all, the bundled
+ * launch issue is shown instead of an empty contents page (its essays are the
+ * ones the sitemap and llms.txt already list). The first post published in the
+ * Staff Portal replaces it, so editors stay in control of what is live.
  */
 const configured = (import.meta.env.VITE_BLOG_API_URL as string | undefined)?.trim();
 export const API_MODE: "demo" | "live" = configured ? "live" : "demo";
-const BASE = (configured ?? "").replace(/\/+$/, "");
+let BASE = (configured ?? "").replace(/\/+$/, "");
+
+/**
+ * Prerender only (Node has no page origin): resolve a same-origin base such as
+ * "/api/v1/blog" against `origin`.
+ */
+export function setContentOrigin(origin: string): void {
+  if (BASE.startsWith("/")) BASE = `${origin.replace(/\/+$/, "")}${BASE}`;
+}
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -95,37 +108,90 @@ function safeDetail(detail: unknown): string | null {
   return cut.charAt(0).toUpperCase() + cut.slice(1);
 }
 
-let postsCache: { issue: IssueMeta; posts: PostSummary[] } | null = null;
+export interface IssueContent {
+  issue: IssueMeta;
+  posts: PostSummary[];
+  /** "bundled": the launch issue shipped with the site (see the note above). */
+  source: "api" | "bundled";
+}
+
+/** Content embedded in a prerendered page, so it paints without a loading state. */
+export interface ContentSnapshot extends IssueContent {
+  bodies: Post[];
+}
+
+let postsCache: IssueContent | null = null;
 const postCache = new Map<string, Post>();
+// Primed from a prerendered page: shown at once, then refreshed from the API.
+let postsStale = false;
+const stalePosts = new Set<string>();
 
-export async function fetchPosts(): Promise<{ issue: IssueMeta; posts: PostSummary[] }> {
-  if (postsCache) return postsCache;
+let postsRequest: Promise<IssueContent> | null = null;
 
+export function fetchPosts(): Promise<IssueContent> {
+  if (postsCache && !postsStale) return Promise.resolve(postsCache);
+  // The issue page and an essay both ask for the list; share one request.
+  postsRequest ??= loadPosts().finally(() => {
+    postsRequest = null;
+  });
+  return postsRequest;
+}
+
+async function loadPosts(): Promise<IssueContent> {
   if (API_MODE === "demo") {
-    postsCache = { issue: ISSUE, posts: DEMO_SUMMARIES };
-    return postsCache;
+    postsCache = { issue: ISSUE, posts: DEMO_SUMMARIES, source: "bundled" };
+  } else {
+    const data = await json<PostsResponse>(await fetch(`${BASE}/posts`));
+    const posts = data.posts ?? [];
+    postsCache = {
+      issue: { ...ISSUE, ...(data.issue ?? {}) },
+      posts: posts.length ? posts : DEMO_SUMMARIES,
+      source: posts.length ? "api" : "bundled",
+    };
   }
-
-  const data = await json<PostsResponse>(await fetch(`${BASE}/posts`));
-  postsCache = {
-    issue: { ...ISSUE, ...(data.issue ?? {}) },
-    posts: data.posts ?? [],
-  };
+  postsStale = false;
   return postsCache;
 }
 
 export async function fetchPost(slug: string): Promise<Post> {
   const cached = postCache.get(slug);
-  if (cached) return cached;
+  if (cached && !stalePosts.has(slug)) return cached;
 
-  if (API_MODE === "demo") {
+  let post: Post;
+  if ((await fetchPosts()).source === "bundled") {
     const found = DEMO_POSTS.find((p) => p.slug === slug);
     if (!found) throw new Error("Post not found");
-    postCache.set(slug, found);
-    return found;
+    post = found;
+  } else {
+    post = await json<Post>(await fetch(`${BASE}/posts/${encodeURIComponent(slug)}`));
   }
-
-  const post = await json<Post>(await fetch(`${BASE}/posts/${encodeURIComponent(slug)}`));
   postCache.set(slug, post);
+  stalePosts.delete(slug);
   return post;
+}
+
+/** What is already loaded, for a first render without a loading state. */
+export function peekPosts(): IssueContent | null {
+  return postsCache;
+}
+
+export function peekPost(slug: string | undefined): Post | null {
+  return (slug && postCache.get(slug)) || null;
+}
+
+/** The content a prerendered page needs: the issue plus the given essays. */
+export async function snapshot(slugs: string[]): Promise<ContentSnapshot> {
+  const content = await fetchPosts();
+  const bodies = await Promise.all(slugs.map((slug) => fetchPost(slug)));
+  return { ...content, bodies };
+}
+
+/** Seed the caches from a prerendered page; the next fetch refreshes them. */
+export function primeContent(data: ContentSnapshot): void {
+  postsCache = { issue: data.issue, posts: data.posts, source: data.source };
+  postsStale = true;
+  for (const post of data.bodies) {
+    postCache.set(post.slug, post);
+    stalePosts.add(post.slug);
+  }
 }

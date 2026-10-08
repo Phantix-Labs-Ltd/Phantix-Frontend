@@ -6,7 +6,7 @@
   "description": "The SecureGraph Weekly: a Markdown-driven magazine blog. Reads published posts from the SecureGraph API (or bundled demo posts); writing and publishing happen only in the Staff Portal.",
   "scripts": {
     "dev": "vite --port 5178",
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "tsc -p tsconfig.json && vite build && vite build --ssr src/entry-server.tsx --outDir ../../node_modules/.prerender/blog && node prerender.mjs",
     "preview": "vite preview --port 5178",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
