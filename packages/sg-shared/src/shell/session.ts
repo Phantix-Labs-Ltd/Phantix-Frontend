@@ -11,9 +11,11 @@
  * The code is not a second credential: it carries the session that already
  * exists, so signing out or rotating the device kills it too.
  */
-import { apiRequest, clearStoredSession, type ApplicationKey } from "./api";
+// ApiError must be the shell client's: apiRequest throws that class, and the
+// shared client's ApiError is a different class an `instanceof` never matches.
+import { apiRequest, ApiError, clearStoredSession, type ApplicationKey } from "./api";
 import { APP_URL } from "../config";
-import { adoptAppSession, enterDemoMode, exitDemoMode, isDemoFlagSet, tokens, ApiError, type IssuedAppSession } from "../api";
+import { adoptAppSession, enterDemoMode, exitDemoMode, isDemoMode, tokens, type IssuedAppSession } from "../api";
 import { seedAppIdentity } from "../applications";
 
 /** URL fragment key carrying a handoff code, e.g. `https://attack…/#sg=abc`. */
@@ -90,7 +92,7 @@ function takeCodeFromFragment(): string {
 export async function handoffUrl(target: ApplicationKey, fallbackHost: string, path = "/"): Promise<string> {
   // The guided demo has no session, and its flag lives in per-origin storage —
   // so it has to be told, in the URL, that it is still the demo on arrival.
-  if (isDemoFlagSet()) {
+  if (isDemoMode()) {
     const base = (fallbackHost || "").replace(/\/+$/, "");
     return base ? `${base}${path}#${DEMO_FRAGMENT_KEY}=1` : fallbackHost;
   }
@@ -134,8 +136,9 @@ let handoffInflight: Promise<boolean> | null = null;
 export function consumeHandoff(application: ApplicationKey): Promise<boolean> {
   if (handoffInflight) return handoffInflight;
   handoffInflight = (async () => {
-    if (takeFlagFromFragment(DEMO_FRAGMENT_KEY)) {
-      enterDemoMode();
+    // A signed-in operator who follows a `#demo=1` link stays in their real
+    // session: enterDemoMode refuses, and the flag is dropped from the URL.
+    if (takeFlagFromFragment(DEMO_FRAGMENT_KEY) && enterDemoMode()) {
       return true;
     }
     const code = takeCodeFromFragment();
@@ -186,7 +189,8 @@ export function consumeHandoff(application: ApplicationKey): Promise<boolean> {
  * but it ends in the same place, so "sign out" means one thing everywhere.
  */
 export async function signOutEverywhere(coreHost?: string): Promise<void> {
-  const demo = isDemoFlagSet();
+  // A live session is revoked even if a demo flag lingers next to it.
+  const demo = isDemoMode();
   if (!demo) {
     try {
       // Best-effort: a failed revoke must not strand the operator in a session
