@@ -319,6 +319,23 @@ export interface AppTarget {
 }
 
 /** Where an application's "Open" action should go. */
+/** A same-site path from a URL parameter (`/vapt?x=1`), or undefined. Never
+ *  `//host` or a full URL, so a crafted link cannot send anyone off-site. */
+export function safeAppPath(raw: string | null | undefined): string | undefined {
+  return raw && /^\/(?![/\\])/.test(raw) ? raw : undefined;
+}
+
+/** Core's sign-in, remembering the application and page to return to. */
+export function coreLoginHref(next?: ApplicationKey, path?: string): string {
+  const core = (APPLICATION_HOSTS.core || "").replace(/\/+$/, "");
+  const q = new URLSearchParams();
+  if (next && next !== "core") q.set("next", next);
+  const p = safeAppPath(path);
+  if (next && next !== "core" && p && p !== "/") q.set("path", p);
+  const qs = q.toString();
+  return `${core}/login${qs ? `?${qs}` : ""}`;
+}
+
 export function applicationTarget(key: ApplicationKey, path = "/dashboard"): AppTarget {
   // "Local" means this bundle's own application, whichever one it is. Assuming
   // Core was always local was true while there was one bundle; each application
@@ -389,9 +406,7 @@ export async function applicationHandoffHref(
     // application) instead of the target's login screen, which reads as a
     // silent logout on app switch.
     if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-      const core = (APPLICATION_HOSTS.core || "").replace(/\/+$/, "");
-      const next = key === "core" ? "" : `?next=${encodeURIComponent(key)}`;
-      return core ? `${core}/login${next}` : "/login";
+      return APPLICATION_HOSTS.core ? coreLoginHref(key, path) : "/login";
     }
     return fallback;
   }

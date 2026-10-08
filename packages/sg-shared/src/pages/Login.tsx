@@ -17,8 +17,13 @@ import { ThemeToggle } from "@sg/ThemeToggle";
 /** After sign-in, go to the picker — remembering the application the operator
  *  was sent here from (`?next=`) so RBAC can hand the session straight back. */
 function chooseAppHref(): string {
-  const next = new URLSearchParams(window.location.search).get("next");
-  return next ? `/choose-app?next=${encodeURIComponent(next)}` : "/choose-app";
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next");
+  if (!next) return "/choose-app";
+  const q = new URLSearchParams({ next });
+  const path = params.get("path");
+  if (path) q.set("path", path);
+  return `/choose-app?${q.toString()}`;
 }
 
 
