@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import { ArrowRight, Boxes, Code2, Crosshair, Lock, LogOut, ShieldCheck, BookOpen } from "lucide-react";
 import { signOutEverywhere } from "@sg/shell/session";
@@ -13,6 +13,7 @@ import {
   loadApplications,
   lastApp,
   rememberApp,
+  safeAppPath,
   type ApplicationCard,
   type ApplicationKey,
   type ApplicationsSnapshot,
@@ -145,20 +146,34 @@ export default function ChooseApp() {
   const last = lastApp();
 
   const open = useCallback(
-    async (app: ApplicationCard) => {
+    async (app: ApplicationCard, path?: string) => {
       if (!app.accessible || opening) return;
       rememberApp(app.key);
-      const target = applicationTarget(app.key);
+      const target = applicationTarget(app.key, path);
       if (!target.external) {
         navigate(target.href, { replace: true });
         return;
       }
       setOpening(app.key);
       // Carry this session across the origin boundary (single-use, seconds-long).
-      window.location.assign(await applicationHandoffHref(app.key));
+      window.location.assign(await applicationHandoffHref(app.key, path));
     },
     [navigate, opening],
   );
+
+  // Sent here to sign in on the way to an application (`?next=attack&path=/vapt`):
+  // go straight back to it once the list confirms this operator may enter it.
+  const [params] = useSearchParams();
+  const nextKey = params.get("next");
+  const nextPath = safeAppPath(params.get("path"));
+  const [forwarded, setForwarded] = useState(false);
+  useEffect(() => {
+    if (forwarded || !nextKey || !snap) return;
+    const app = all.find((a) => a.key === nextKey);
+    if (!app?.accessible) return; // no access: the picker explains why
+    setForwarded(true);
+    void open(app, nextPath);
+  }, [forwarded, nextKey, nextPath, snap, all, open]);
 
   // Deliberately no auto-forward when only one application is reachable: the
   // picker is where an operator sees the whole product, including what their

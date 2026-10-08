@@ -46,7 +46,7 @@ import CookieConsent from "../components/CookieConsent";
 import { useStore } from "../store";
 import { shortName } from "../utils";
 import { loadSandboxMe } from "../sandbox";
-import { loadAppIdentity, type AppIdentity } from "../applications";
+import { loadAppIdentity, safeAppPath, type AppIdentity } from "../applications";
 import { PLATFORM_IDENTITY_URL } from "../links";
 import { apiGet, appToken, clearStoredSession, setApplication } from "./api";
 import { isDemoFlagSet, setActiveApplication, setSessionCardMounted } from "../api";
@@ -383,7 +383,7 @@ export function ApplicationShell({
       demo = isDemoFlagSet();
       if (!handed && !demo && !appToken()) {
         // Replace (not push) so Back cannot land on the gated page.
-        window.location.replace(coreLoginUrl(application));
+        window.location.replace(coreLoginUrl(application, window.location.pathname + window.location.search));
         return;
       }
       if (demo) {
@@ -614,9 +614,13 @@ export function ApplicationShell({
 
   /** Core owns sign-in. Send an unauthenticated visitor there, remembering the
    *  application they wanted so Core hands the session back after login. */
-  function coreLoginUrl(next?: ApplicationKey): string {
+  function coreLoginUrl(next?: ApplicationKey, path?: string): string {
     const base = (hosts.core || "").replace(/\/+$/, "");
-    return `${base}/login${next ? `?next=${next}` : ""}`;
+    const q = new URLSearchParams();
+    if (next) q.set("next", next);
+    if (next && path && safeAppPath(path) && path !== "/") q.set("path", path);
+    const qs = q.toString();
+    return `${base}/login${qs ? `?${qs}` : ""}`;
   }
 
   function signOut() {
