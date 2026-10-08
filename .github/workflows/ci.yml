@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [core, attack, defend, code]
+        app: [core, attack, defend, code, blog]
     defaults:
       run:
         working-directory: apps/securegraph-${{ matrix.app }}

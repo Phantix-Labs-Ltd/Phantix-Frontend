@@ -1,6 +1,6 @@
 # Deployment
 
-Four deployable applications live in `apps/` and share `packages/sg-shared`.
+Five deployable applications live in `apps/`. The four operator apps share `packages/sg-shared`.
 
 | App | App directory | Host |
 |---|---|---|
@@ -8,6 +8,7 @@ Four deployable applications live in `apps/` and share `packages/sg-shared`.
 | Attack | `apps/securegraph-attack` | `attack.phantixlabs.com` |
 | Defend | `apps/securegraph-defend` | `defend.phantixlabs.com` |
 | Code | `apps/securegraph-code` | `code.phantixlabs.com` |
+| The Weekly (blog) | `apps/securegraph-blog` | `blog.phantixlabs.com` |
 
 Platform (`platform.phantixlabs.com`), landing and staff are separate repositories and are not built here.
 
@@ -23,31 +24,32 @@ Output Directory: dist
 Install Command: npm install
 ```
 
-Each app ships a `vercel.json` (SPA rewrite to `/index.html`, `/api/v1/*` proxy to the
-backend, cache/security headers). `packages/sg-shared` and the repo-root `public/` +
+Each app ships a `vercel.json` (SPA rewrite, `/api/v1/*` proxy to the backend,
+cache/security headers). The commands in each `vercel.json` override the project settings.
+
+Vercel's Git integration deploys every project: pushes to `main` go to production and
+other branches get preview deployments. There are no deploy workflows in GitHub Actions
+and no Vercel token is stored in the repository.
+
+### Prerendered pages (Core and the blog)
+
+Core and the blog render their public pages to static HTML at build time
+(`prerender.mjs` in each app, run by its `npm run build`). Vercel serves a file that
+exists before applying the rewrite, so those URLs answer with real content; every other
+path is rewritten to `app-shell.html`, the plain SPA entry.
+
+The blog renders the issue page and each essay from its content API (`VITE_BLOG_API_URL`)
+at build time and embeds that content in the page; the browser shows it at once and then
+refreshes it from the API. An essay published after the last build is served by the SPA
+until the next deploy prerenders it. While the API has no published posts, the blog shows
+the bundled launch issue (`src/content/posts`). An unreachable API never fails the build:
+the blog then ships as a plain SPA. `packages/sg-shared` and the repo-root `public/` +
 `docs/` are consumed via path aliases, so the Vercel checkout must include the whole
 repository (do **not** set a Root Directory above `apps/...` while keeping this layout).
 
 ## GitHub Actions
 
 - `.github/workflows/ci.yml`. Typecheck + build every app on push/PR.
-- `.github/workflows/deploy-<app>.yml`. Build and deploy one app to Vercel on push to
-  `main`, filtered to that app plus the shared paths (`packages/sg-shared`, `public`,
-  `docs`). Also runnable via **workflow_dispatch**.
-
-### Required repository secrets
-
-| Secret | Purpose |
-|---|---|
-| `VERCEL_TOKEN` | Vercel access token (Account → Settings → Tokens) |
-| `VERCEL_ORG_ID` | Vercel team/user id (`.vercel/project.json` after first `vercel link`) |
-| `VERCEL_PROJECT_ID_CORE` | Project id for Core |
-| `VERCEL_PROJECT_ID_ATTACK` | Project id for Attack |
-| `VERCEL_PROJECT_ID_DEFEND` | Project id for Defend |
-| `VERCEL_PROJECT_ID_CODE` | Project id for Code |
-
-Find the ids by running `vercel link` inside each app directory once, then reading
-`.vercel/project.json`.
 
 ## Shared package
 
