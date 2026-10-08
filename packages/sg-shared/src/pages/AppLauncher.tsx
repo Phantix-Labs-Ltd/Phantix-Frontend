@@ -4,7 +4,7 @@ import { motion, type Variants } from "framer-motion";
 import { ArrowUpRight, Boxes, Code2, Crosshair, ShieldCheck } from "lucide-react";
 import { cx } from "@sg/utils";
 import { apiGet } from "@sg/shell/api";
-import { isDemoFlagSet } from "@sg/api";
+import { isDemoMode } from "@sg/api";
 import { useStore } from "@sg/store";
 import { APPLICATION_LABEL, type ApplicationKey, type NavSection } from "@sg/shell/types";
 import LatestAssessmentPanel from "../components/LatestAssessment";
@@ -76,7 +76,7 @@ export default function AppLauncher({
   const [card, setCard] = useState<LauncherCard | null>(null);
 
   useEffect(() => {
-    if (isDemoFlagSet()) return;
+    if (isDemoMode()) return;
     let alive = true;
     apiGet<Snapshot>("/app/auth/applications")
       .then((s) => alive && setCard(s.applications.find((a) => a.key === application) ?? null))

@@ -8,9 +8,27 @@ export const API_BASE = CONFIG_API_BASE;
 
 const DEMO_FLAG = "phantix_demo";
 
-/** Enter the guided demo tenant (runtime, survives refresh in this tab). */
-export function enterDemoMode(): void {
+/** Placeholder bearers the demo stores so the UI reads as signed in. */
+const DEMO_PLACEHOLDER_TOKENS = new Set(["demo.company.jwt", "demo.org_user.jwt"]);
+
+/** A real signed-in session on this origin (the demo's placeholders do not count). */
+export function hasLiveSession(): boolean {
+  const live = (v: string | null) => !!v && !DEMO_PLACEHOLDER_TOKENS.has(v);
+  return live(tokens.appSession) || live(tokens.platform) || live(tokens.orgUser);
+}
+
+/**
+ * Enter the guided demo tenant (runtime, survives refresh in this tab).
+ *
+ * Refused while a real session exists: demo mode resolves every write as a
+ * no-op success, so a link carrying `#demo=1` or `?demo=1` must never turn a
+ * signed-in operator's "cancel scan" or "revoke" into a fake confirmation.
+ * Returns whether the demo was entered.
+ */
+export function enterDemoMode(): boolean {
+  if (hasLiveSession()) return false;
   sessionStorage.setItem(DEMO_FLAG, "1");
+  return true;
 }
 
 /** Leave demo mode --- the next sign-in talks to the real organization. */
@@ -23,9 +41,15 @@ export function isDemoFlagSet(): boolean {
   return sessionStorage.getItem(DEMO_FLAG) === "1" || localStorage.getItem(DEMO_FLAG) === "1";
 }
 
-/** Demo mode = visitor explicitly entered the guided demo tenant. */
+/**
+ * Demo mode = visitor explicitly entered the guided demo tenant.
+ *
+ * A live session always wins: even if the flag lingers (set before signing in,
+ * or by anything that bypassed enterDemoMode), real data loads and real writes
+ * reach the backend.
+ */
 export function isDemoMode(): boolean {
-  return isDemoFlagSet();
+  return isDemoFlagSet() && !hasLiveSession();
 }
 
 // ── Token stores (per-surface, never mixed) ──────────────────────────────────

@@ -97,7 +97,7 @@ const Ctx = createContext<Store | null>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const demoSession: Session = { authenticated: true, realm: "platform", userEmail: "demo@acme.ng", userName: "Demo Explorer", isInitiator: true, isAuthorizer: false, initiatorName: "Ada Okonkwo", authorizerName: "Chidi Eze" };
   const [session, setSession] = useState<Session>(() => {
-    if (isDemoFlagSet()) return demoSession;
+    if (isDemoMode()) return demoSession;
     // Seed the account naming from this origin's last identity so a reload does
     // not flash an empty name before `/app/auth/me` returns.
     const id = readPersistedAppIdentity();
@@ -261,7 +261,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // what makes tenant + account naming show on a switched-to app.
   useEffect(() => {
     const onAuthenticated = (e: Event) => {
-      if (isDemoFlagSet() || !tokens.appSession) return;
+      if (isDemoMode() || !tokens.appSession) return;
       const detail = (e as CustomEvent<{ identity?: AppIdentity | null }>).detail;
       const id = detail?.identity ?? readPersistedAppIdentity();
       if (!id) return;
@@ -592,9 +592,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [clearSessionExpired]);
 
   const enterDemo = useCallback(() => {
+    // Refused while signed in (see enterDemoMode): the operator stays in their
+    // real session rather than one where every write is a silent no-op.
+    if (!enterDemoMode()) return;
     clearResourceCache();
     clearAppIdentity();
-    enterDemoMode();
     setOrg(demo.organization);
     setDualControl(demo.dualControl);
     setSecurityDbReady(true);

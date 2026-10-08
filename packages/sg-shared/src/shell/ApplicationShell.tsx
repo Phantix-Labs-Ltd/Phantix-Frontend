@@ -49,7 +49,7 @@ import { loadSandboxMe } from "../sandbox";
 import { loadAppIdentity, safeAppPath, type AppIdentity } from "../applications";
 import { PLATFORM_IDENTITY_URL } from "../links";
 import { apiGet, appToken, clearStoredSession, setApplication } from "./api";
-import { isDemoFlagSet, migrateToCookieSession, setActiveApplication, setSessionCardMounted } from "../api";
+import { isDemoMode, migrateToCookieSession, setActiveApplication, setSessionCardMounted } from "../api";
 import { consumeHandoff, handoffUrl, signOutEverywhere } from "./session";
 import { IS_DEV_HOSTS } from "../config";
 import { useNoIndex } from "../pageTitle";
@@ -371,7 +371,7 @@ export function ApplicationShell({
     let alive = true;
     setAuthReady(false);
     (async () => {
-      let demo = isDemoFlagSet();
+      let demo = isDemoMode();
       // Redeem an arriving handoff/demo fragment BEFORE trusting any token that
       // already sits on this origin. Gating this on `!appToken()` signed
       // operators out on every app switch: the target origin still held a token
@@ -380,7 +380,7 @@ export function ApplicationShell({
       // screen. Consuming first is always safe — with no fragment it is a no-op,
       // and with one the arriving session is authoritative.
       const handed = await consumeHandoff(application);
-      demo = isDemoFlagSet();
+      demo = isDemoMode();
       if (!handed && !demo && !appToken()) {
         // Replace (not push) so Back cannot land on the gated page.
         window.location.replace(coreLoginUrl(application, window.location.pathname + window.location.search));
@@ -480,7 +480,7 @@ export function ApplicationShell({
   // stops when the document is not visible). App realm only — platform/company
   // JWTs have their own clocks.
   useEffect(() => {
-    if (!authReady || session?.realm !== "application" || isDemoFlagSet()) return;
+    if (!authReady || session?.realm !== "application" || isDemoMode()) return;
     let timer: number | undefined;
     const touch = () => {
       if (document.visibilityState !== "visible") return;
