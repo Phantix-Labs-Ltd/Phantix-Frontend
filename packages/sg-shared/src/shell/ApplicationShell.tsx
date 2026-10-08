@@ -49,7 +49,7 @@ import { loadSandboxMe } from "../sandbox";
 import { loadAppIdentity, safeAppPath, type AppIdentity } from "../applications";
 import { PLATFORM_IDENTITY_URL } from "../links";
 import { apiGet, appToken, clearStoredSession, setApplication } from "./api";
-import { isDemoFlagSet, setActiveApplication, setSessionCardMounted } from "../api";
+import { isDemoFlagSet, migrateToCookieSession, setActiveApplication, setSessionCardMounted } from "../api";
 import { consumeHandoff, handoffUrl, signOutEverywhere } from "./session";
 import { IS_DEV_HOSTS } from "../config";
 import { useNoIndex } from "../pageTitle";
@@ -391,6 +391,9 @@ export function ApplicationShell({
         if (alive) setAuthReady(true);
         return;
       }
+      // A session signed in before cookie transport still sits in localStorage:
+      // trade it for HttpOnly cookies once (no-op for a cookie session).
+      await migrateToCookieSession();
       // Verify identity AND this application's access before rendering anything.
       // A transient failure (API restarting, gateway error) must NOT be read as
       // a dead session — only a 401/403 is the backend rejecting the token.

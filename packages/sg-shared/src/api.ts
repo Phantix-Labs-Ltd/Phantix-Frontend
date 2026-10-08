@@ -125,6 +125,93 @@ export const tokens = {
   set stepUp(v: string | null) { writeSessionToken("platform_step_up", v); if (!v) writeSessionToken("platform_step_up_exp", null); },
 };
 
+// ── Cookie session transport ─────────────────────────────────────────────────
+// The app session and device tokens live in HttpOnly cookies the backend sets
+// (session_cookies.py), so no script on this origin — including an injected
+// one — can read them and replay the session elsewhere. Every request asks for
+// cookie transport; the backend only honours the cookies on requests carrying
+// this header, which a cross-site page cannot send (CSRF).
+//
+// `tokens.appSession` then holds a per-sign-in marker, not a credential: every
+// "is there a session?" check keeps working, it is never sent as a bearer, and
+// being unique per sign-in it still lets a late 401 tell an old session from
+// the one that replaced it.
+export const SESSION_TRANSPORT_HEADER = "X-Session-Transport";
+const COOKIE_SESSION_PREFIX = "cookie:";
+
+export function isCookieSession(value: string | null | undefined): boolean {
+  return !!value && value.startsWith(COOKIE_SESSION_PREFIX);
+}
+
+/** A stored token that is a real bearer (not the cookie-session marker), or null. */
+function sendableBearer(value: string | null | undefined): string | null {
+  return value && !isCookieSession(value) ? value : null;
+}
+
+/** Auth headers for raw `fetch` calls (downloads, SSE) outside `request()`. */
+export function sessionAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { [SESSION_TRANSPORT_HEADER]: "cookie" };
+  const bearer = sendableBearer(tokens.appSession || tokens.orgUser || tokens.platform);
+  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
+  const device = sendableBearer(tokens.device);
+  if (device) headers["X-Device-Token"] = device;
+  return headers;
+}
+
+/** The session fields an issuing endpoint (MFA, device-status, handoff redeem) returns. */
+export interface IssuedAppSession {
+  access_token?: string;
+  device_token?: string;
+  session_transport?: string;
+}
+
+/**
+ * Record the session an issuing endpoint established. Returns false when the
+ * response carries none. A cookie-transport answer stores only a fresh marker;
+ * a legacy bearer answer (cookie transport disabled server-side) stores tokens.
+ */
+export function adoptAppSession(res: IssuedAppSession | null | undefined): boolean {
+  if (res?.session_transport === "cookie") {
+    tokens.appSession = `${COOKIE_SESSION_PREFIX}${crypto.randomUUID()}`;
+    tokens.device = null;
+    return true;
+  }
+  if (res?.access_token) {
+    tokens.appSession = res.access_token;
+    tokens.device = res.device_token || null;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Move a session signed in before cookie transport out of localStorage: one
+ * forced renewal with the stored bearer returns the rotated pair as cookies,
+ * and the readable copies are dropped. On any failure the bearer keeps working
+ * until it expires.
+ */
+export async function migrateToCookieSession(): Promise<void> {
+  const bearer = sendableBearer(tokens.appSession);
+  if (!bearer) return;
+  try {
+    const res = await fetch(`${API_BASE}/app/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${bearer}`,
+        ...(tokens.device ? { "X-Device-Token": tokens.device } : {}),
+        "X-Device-Id": deviceId(),
+        [SESSION_TRANSPORT_HEADER]: "cookie",
+      },
+    });
+    if (!res.ok) return;
+    const body = (await res.json()) as IssuedAppSession;
+    // Only drop the bearer once the cookies are confirmed set.
+    if (body?.session_transport === "cookie" && tokens.appSession === bearer) adoptAppSession(body);
+  } catch {
+    /* keep the bearer; retried on the next load */
+  }
+}
+
 /** Store a step-up token with its lifetime (seconds) from the verify response. */
 export function setStepUpToken(token: string, expiresInSec: number): void {
   tokens.stepUp = token;
@@ -580,11 +667,14 @@ async function request<T>(
   // Build headers fresh on every attempt so a renewal applied by another
   // in-flight response is picked up on retry.
   const doFetch = async (): Promise<Response> => {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { [SESSION_TRANSPORT_HEADER]: "cookie" };
     const bearer = currentBearer(realm);
     sentBearer = bearer;
-    if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-    if (realm === "application" && tokens.device) headers["X-Device-Token"] = tokens.device!;
+    // A cookie session sends no bearer: the browser attaches the HttpOnly cookies.
+    const sendable = sendableBearer(bearer);
+    if (sendable) headers["Authorization"] = `Bearer ${sendable}`;
+    const device = sendableBearer(tokens.device);
+    if (realm === "application" && device) headers["X-Device-Token"] = device;
     // Per 03_APPLICATION_IMPLEMENTATION.md §2.4: every app API call carries X-Device-Id
     if (realm === "application") headers["X-Device-Id"] = deviceId();
     // Which of the four applications this call comes from (see the applications
@@ -840,12 +930,15 @@ async function isSessionSuperseded(res: Response): Promise<boolean> {
 
 /** Common auth headers for the auxiliary (non-request) helpers. */
 function buildAuthHeaders(method: string): Record<string, string> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { [SESSION_TRANSPORT_HEADER]: "cookie" };
   const realm: Realm = tokens.appSession ? "application" : "platform";
-  const bearer = realm === "application" ? tokens.appSession : tokens.orgUser ?? tokens.platform;
+  const bearer = sendableBearer(
+    realm === "application" ? tokens.appSession : tokens.orgUser ?? tokens.platform,
+  );
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   if (realm === "application") {
-    if (tokens.device) headers["X-Device-Token"] = tokens.device;
+    const device = sendableBearer(tokens.device);
+    if (device) headers["X-Device-Token"] = device;
     headers["X-Device-Id"] = deviceId();
     headers["X-Application"] = activeApplication;
   }

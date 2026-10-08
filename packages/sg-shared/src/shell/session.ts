@@ -11,9 +11,9 @@
  * The code is not a second credential: it carries the session that already
  * exists, so signing out or rotating the device kills it too.
  */
-import { apiRequest, clearStoredSession, setStoredSession, type ApplicationKey } from "./api";
+import { apiRequest, clearStoredSession, type ApplicationKey } from "./api";
 import { APP_URL } from "../config";
-import { enterDemoMode, exitDemoMode, isDemoFlagSet, tokens, ApiError } from "../api";
+import { adoptAppSession, enterDemoMode, exitDemoMode, isDemoFlagSet, tokens, ApiError, type IssuedAppSession } from "../api";
 import { seedAppIdentity } from "../applications";
 
 /** URL fragment key carrying a handoff code, e.g. `https://attack…/#sg=abc`. */
@@ -28,9 +28,7 @@ interface HandoffMinted {
   open_url: string;
 }
 
-interface HandoffRedeemed {
-  access_token: string;
-  device_token?: string;
+interface HandoffRedeemed extends IssuedAppSession {
   dual_control_session?: string;
   organization_id?: number;
   organization_slug?: string;
@@ -148,12 +146,10 @@ export function consumeHandoff(application: ApplicationKey): Promise<boolean> {
         body: { code, application },
         anonymous: true,
       });
-      if (!session?.access_token) return false;
-      setStoredSession({
-        accessToken: session.access_token,
-        deviceToken: session.device_token || "",
-        dualControlSession: session.dual_control_session || "",
-      });
+      // Cookie transport: the session arrives as HttpOnly cookies and only a
+      // marker is stored here (see adoptAppSession).
+      if (!adoptAppSession(session)) return false;
+      tokens.dualControl = session.dual_control_session || null;
       // The redeem already validated the session, so carry the tenant + account
       // naming straight into this origin's store — the shell and store can name
       // the org and user immediately instead of after another `/app/auth/me`.

@@ -13,10 +13,8 @@ import { timeAgo, formatBytes, titleCase, cx, normalizeReportRow, extractReportF
 import { useStore } from "@sg/store";
 import { Navigate, useSearchParams, useNavigate } from "react-router-dom";
 import { isDemoMode } from "@sg/api";
-import { marked } from "marked";
+import { renderMarkdown } from "@sg/safeHtml";
 import type { TrackerSummary } from "@sg/types";
-
-marked.setOptions({ breaks: true, gfm: true });
 
 /** Verification gate (GET /reports/verification-gate) --- counts before generate. */
 type VerificationGate = {
@@ -134,7 +132,7 @@ function JsonPre({ data }: { data: unknown }) {
 }
 
 function MarkdownContent({ content }: { content: string }) {
-  const html = useMemo(() => (content ? (marked.parse(content) as string) : ""), [content]);
+  const html = useMemo(() => renderMarkdown(content), [content]);
   return (
     <div
       className="prose-doc max-w-none mt-2 rounded-xl border border-phantix-700/40 bg-phantix-950/60 p-4 max-h-[500px] overflow-auto"
@@ -875,7 +873,7 @@ export default function Reports() {
                     <summary className="cursor-pointer font-semibold text-slate-300">Remediation Guidance</summary>
                     <div
                       className="prose-doc max-w-none mt-2"
-                      dangerouslySetInnerHTML={{ __html: marked.parse(detail.ai_narratives.remediation_guidance) as string }}
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(detail.ai_narratives.remediation_guidance) }}
                     />
                   </details>
                 )}

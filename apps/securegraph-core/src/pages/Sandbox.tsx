@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { marked } from "marked";
+import { renderMarkdown } from "@sg/safeHtml";
 import { FlaskConical, Star, Megaphone, CheckCircle2, RefreshCw, AlertTriangle, ExternalLink } from "lucide-react";
 import { PageHeader, Card, CardHeader, Modal, Spinner, EmptyState, StatusBadge, PageSkeleton } from "@sg/ui";
 import { useStore } from "@sg/store";
@@ -206,7 +206,7 @@ if (loading) {
                       {body && (
                         <div
                           className="prose-doc max-w-none mt-1.5"
-                          dangerouslySetInnerHTML={{ __html: marked.parse(body) as string }}
+                          dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
                         />
                       )}
                       {!u.acked && (

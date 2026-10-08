@@ -278,11 +278,16 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
         ...b,
         trackerFindings: b.trackerFindings.map((tf) => (tf.finding_key === key ? ({ ...tf, ...(updated ?? {}), status: s } as TrackerFinding) : tf)),
       }));
-      toast(
-        s === "fixed" ? "success" : s === "retest_failed" ? "error" : "info",
-        s === "fixed" ? "Fix confirmed. Finding closed." : "Retest complete",
-        s === "fixed" ? `${key} re-scanned clean. Closed as fixed.` : s === "retest_failed" ? `${key} still matches. It stays open.` : `${key} retest inconclusive. Status unchanged.`,
-      );
+      if (updated?.retest_status === "queued") {
+        // The scan runs on a scan worker; the board updates when it finishes.
+        toast("info", "Retest queued", `${key} is being re-scanned. The result appears here when it finishes.`);
+      } else {
+        toast(
+          s === "fixed" ? "success" : s === "retest_failed" ? "error" : "info",
+          s === "fixed" ? "Fix confirmed. Finding closed." : "Retest complete",
+          s === "fixed" ? `${key} re-scanned clean. Closed as fixed.` : s === "retest_failed" ? `${key} still matches. It stays open.` : `${key} retest inconclusive. Status unchanged.`,
+        );
+      }
       setRetestTarget(null);
       setRetestForm({ tool: "", note: "" });
       reload();

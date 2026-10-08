@@ -2,28 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      // Apply the saved theme before first paint (mirrors @sg/theme bootstrapTheme).
-      (function () {
-        try {
-          var stored = localStorage.getItem("phantix_theme");
-          var dark;
-          if (stored === "light") dark = false;
-          else if (stored === "system")
-            dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          else dark = true;
-          if (dark) {
-            document.documentElement.removeAttribute("data-theme");
-            document.documentElement.classList.add("dark");
-          } else {
-            document.documentElement.setAttribute("data-theme", "light");
-            document.documentElement.classList.remove("dark");
-          }
-          var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute("content", dark ? "#000000" : "#F4F6FA");
-        } catch (e) {}
-      })();
-    </script>
+    <script src="/theme-boot.js"></script>
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

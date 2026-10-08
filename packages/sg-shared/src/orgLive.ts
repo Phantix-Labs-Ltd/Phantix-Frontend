@@ -10,7 +10,7 @@
 // event-agnostic: any event that is not a heartbeat means "some org data moved",
 // and a page showing cached data revalidates.
 
-import { API_BASE, isDemoMode, tokens } from "./api";
+import { API_BASE, isDemoMode, sessionAuthHeaders } from "./api";
 
 type Listener = () => void;
 
@@ -38,11 +38,7 @@ function _emit(): void {
 }
 
 function _headers(): Record<string, string> {
-  const headers: Record<string, string> = { Accept: "text/event-stream" };
-  const bearer = tokens.appSession || tokens.orgUser || tokens.platform;
-  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-  if (tokens.device) headers["X-Device-Token"] = tokens.device;
-  return headers;
+  return { Accept: "text/event-stream", ...sessionAuthHeaders() };
 }
 
 async function _loop(): Promise<void> {

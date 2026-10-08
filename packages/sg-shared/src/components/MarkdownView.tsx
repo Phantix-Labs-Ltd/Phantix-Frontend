@@ -24,8 +24,15 @@ type Block =
   | { kind: "quote"; text: string }
   | { kind: "hr" };
 
+// Quotes too: link URLs are interpolated into `href="…"`, and an unescaped `"`
+// in the URL closes the attribute and opens an event handler.
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function inline(text: string): string {
