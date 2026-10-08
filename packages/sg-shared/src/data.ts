@@ -1,5 +1,5 @@
 // Central resource loaders --- demo-data only when isDemoMode() is true.
-import { api, ApiError, delay, isDemoMode, isSecurityDbBlocked, tokens, API_BASE, publicDetailCopy } from "./api";
+import { api, ApiError, delay, isDemoMode, isSecurityDbBlocked, tokens, API_BASE, publicDetailCopy, sessionAuthHeaders } from "./api";
 import * as demo from "./demo-data";
 import { deriveParents } from "./assetChain";
 import type {
@@ -1161,9 +1161,7 @@ export async function downloadSocAgent(os: string): Promise<{ blob: Blob; filena
   }
   const path = `/soc/availability/agent/download/${encodeURIComponent(os)}`;
   const headers: Record<string, string> = {};
-  const bearer = tokens.appSession || tokens.orgUser || tokens.platform;
-  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-  if (tokens.device) headers["X-Device-Token"] = tokens.device;
+  Object.assign(headers, sessionAuthHeaders());
   const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
   if (!res.ok) throw new ApiError(res.status, res.statusText);
   const cd = res.headers.get("content-disposition") || "";
@@ -1701,9 +1699,7 @@ function agentStreamHeaders(): Record<string, string> {
     "Content-Type": "application/json",
     Accept: "text/event-stream",
   };
-  const bearer = tokens.appSession || tokens.orgUser || tokens.platform;
-  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-  if (tokens.device) headers["X-Device-Token"] = tokens.device;
+  Object.assign(headers, sessionAuthHeaders());
   // Agent chat/run streams are mutating org POSTs — the operate middleware
   // requires the dual-control session header once dual-control is configured.
   if (tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl;

@@ -5,7 +5,7 @@ import {
   ArrowRight, KeyRound, Mail, ShieldCheck, Smartphone, Loader2, PlayCircle,
   Link2, Building2, User, AlertOctagon, AlertTriangle, Check, Send, RefreshCw,
 } from "lucide-react";
-import { api, ApiError, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId } from "@sg/api";
+import { api, ApiError, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId, adoptAppSession, type IssuedAppSession } from "@sg/api";
 import { useStore } from "@sg/store";
 import { PLATFORM_URL } from "@sg/links";
 import { cx, humanize } from "@sg/utils";
@@ -236,9 +236,7 @@ function ReturningLogin({
     setError("A new code was sent. Enter the latest code.");
   };
 
-  type MfaResult = {
-    access_token?: string;
-    device_token?: string;
+  type MfaResult = IssuedAppSession & {
     device_verification_required?: boolean;
     user?: { full_name?: string; email?: string };
     user_email?: string;
@@ -257,8 +255,7 @@ function ReturningLogin({
   };
 
   const finishLogin = (res: MfaResult, rotated = false) => {
-    tokens.appSession = res.access_token ?? "";
-    tokens.device = res.device_token ?? "";
+    adoptAppSession(res);
     const dcSessionToken = res.dual_control_session_token ?? res.dual_control?.session_token;
     if (dcSessionToken) tokens.dualControl = dcSessionToken;
 
@@ -311,7 +308,7 @@ function ReturningLogin({
         device_id: deviceId(),
       }, { realm: "application" });
       if (res && res.confirmed === false) return false;
-      if (!res?.access_token) {
+      if (!res?.access_token && res?.session_transport !== "cookie") {
         // Someone already finished this sign-in with this link. Say so rather
         // than waiting out the timeout on a link that can never complete here.
         if (res?.already_completed) {
@@ -615,9 +612,7 @@ function AppLoginFlow({
     setBusy(true);
     setError(null);
     try {
-      const res = await api.post<{
-        access_token?: string;
-        device_token?: string;
+      const res = await api.post<IssuedAppSession & {
         device_verification_required?: boolean;
         user?: { full_name?: string; email?: string };
         user_email?: string;
@@ -649,8 +644,7 @@ function AppLoginFlow({
         return;
       }
 
-      tokens.appSession = res.access_token ?? "";
-      tokens.device = res.device_token ?? "";
+      adoptAppSession(res);
       const devId2 = localStorage.getItem("phantix_device_id") ?? crypto.randomUUID();
       localStorage.setItem("phantix_device_id", devId2);
 
@@ -684,12 +678,12 @@ function AppLoginFlow({
   const checkDeviceConfirmed = useCallback(async (): Promise<boolean> => {
     if (!deviceToken) return false;
     const exchange = async (): Promise<boolean> => {
-      const res = await api.post<{ access_token?: string; device_token?: string; confirmed?: boolean; already_completed?: boolean; user?: { full_name?: string; email?: string }; user_email?: string; dual_control?: { session_token?: string; can_operate?: boolean; is_initiator?: boolean; is_authorizer?: boolean }; dual_control_session_token?: string }>("/app/auth/device-status", {
+      const res = await api.post<IssuedAppSession & { confirmed?: boolean; already_completed?: boolean; user?: { full_name?: string; email?: string }; user_email?: string; dual_control?: { session_token?: string; can_operate?: boolean; is_initiator?: boolean; is_authorizer?: boolean }; dual_control_session_token?: string }>("/app/auth/device-status", {
         device_token: deviceToken,
         device_id: deviceId(),
       }, { realm: "application" });
       if (!res || res.confirmed === false) return false;
-      if (!res.access_token) {
+      if (!res.access_token && res.session_transport !== "cookie") {
         // Someone already finished this sign-in with this link. Say so rather
         // than waiting out the timeout on a link that can never complete here.
         if (res.already_completed) {
@@ -699,8 +693,7 @@ function AppLoginFlow({
         return false;
       }
 
-      tokens.appSession = res.access_token ?? "";
-      tokens.device = res.device_token ?? "";
+      adoptAppSession(res);
       const dcSessionToken = res.dual_control_session_token ?? res.dual_control?.session_token;
       if (dcSessionToken) tokens.dualControl = dcSessionToken;
 

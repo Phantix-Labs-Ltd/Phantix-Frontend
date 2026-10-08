@@ -55,7 +55,9 @@ async function getMermaid(): Promise<typeof Mermaid> {
   mermaid.initialize({
     startOnLoad: false,
     theme: "base",
-    securityLevel: "loose",
+    // Diagram source comes from model output: "strict" encodes HTML in labels
+    // and disables click callbacks.
+    securityLevel: "strict",
     fontFamily: "'Geist Variable', 'Space Grotesk', system-ui, sans-serif",
     themeVariables: themeVars(),
   });

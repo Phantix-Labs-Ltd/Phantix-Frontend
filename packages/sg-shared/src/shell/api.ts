@@ -12,7 +12,15 @@
  * because the operator's role happens to include Attack.
  */
 import type { ApplicationKey } from "./types";
-import { deviceId as sharedDeviceId, readSessionStoredToken, readStoredToken, writeSessionStoredToken, writeStoredToken } from "../api";
+import {
+  deviceId as sharedDeviceId,
+  isCookieSession,
+  readSessionStoredToken,
+  readStoredToken,
+  SESSION_TRANSPORT_HEADER,
+  writeSessionStoredToken,
+  writeStoredToken,
+} from "../api";
 
 export type { ApplicationKey };
 
@@ -147,12 +155,17 @@ async function isSessionSuperseded(res: Response): Promise<boolean> {
 }
 
 function buildHeaders(anonymous: boolean): Record<string, string> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+  // Cookie transport on every call (see SESSION_TRANSPORT_HEADER in ../api):
+  // the session itself rides in HttpOnly cookies the browser attaches.
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    [SESSION_TRANSPORT_HEADER]: "cookie",
+  };
   if (!anonymous) {
     const token = appToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token && !isCookieSession(token)) headers["Authorization"] = `Bearer ${token}`;
     const device = deviceToken();
-    if (device) headers["X-Device-Token"] = device;
+    if (device && !isCookieSession(device)) headers["X-Device-Token"] = device;
     const dual = dualControlSession();
     if (dual) headers["X-Dual-Control-Session"] = dual;
     headers["X-Device-Id"] = deviceId();

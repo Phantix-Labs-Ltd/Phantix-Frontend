@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { tokens, API_BASE, isDemoMode } from "./api";
+import { sessionAuthHeaders, API_BASE, isDemoMode } from "./api";
 
 export interface SseEvent {
   event: string;
@@ -67,10 +67,8 @@ export function useSseStream(path: string, opts: SseOptions = {}) {
         const url = `${API_BASE}${path}${path.includes("?") ? "&" : "?"}replay=10`;
         const headers: Record<string, string> = {
           Accept: "text/event-stream",
+          ...sessionAuthHeaders(),
         };
-        const bearer = tokens.appSession || tokens.orgUser || tokens.platform;
-        if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-        if (tokens.device) headers["X-Device-Token"] = tokens.device;
 
         const res = await fetch(url, { headers, signal: controller.signal });
         if (!res.ok || !res.body) {

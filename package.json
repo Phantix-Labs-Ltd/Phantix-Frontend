@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Phantix Labs ltd \u2014 Product Delivery Command Centre frontend",
+  "description": "Phantix Labs ltd — Product Delivery Command Centre frontend",
   "scripts": {
     "dev": "cd apps/securegraph-core && npm run dev",
     "build": "cd apps/securegraph-core && npm run build",
@@ -43,6 +43,7 @@
     "animejs": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dompurify": "^3.4.16",
     "framer-motion": "^11.11.17",
     "lottie-web": "^5.13.0",
     "lucide-react": "^0.462.0",
