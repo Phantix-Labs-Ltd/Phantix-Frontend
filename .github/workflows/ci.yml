@@ -27,8 +27,11 @@ jobs:
         with:
           node-version: 20
 
+      # The apps are npm workspaces: shared dependencies (recharts, shiki,
+      # lottie-web, …) are declared at the repo root, so install from there.
       - name: Install
-        run: npm install
+        working-directory: .
+        run: npm ci
 
       - name: Typecheck
         run: npm run typecheck
