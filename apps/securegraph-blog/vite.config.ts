@@ -33,17 +33,18 @@ async function postPaths(apiUrl: string | undefined): Promise<string[]> {
   return ["/", ...[...slugs].map((s) => `/posts/${s}`)];
 }
 
-// The blog is a client-only React app. It talks to the admin backend through
-// `VITE_BLOG_API_URL` (absolute, or "/api/v1" when a same-origin rewrite is
+// The blog is a React app, prerendered at build time (prerender.mjs). It talks
+// to the admin backend through `VITE_BLOG_API_URL` (absolute, or "/api/v1" when a same-origin rewrite is
 // used). For local dev you can point a proxy at the backend instead:
 //   BLOG_API_PROXY_TARGET=https://staging.phantix.site npm run dev
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, isSsrBuild }) => {
   const proxyTarget = process.env.BLOG_API_PROXY_TARGET;
   const env = loadEnv(mode, process.cwd(), "");
   return {
     plugins: [
       react(),
-      siteFiles({
+      // The prerender server bundle (src/entry-server.tsx) is not a site.
+      !isSsrBuild && siteFiles({
         siteUrl: BLOG_ORIGIN,
         allow: "all",
         sitemap: () => postPaths(env.VITE_BLOG_API_URL || process.env.VITE_BLOG_API_URL),
@@ -91,6 +92,9 @@ export default defineConfig(({ mode }) => {
         ? { proxy: { "/api": { target: proxyTarget, changeOrigin: true, secure: true } } }
         : {}),
     },
-    build: { outDir: "dist", emptyOutDir: true },
+    // Prerender (prerender.mjs) runs the server bundle in plain Node:
+    // bundle every dependency so CSS imports never reach Node's loader.
+    ssr: { noExternal: true },
+    build: isSsrBuild ? { emptyOutDir: true } : { outDir: "dist", emptyOutDir: true },
   };
 });
