@@ -5,7 +5,7 @@ import { docPageIds, siteFiles } from "../../packages/sg-shared/vite/siteFiles";
 
 // SecureGraph application shell. Browser config is same-origin; the dev server
 // proxies /api upstream. Shared code lives in ../../packages/sg-shared.
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, isSsrBuild }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const apiTarget =
     env.API_PROXY_TARGET || process.env.API_PROXY_TARGET || "https://staging.phantix.site";
@@ -13,7 +13,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      siteFiles({
+      // The prerender server bundle (src/entry-server.tsx) is not a site.
+      !isSsrBuild && siteFiles({
         siteUrl: "https://defend.phantixlabs.com",
         // Only the documentation is public: every other route renders inside
         // the operator shell, which bounces a signed-out visitor to Core's
@@ -61,7 +62,10 @@ export default defineConfig(({ mode }) => {
       host: true,
       proxy: { "/api": { target: apiTarget, changeOrigin: true, secure: true, ws: true } },
     },
-    build: {
+    // Prerender (prerender.mjs) runs the server bundle in plain Node:
+    // bundle every dependency so CSS / font imports never reach Node's loader.
+    ssr: { noExternal: true },
+    build: isSsrBuild ? { emptyOutDir: true } : {
       // Lazy chunks for heavy libraries (Mermaid and its parser, Cytoscape) are
       // ~700 KB and load only on the pages that draw diagrams. The first-paint
       // bundle has its own, stricter budget (siteFiles, in plugins above).
