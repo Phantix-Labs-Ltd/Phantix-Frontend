@@ -5,7 +5,7 @@ import {
   ArrowRight, KeyRound, Mail, ShieldCheck, Smartphone, Loader2, PlayCircle,
   Link2, Building2, User, AlertOctagon, AlertTriangle, Check, Send, RefreshCw,
 } from "lucide-react";
-import { api, ApiError, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId, adoptAppSession, type IssuedAppSession } from "@sg/api";
+import { api, ApiError, publicDetailCopy, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId, adoptAppSession, type IssuedAppSession } from "@sg/api";
 import { useStore } from "@sg/store";
 import { PLATFORM_URL } from "@sg/links";
 import { cx, humanize } from "@sg/utils";
@@ -54,6 +54,35 @@ function serviceKeyMessage(err: unknown): string | null {
     return "Application access is not enabled for this company yet. An admin must create a service key on the Platform before operators can sign in.";
   }
   return null;
+}
+
+/**
+ * What a failed sign-in step should say. The backend answers every sign-in
+ * failure with 401, which the shared client words as "Your session has
+ * expired" — wrong before anyone has signed in. Say what actually went wrong:
+ * a replaced or expired link, a password that was never set, wrong details.
+ */
+function signInError(err: unknown, fallback: string): string {
+  if (!(err instanceof ApiError)) return err instanceof Error ? err.message : fallback;
+  if (err.status !== 401) return err.message;
+  const raw = (err.serverMessage || "").toLowerCase();
+  if (raw.includes("password not set")) {
+    return "You have not set a password yet. Open the login link your administrator emailed you and set one there first.";
+  }
+  if (raw.includes("sign-in link expired")) {
+    return "This login link has expired. Ask your administrator to send you a new one.";
+  }
+  if (raw.includes("sign-in link") || raw.includes("user not found")) {
+    return "This login link is no longer valid. Sending a new link replaces the old one, so use the latest email you received, or ask your administrator to send a new link.";
+  }
+  if (raw.includes("invalid email or password")) return "Incorrect email or password.";
+  if (raw.includes("multiple organizations")) {
+    return "This email belongs to more than one organization. Sign in from the login link your administrator emailed you.";
+  }
+  if (raw.includes("login session") || raw.includes("confirmation link")) {
+    return "This sign-in attempt has timed out. Start again.";
+  }
+  return publicDetailCopy(err.detail) ?? fallback;
 }
 
 /** Detect the device-bound 401 so the UI can offer rotation. */
@@ -222,7 +251,7 @@ function ReturningLogin({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else setError(err instanceof Error ? err.message : "Invalid email or password");
+      else setError(signInError(err, "Invalid email or password"));
     } finally {
       setBusy(false);
     }
@@ -290,7 +319,7 @@ function ReturningLogin({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else { setError(err instanceof Error ? err.message : "Verification failed"); setCode(""); }
+      else { setError(signInError(err, "Verification failed")); setCode(""); }
     } finally {
       setBusy(false);
     }
@@ -536,7 +565,7 @@ function AppLoginFlow({
         if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
         else setError(err instanceof ApiError && err.status === 403
           ? "This login link requires an active service key. Contact your organization admin to create one on the platform."
-          : err instanceof Error ? err.message : "Login link validation failed");
+          : signInError(err, "Login link validation failed"));
       } finally {
         setBusy(false);
       }
@@ -570,7 +599,7 @@ function AppLoginFlow({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else setError(err instanceof Error ? err.message : "Could not save password");
+      else setError(signInError(err, "Could not save password"));
     } finally {
       setBusy(false);
     }
@@ -600,7 +629,7 @@ function AppLoginFlow({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else setError(err instanceof Error ? err.message : "Password verification failed");
+      else setError(signInError(err, "Password verification failed"));
     } finally {
       setBusy(false);
     }
@@ -665,7 +694,7 @@ function AppLoginFlow({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else { setError(err instanceof Error ? err.message : "Verification failed"); setCode(""); }
+      else { setError(signInError(err, "Verification failed")); setCode(""); }
     } finally {
       setBusy(false);
     }
@@ -775,7 +804,7 @@ function AppLoginFlow({
       setCode("");
       setError("A new code was sent. Enter the latest code.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not resend code");
+      setError(signInError(err, "Could not resend code"));
     } finally {
       setBusy(false);
     }
