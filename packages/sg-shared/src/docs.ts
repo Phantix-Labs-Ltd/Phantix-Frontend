@@ -227,6 +227,7 @@ const DOC_ID_BY_FILE: Record<string, string> = {
   "11-billing-and-subscribe.md": "howto-platform-11",
   "12-configure-alerts.md": "howto-platform-12",
   "13-sandbox-feedback.md": "howto-platform-13",
+  "14-install-connector.md": "howto-platform-14",
   // Command Centre how-tos (docs/how-to/command-centre)
   "01-sign-in.md": "howto-app-01",
   "02-unlock-operate.md": "howto-app-02",

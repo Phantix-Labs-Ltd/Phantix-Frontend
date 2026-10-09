@@ -21,6 +21,7 @@
 | 11 | Billing and subscribe | [11-billing-and-subscribe.md](./11-billing-and-subscribe.md) |
 | 12 | Alert channels (email or WA or Telegram) | [12-configure-alerts.md](./12-configure-alerts.md) |
 | 13 | BETA sandbox feedback | [13-sandbox-feedback.md](./13-sandbox-feedback.md) |
+| 14 | Install the SecureGraph Connector (private databases) | [14-install-connector.md](./14-install-connector.md) |
 
 ## End-to-end onboarding flow
 

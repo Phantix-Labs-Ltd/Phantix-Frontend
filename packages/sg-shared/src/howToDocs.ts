@@ -16,6 +16,7 @@ import plat10 from "@docs/docs/how-to/platform/10-connect-github.md?raw";
 import plat11 from "@docs/docs/how-to/platform/11-billing-and-subscribe.md?raw";
 import plat12 from "@docs/docs/how-to/platform/12-configure-alerts.md?raw";
 import plat13 from "@docs/docs/how-to/platform/13-sandbox-feedback.md?raw";
+import plat14 from "@docs/docs/how-to/platform/14-install-connector.md?raw";
 
 import appIndex from "@docs/docs/how-to/command-centre/README.md?raw";
 import app01 from "@docs/docs/how-to/command-centre/01-sign-in.md?raw";
@@ -84,6 +85,7 @@ export const howToDocs: Entry[] = [
   e("howto-platform-11", "Platform: Billing", "Subscribe, pay, redeem coupons.", "how-to-platform", plat11),
   e("howto-platform-12", "Platform: Alerts", "SMTP, WhatsApp, Telegram.", "how-to-platform", plat12),
   e("howto-platform-13", "Platform: Sandbox feedback", "Updates and ratings when enrolled.", "how-to-platform", plat13),
+  e("howto-platform-14", "Platform: Install the SecureGraph Connector", "Reach a database on a private network without opening an inbound port.", "how-to-platform", plat14),
 
   e("howto-app-index", "Command Centre: how-to index", "Operator tasks on app.phantixlabs.com.", "how-to-app", appIndex),
   e("howto-app-01", "App: Sign in", "Password, invite link, or demo.", "how-to-app", app01),

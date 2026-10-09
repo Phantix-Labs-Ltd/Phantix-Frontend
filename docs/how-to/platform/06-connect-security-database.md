@@ -1,9 +1,9 @@
 # Platform: Connect a security database
 
-**Where:** **Security Database** → `/connections`
-**What:** Registers the dedicated database that holds assets, findings, risks, and security operations center (SOC) data. Bootstrap creates the SecureGraph schema and the migrations.
-**Who:** The primary user of the organization.
-**Before you start:** A PostgreSQL database you control, a user with create privileges, and an open network path.
+**Where:** **Security database** → `/connections`
+**What:** Connects the dedicated database that holds assets, findings, risks, and security operations center (SOC) data. SecureGraph then tests the connection and prepares its schema.
+**Who:** The admin of the organization. A write action needs operate mode when dual control is on.
+**Before you start:** A PostgreSQL database you control, and a database user that owns only the SecureGraph schema.
 
 ![Connections](../../screenshots/platform/connections.png)
 
@@ -11,13 +11,13 @@
 
 ## Before you start
 
-- The bootstrap gate blocks scans and vulnerability assessment and penetration testing (VAPT) until the connection reads ready.
-- The database is empty, or it has a dedicated schema for SecureGraph.
-- The database user can create schemas and tables for the bootstrap.
-- The network path from the Platform backend to the host and port is open.
-- Dual control is assigned. Platform refuses connection changes without it.
-- One security data storage connection is primary. Platform clears the flag on the old primary when a new one arrives.
-- The purpose value is `security_data_storage`. A config inspection connection is a different task.
+- Scans and vulnerability assessment and penetration testing (VAPT) stay blocked until the security database reads **ready**.
+- The security database is PostgreSQL. Neon, Supabase, Amazon RDS and self-hosted PostgreSQL all work.
+- Use an empty database, or a dedicated schema. SecureGraph never needs your application tables.
+- Know where the database is. A hosted database with a public endpoint connects directly. A database on a private network needs a SecureGraph Connector.
+- For a private database, install the connector first. See [14-install-connector.md](./14-install-connector.md).
+- Dual control is on: assign the audit controller first. Platform refuses connection changes without it.
+- One security data storage connection is primary. A new primary clears the flag on the old one.
 
 ---
 
@@ -29,30 +29,40 @@
 
 ## Steps
 
-1. Provision a dedicated PostgreSQL database. Use a cloud or on-premises server.
-2. Create a database user with the privilege to create schemas and tables.
-3. Sign in to Platform and select **Security Database**.
-4. Click **Add connection**.
-5. Enter the name of the connection. The default is `SecureGraph Store`.
-6. Select the purpose **Security data storage**. The value is `security_data_storage`.
-7. Select the engine: `postgresql`, `mysql`, `mssql`, or `mongodb`.
-8. Enter the host. Platform resolves a hostname to IPv4 before the connection starts.
-9. Enter the port. The PostgreSQL default is `5432`.
-10. Enter the database name. The default is `phantix_security`.
-11. Enter the target schema. The default is `phantix`.
-12. Enter the username and the password.
-13. Select the Secure Sockets Layer (SSL) mode: `prefer`, `require`, or `disable`.
-14. Select the environment: `production`, `staging`, or `development`.
-15. Click **Save connection**. Platform stores the credentials in encrypted form.
-16. Click **Test**. Wait for the message "Connectivity OK".
-17. Click **Bootstrap schema**. Wait for the status **ready**.
-18. Open Command Centre and confirm that scans and VAPT report no missing security database.
+### Hosted database (Neon, Supabase, or a public endpoint)
 
-**Result:** The bootstrap gate reads **ready**, and the product modules are unblocked.
+1. Open **Security database**.
+2. Under **Where is your database?**, select **Hosted, with a public endpoint**.
+3. Select the provider tab: **Neon**, **Supabase**, or **Other PostgreSQL**.
+4. Follow the provider steps on the card. For Supabase, copy the **Session pooler** connection string.
+5. Allowlist the SecureGraph addresses in the provider, when the card shows them. Add every address.
+6. Paste the `postgresql://` connection string into **Connection URL**.
+7. Click **Connect**. Platform saves the connection and opens the setup window.
+8. Click **Test connection**. Wait for the step to show a check mark.
+9. Click **Prepare security database**. SecureGraph creates its schema and tables.
+10. Click **Continue setup** during first-run setup, or **Done** after it.
 
-- The gate is enforced by Platform, not by the user interface alone.
-- A bootstrap result of `pending` means an authorizer must approve it in Authorizations.
-- A delete result of `pending` behaves in the same way.
+### Database on a private network
+
+1. Install a SecureGraph Connector next to the database, and wait for **Online**. See [14-install-connector.md](./14-install-connector.md).
+2. In the connector setup window, click **Add the database**. Or click **Add connection** at the top of the page.
+3. Select **Security database**. The engine is PostgreSQL.
+4. Under **How does SecureGraph reach this database?**, select **Through a connector**.
+5. Select the connector.
+6. Enter the host and port as the connector reaches them, for example `10.0.3.12` and `5432`.
+7. Enter the other fields. See the reference below.
+8. Click **Save connection**. The setup window opens.
+9. Click **Test connection**, then **Prepare security database**, then **Continue setup** or **Done**.
+
+### Enter the details manually
+
+1. Click **Enter details manually**, or **Add connection** at the top of the page.
+2. Select **Security database**. The engine is PostgreSQL.
+3. Select **Directly**, or **Through a connector** for a private database.
+4. Enter the fields. No field is filled in for you.
+5. Click **Save connection**, then complete the setup window.
+
+**Result:** The page reads **Bootstrap gate: ready**, and scans, VAPT and saved findings are unblocked.
 
 ---
 
@@ -60,50 +70,45 @@
 
 ### Connection fields
 
-| Field | Allowed values or default | Notes |
+| Field | Values | Notes |
 | --- | --- | --- |
-| Name | Text | Default: `SecureGraph Store`. |
-| Purpose | `security_data_storage`, `config_inspection` | Security data storage is required for the product modules. |
-| Engine | `postgresql`, `mysql`, `mssql`, `mongodb` | The live drivers cover PostgreSQL, Supabase, SQLite, MySQL, and MariaDB. |
-| Host | Hostname or IP address | Platform resolves a hostname to IPv4 first. |
-| Port | Number | Default: `5432`. |
-| Database | Text | Default: `phantix_security`. |
-| Target schema | Text | Default: `phantix`. |
-| Username | Text | The example is `phantix_writer`. |
-| Password | Text | Stored in encrypted form. |
-| SSL mode | `prefer`, `require`, `disable` | Default: `prefer`. |
+| Name | Text | Required. The hint shows `SecureGraph Store`. |
+| Reach | **Directly**, **Through a connector** | PostgreSQL only. A connector is for a private network. |
+| Connector | A connector of your organization | Shown for **Through a connector**. A revoked connector is not listed. |
+| Host | Hostname or IP address | Through a connector: the address as the connector reaches it. |
+| Port | Number | Required. The hint shows `5432`. |
+| Database | Text | Required. The hint shows `phantix_security`. |
+| Target schema | Text | Empty means `phantix`. |
+| Username and password | Text | Platform stores the password encrypted and never shows it again. |
+| SSL mode | `prefer`, `require`, `disable` | Use `require` for a hosted database. |
 | Environment | `production`, `staging`, `development` | Default: `production`. |
 
-Each engine offers further options beyond the username and the password. Open **Connection options** on the page for the list, for example `ssl_mode`, `search_path`, and `odbc_driver`.
+### Setup window steps
 
-### Driver availability
-
-The **Driver availability for your engine** card reads `GET /db-connections/drivers`.
-
-| Chip | Meaning |
+| Step | What happens |
 | --- | --- |
-| Live | The driver package is installed, so a live probe can run. |
-| Optional | Platform can store the credentials, but a live test needs the package. |
+| Test the connection | SecureGraph connects with the details you entered. |
+| Prepare the security database | SecureGraph creates its own schema. It never touches your other tables. |
+| Continue setup | First-run setup: you go back to save your Quick Scan results. After setup, the button reads **Done**. |
+
+A test often prepares the schema in the same call. The second step then completes by itself.
+
+### Allowlist addresses
+
+| Provider | Where to add the addresses |
+| --- | --- |
+| Neon | Project **Settings** → **Network security** → **IP Allow**. IP Allow is part of the paid plans. |
+| Supabase | **Project Settings** → **Database** → **Network Restrictions**. Add each address as a `/32` range. |
+
+Platform shows the addresses only to signed-in organizations. The addresses accept no inbound traffic.
 
 ### Connection states
 
 | State | Meaning |
 | --- | --- |
-| `not_bootstrapped` | The connection is saved and the schema is missing. |
-| `ready` | The bootstrap finished. The gate is open. |
-| Last test `passed` | The live probe succeeded. |
-| Last test `failed` | The probe failed. Read the last error on the connection card. |
-| `pending` | The action waits for an authorizer. Approve it in Authorizations. |
-
-### Requirements
-
-| Item | Detail |
-| --- | --- |
-| Database | An empty or dedicated database. Do not point the connection at a production transaction database at random. |
-| Network path | The Platform backend must reach the host and the port. |
-| Privileges | Create schema and create table for the bootstrap. |
-| Primary | One primary security store for each organization. |
-| Least privilege | SecureGraph needs its own schema only, never the application tables. |
+| `not_bootstrapped` | The connection is saved. The schema is missing. |
+| `ready` | The schema is prepared. The gate is open. |
+| `pending` | The action waits for an authorizer. Approve it in **Authorizations**. |
 
 ---
 
@@ -111,15 +116,15 @@ The **Driver availability for your engine** card reads `GET /db-connections/driv
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| The test times out | A firewall or a security group blocks the port, or the host is wrong | Open the path to the host and port, then test again. |
-| Authentication fails | The username or the password is wrong, or the host uses a different password hash | Check the credentials. Note the `scram` and `md5` difference on PostgreSQL. |
-| The bootstrap fails | The user lacks the create privilege, or the schema holds an unexpected state | Grant create on the schema, then read the last error on the connection card. |
-| "Audit control required" | Dual control is not assigned | Assign an initiator and an authorizer first. |
-| A 409 arrives in Command Centre | The bootstrap did not finish, or the connection is not primary | Finish the bootstrap and confirm the **primary** label. |
-| A driver chip reads **optional** | The engine package is not installed on the server | Save the credentials. A live test needs the driver package. |
-| "Sent for approval" after the bootstrap | Platform parked the bootstrap for an authorizer | Approve it in Authorizations. |
-| "No IPv4 record" after a save | The hostname has no A record | Use an IP address, or add the record. Platform passes the name as it is. |
-| The **Add connection** control opens a warning | Dual control is not assigned | Assign the slots on **People and Control**. |
+| The test times out | A firewall blocks the port, or the host is wrong | Check the host and port. For a hosted database, allowlist every SecureGraph address. |
+| Authentication fails | The username or the password is wrong | Check the credentials, then update the connection. |
+| "The connector is offline" | The connector is not running, or cannot reach SecureGraph on port 443 | Start the connector. Allow outbound HTTPS from its host. |
+| "The connector refused this database" | The host and port are not in `SG_ALLOWED_TARGETS` | Add `host:port` to `SG_ALLOWED_TARGETS` exactly, then restart the connector. |
+| "Cannot reach the target from the connector" | The connector cannot open a connection to the database | Check the address, the database listen address and the network between them. |
+| "Connectors support PostgreSQL databases today" | The engine is not PostgreSQL | Connect the database directly. |
+| Preparing fails | The user cannot create the schema | Grant create on the database, or create the `phantix` schema for the user. |
+| "Sent for approval" | Platform parked the action for an authorizer | Approve it in **Authorizations**. |
+| "Audit control required" | Dual control is on and not assigned | Assign the audit controller on the **People** page. |
 
 ---
 
@@ -127,6 +132,6 @@ The **Driver availability for your engine** card reads `GET /db-connections/driv
 
 - Previous: [02-complete-setup-wizard.md](./02-complete-setup-wizard.md)
 - Next step: [07-connect-config-database.md](./07-connect-config-database.md)
-- [04-assign-dual-control.md](./04-assign-dual-control.md)
+- [14-install-connector.md](./14-install-connector.md)
 - [Command Centre: Launch a scan](../command-centre/05-launch-a-scan.md)
 - [Platform how-tos](./README.md)

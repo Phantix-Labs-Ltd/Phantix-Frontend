@@ -3,7 +3,7 @@
 **Where:** `https://platform.phantixlabs.com` → **Register your organization** (`/register`) and **Sign in** (`/login`)
 **What:** Creates the organization tenant, then signs in the primary user. Registration returns no session. A one-time password (OTP) from email signs you in.
 **Who:** The primary user of the organization. Platform access is reserved for this person.
-**Before you start:** A work email you control, a company name of 2 characters or more, and a password of 8 characters or more.
+**Before you start:** A work email you control, a company name of 2 characters or more, and a password of 12 characters or more.
 
 ![Sign in](../../screenshots/platform/login.png)
 
@@ -13,7 +13,7 @@
 
 - You control the primary sign-in email. Platform sends every email OTP to this address.
 - The company name holds 2 characters or more.
-- The password holds 8 characters or more. The second entry matches the first.
+- The password holds 12 characters or more. The second entry matches the first.
 - A secondary email and a primary contact name are ready. Both fields are required.
 - A country and an industry are ready. The default country is Nigeria.
 - Everyone else signs in to Command Centre with a login link, not with this page.
@@ -36,7 +36,7 @@
 4. Select the industry. The list holds 21 options, and the default is **Other**.
 5. Enter the secondary email and the primary contact name. Both are required.
 6. Select a country. The default is Nigeria.
-7. Enter the password and confirm it. The password needs 8 characters or more.
+7. Enter the password and confirm it. The password needs 12 characters or more.
 8. Click **Create organization**. Platform builds the tenant slug from the company name.
 9. Open **Sign in**. Registration does not keep you signed in.
 
@@ -73,7 +73,7 @@ The page uses email codes only. Phone verification is not available.
 | Industry | 21 options, for example technology, financial services, healthcare, government, education, other | Default: Other. |
 | Secondary email | A valid email address | Required. |
 | Primary contact | A title and a full name | Titles: Mr, Mrs, Ms, Dr, Prof, Eng, Chief, Other. |
-| Password | 8 characters or more | The two entries must match. |
+| Password | 12 characters or more | The two entries must match. |
 | Country | Nigeria, Ghana, Kenya, South Africa, United Kingdom, United States | Default: Nigeria. |
 
 ### Sign-in stages
