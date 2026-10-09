@@ -1,0 +1,59 @@
+<svg style="background:#0A0A0A" xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" font-family="Geist Variable, Space Grotesk, Inter, system-ui, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Five ways to connect to a database without a public endpoint, ranked by exposure</title>
+  <desc id="d">Outbound-only connector and cloud private connectivity open no inbound port and have low exposure. A site-to-site VPN has medium exposure, an SSH bastion higher, and an IP allowlist the highest, as a stopgap only.</desc>
+  <rect width="900" height="470" fill="#0A0A0A"/>
+  <text x="450" y="40" text-anchor="middle" font-size="20" font-weight="700" fill="#F4F4F5">Five Ways to Connect, Ranked by Exposure</text>
+  <text x="450" y="63" text-anchor="middle" font-size="13" fill="#A1A1AA">What each option opens on your side, and who it suits</text>
+
+  <text x="60" y="104" font-size="11" font-weight="700" fill="#71717A">OPTION</text>
+  <text x="330" y="104" font-size="11" font-weight="700" fill="#71717A">INBOUND ON YOUR SIDE</text>
+  <text x="570" y="104" font-size="11" font-weight="700" fill="#71717A">BEST FOR</text>
+  <text x="780" y="104" font-size="11" font-weight="700" fill="#71717A">EXPOSURE</text>
+
+  <!-- 1 -->
+  <rect x="40" y="116" width="830" height="54" rx="8" fill="#241E10" stroke="#E8B54D" stroke-width="1.5"/>
+  <text x="60" y="139" font-size="13.5" font-weight="700" fill="#F3CD7E">1. Outbound-only connector</text>
+  <text x="60" y="157" font-size="11" fill="#E8B54D">Recommended</text>
+  <text x="330" y="147" font-size="12" fill="#E4E4E7">None</text>
+  <text x="570" y="147" font-size="12" fill="#E4E4E7">Most teams, any network</text>
+  <text x="780" y="140" font-size="11.5" fill="#34D399">Lowest</text>
+  <rect x="780" y="148" width="72" height="6" rx="3" fill="#27272A"/><rect x="780" y="148" width="12" height="6" rx="3" fill="#34D399"/>
+
+  <!-- 2 -->
+  <rect x="40" y="178" width="830" height="54" rx="8" fill="#111113" stroke="#27272A"/>
+  <text x="60" y="201" font-size="13.5" font-weight="700" fill="#E4E4E7">2. Cloud private connectivity</text>
+  <text x="60" y="219" font-size="11" fill="#A1A1AA">PrivateLink, Private Service Connect</text>
+  <text x="330" y="209" font-size="12" fill="#E4E4E7">None (cloud private network)</text>
+  <text x="570" y="209" font-size="12" fill="#E4E4E7">Single-cloud enterprises</text>
+  <text x="780" y="202" font-size="11.5" fill="#34D399">Low</text>
+  <rect x="780" y="210" width="72" height="6" rx="3" fill="#27272A"/><rect x="780" y="210" width="16" height="6" rx="3" fill="#34D399"/>
+
+  <!-- 3 -->
+  <rect x="40" y="240" width="830" height="54" rx="8" fill="#111113" stroke="#27272A"/>
+  <text x="60" y="263" font-size="13.5" font-weight="700" fill="#E4E4E7">3. Site-to-site VPN or mesh</text>
+  <text x="60" y="281" font-size="11" fill="#A1A1AA">IPsec or WireGuard</text>
+  <text x="330" y="271" font-size="12" fill="#E4E4E7">VPN endpoint, one host allowed</text>
+  <text x="570" y="271" font-size="12" fill="#E4E4E7">Teams with a network team</text>
+  <text x="780" y="264" font-size="11.5" fill="#E8B54D">Medium</text>
+  <rect x="780" y="272" width="72" height="6" rx="3" fill="#27272A"/><rect x="780" y="272" width="34" height="6" rx="3" fill="#E8B54D"/>
+
+  <!-- 4 -->
+  <rect x="40" y="302" width="830" height="54" rx="8" fill="#111113" stroke="#27272A"/>
+  <text x="60" y="325" font-size="13.5" font-weight="700" fill="#E4E4E7">4. SSH bastion host</text>
+  <text x="60" y="343" font-size="11" fill="#A1A1AA">A hardened jump server</text>
+  <text x="330" y="333" font-size="12" fill="#E4E4E7">SSH (port 22) on the bastion</text>
+  <text x="570" y="333" font-size="12" fill="#E4E4E7">Small, familiar setups</text>
+  <text x="780" y="326" font-size="11.5" fill="#F59E0B">Higher</text>
+  <rect x="780" y="334" width="72" height="6" rx="3" fill="#27272A"/><rect x="780" y="334" width="50" height="6" rx="3" fill="#F59E0B"/>
+
+  <!-- 5 -->
+  <rect x="40" y="364" width="830" height="54" rx="8" fill="#2A1017" stroke="#F43F5E" stroke-width="1.2"/>
+  <text x="60" y="387" font-size="13.5" font-weight="700" fill="#F4F4F5">5. IP allowlist</text>
+  <text x="60" y="405" font-size="11" fill="#F43F5E">Last resort</text>
+  <text x="330" y="395" font-size="12" fill="#E4E4E7">The database port, allowlisted</text>
+  <text x="570" y="395" font-size="12" fill="#E4E4E7">A stopgap only</text>
+  <text x="780" y="388" font-size="11.5" fill="#F43F5E">Highest</text>
+  <rect x="780" y="396" width="72" height="6" rx="3" fill="#27272A"/><rect x="780" y="396" width="72" height="6" rx="3" fill="#F43F5E"/>
+
+  <text x="60" y="446" font-size="12" fill="#A1A1AA">Whichever you choose, require TLS and give the platform a database user with the least privilege it needs.</text>
+</svg>
