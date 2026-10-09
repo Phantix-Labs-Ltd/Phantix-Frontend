@@ -12,6 +12,8 @@ import { cx, humanize } from "@sg/utils";
 import { listenDeviceConfirmed, claimExchange, newExchangeGuard } from "@sg/deviceConfirm";
 import { BrandWordmark } from "@sg/components/BrandLogo";
 import AuthShowcase from "@sg/components/AuthShowcase";
+import { BrandLoader } from "@sg/components/BrandLoader";
+import { loadAppIdentity } from "@sg/applications";
 import { ThemeToggle } from "@sg/ThemeToggle";
 
 /** After sign-in, go to the picker — remembering the application the operator
@@ -24,6 +26,16 @@ function chooseAppHref(): string {
   const path = params.get("path");
   if (path) q.set("path", path);
   return `/choose-app?${q.toString()}`;
+}
+
+const NEXT_LABEL: Record<string, string> = { attack: "Attack", defend: "Defend", code: "Code" };
+
+/** Says where sign-in leads when the operator was sent here on the way to an
+ *  application, so the form does not read as being signed out. */
+function destinationNote(): string | null {
+  const next = new URLSearchParams(window.location.search).get("next");
+  const label = next ? NEXT_LABEL[next] : undefined;
+  return label ? `Sign in to continue to ${label}.` : null;
 }
 
 
@@ -140,6 +152,27 @@ export default function Login() {
   useEffect(() => { if (API_BASE && isDemoFlagSet()) exitDemoMode(); }, []);
 
   const demoMode = isDemoMode();
+
+  // Already signed in to Core (e.g. an application sent the operator here with
+  // `?next=attack`): skip the form and go on to the picker, which hands the
+  // session to that application. A rejected session just shows the form, and a
+  // plain visit to /login (no `next`) still shows it, e.g. to switch accounts.
+  const resumable = !demoMode && !isInvite && Boolean(searchParams.get("next")) && Boolean(tokens.appSession);
+  const [resuming, setResuming] = useState(resumable);
+  useEffect(() => {
+    if (!resumable) return;
+    let alive = true;
+    loadAppIdentity({ force: true })
+      .then((me) => {
+        if (!alive) return;
+        if (me) navigate(chooseAppHref(), { replace: true });
+        else setResuming(false);
+      })
+      .catch(() => { if (alive) setResuming(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (resuming) return <BrandLoader message="Checking your session" />;
 
   // No invite link and not demo → show returning sign-in (email + password) + paste-link option.
   if (!demoMode && !isInvite) {
@@ -406,7 +439,7 @@ function ReturningLogin({
   return (
     <LoginChrome>
       <motion.div initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }} className="w-full max-w-[420px]">
-        <LoginBrand subtitle="Application sign-in" note="Returning user? Sign in with your email and password." />
+        <LoginBrand subtitle="Application sign-in" note={destinationNote() ?? "Returning user? Sign in with your email and password."} />
         <div className="card p-7">
           <AuthErrorBanner message={error} />
           {showInvite ? (

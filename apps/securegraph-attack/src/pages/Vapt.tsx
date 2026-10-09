@@ -17,6 +17,7 @@ import type { VaptPlan } from "@sg/vaptOps";
 import type { VaptCampaign, VaptFinding, VaptQuota } from "@sg/types";
 import { UpsellBanner } from "@sg/components/UpgradeGate";
 import { SetupRequired } from "@sg/platformSetup";
+import FirstVaptJourney from "../FirstVaptJourney";
 
 /**
  * Free-plan quota strip. The shared free pool is 10 campaigns/day across every
@@ -446,6 +447,9 @@ export default function Vapt() {
     });
   }, [vaptCampaigns, register, update]);
 
+  // No campaign has been started yet (none, or only drafts).
+  const firstVapt = vaptCampaigns.every((c) => c.status === "draft");
+
   if (loading) {
     return <PageSkeleton variant="split" rows={4} actions />;
   }
@@ -488,7 +492,17 @@ export default function Vapt() {
           </>
         }
       />
-      <SetupRequired action="run a VAPT campaign" needs={dualControl.policy_mode === "off" ? ["database", "verified_domain"] : ["database"]} />
+      {/* Until a campaign has been started, the first-VAPT journey walks
+          through asset → ownership → plan → start (it covers the domain step). */}
+      <SetupRequired action="run a VAPT campaign" needs={dualControl.policy_mode === "off" && !firstVapt ? ["database", "verified_domain"] : ["database"]} />
+      {firstVapt && !securityDbBlocked && (
+        <FirstVaptJourney
+          campaigns={vaptCampaigns}
+          planning={planning}
+          onPlan={() => void handlePlan()}
+          onStart={(c) => void handleCampaignAction(c.id, "start")}
+        />
+      )}
 
       <UpsellBanner feature="continuous_pentest" />
 

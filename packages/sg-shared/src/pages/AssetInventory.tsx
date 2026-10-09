@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Search, ShieldCheck, Boxes, Globe, Smartphone, Github, FileJson, Radar, Tag, Sparkles, RefreshCw, KeyRound, Trash2, ListTree, List, ChevronRight, FileSearch, EyeOff, Eye } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, SeverityBadge, Modal, EmptyState, Tabs, ProgressBar, Spinner, PageSkeleton, ErrorState, TableSkeleton } from "@sg/ui";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@sg/components/Pagination";
@@ -23,6 +24,7 @@ import { classifyAsset, createAssetTag, deleteAssetTag, TAG_COLORS, type AssetCl
 import { sanitizeSingleLine, validateUploadFile } from "@sg/uploadValidation";
 import type { Asset, AssetIntelligence, DiscoveryJob } from "@sg/types";
 import { SetupRequired } from "@sg/platformSetup";
+import { safeAppPath } from "@sg/applications";
 
 const typeIcon: Record<string, React.ReactNode> = {
   domain: <Globe size={15} />,
@@ -167,6 +169,18 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
       setAddOpen(true);
     }
   };
+  // `?add=1` opens the add dialog straight away (the first-VAPT journey sends
+  // people here), and `?return=/vapt` goes back there once the asset is saved.
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const returnTo = safeAppPath(searchParams.get("return"));
+  const autoAdd = useRef(false);
+  useEffect(() => {
+    if (autoAdd.current || searchParams.get("add") !== "1") return;
+    autoAdd.current = true;
+    void openAdd();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [addForm, setAddForm] = useState({ type: "domain", value: "", name: "", environment: "production", criticality: "medium" });
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubMethod, setGithubMethod] = useState<"pat" | "app">("pat");
@@ -427,6 +441,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
       setVerifyStep(null);
       setAddForm({ type: "domain", value: "", name: "", environment: "production", criticality: "medium" });
       reload();
+      if (returnTo) navigate(returnTo);
     } catch (e: any) {
       if (e.status === 422 && e.detail?.verification) {
         // Normalized before display: the backend detail can name internals.

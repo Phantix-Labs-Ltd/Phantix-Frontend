@@ -103,7 +103,7 @@ export default function AppLauncher({
 
   return (
     <div>
-      <OnboardingChecklist />
+      <OnboardingChecklist application={application} />
       {/* Header: name and tagline only. The catalog's long description belongs
           on the app picker, not above the work on every overview. */}
       <motion.div
