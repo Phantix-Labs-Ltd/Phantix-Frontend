@@ -96,7 +96,7 @@ A user with the `users.manage` privilege can manage the per-organization roles.
 | Item | Detail |
 | --- | --- |
 | Allowed roles | `org_admin` and `org_owner` only. |
-| Length | 8 characters or more. |
+| Length | 12 characters or more. |
 | First sign in | The user must change the password at the first sign in. |
 | Endpoint | `PATCH /org-users/{id}` with a `password` field. |
 

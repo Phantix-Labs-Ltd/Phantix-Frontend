@@ -1,24 +1,28 @@
 # Security database setup
 
-Phantix uses a **hybrid privacy model**:
+SecureGraph uses a **hybrid privacy model**:
 
-- **Platform** holds your login, billing, and settings.
-- **Your security database** holds assets, scans, findings, risks, and evidence.
+- **Platform** holds your sign-in, billing and settings.
+- **Your security database** holds assets, scans, findings, risks and evidence.
 
-Phantix never uses this connection to read your production business rows (customers, orders, etc.).
+SecureGraph writes only to its own schema in that database. It never reads your business rows, such as customers or orders.
 
 ---
 
-## Coming soon: Phantix-hosted databases
+## Coming later: SecureGraph-hosted databases
 
-We will offer **managed security databases** provisioned for you (one click).
+A managed security database that SecureGraph provisions for you is on the roadmap. Until then, connect your own PostgreSQL.
 
-Until that ships:
+---
 
-- Connect **your own** PostgreSQL (recommended), or another supported engine.
-- Endpoint `POST /api/v1/db-connections/provision` is reserved for hosted provisioning.
+## Choose how SecureGraph reaches your database
 
-Watch the product changelog or ask sales for availability.
+| Where the database is | How SecureGraph connects | What you do |
+|------|------|------|
+| Hosted, with a public endpoint (Neon, Supabase, a cloud database) | Directly, over the internet, with TLS | Allowlist the SecureGraph addresses in the provider. |
+| On a private network (data centre, office, private cloud subnet) | Through a SecureGraph Connector | Install the connector next to the database. Open no inbound port. |
+
+Platform asks this first: **Security database** → **Where is your database?**
 
 ---
 
@@ -26,150 +30,141 @@ Watch the product changelog or ask sales for availability.
 
 | Item | Recommendation |
 |------|----------------|
-| Database name | e.g. `phantix_security` (separate from your app DB) |
-| Schema | `phantix` (default) |
-| User | Dedicated role with rights **only** on that DB/schema |
-| Network | Allow Phantix platform IPs and your staging IP on port 5432 (or provider SSL port) |
-| TLS | Prefer `require` and `verify-full` in production |
+| Database | A dedicated database, for example `phantix_security`, separate from your application database |
+| Schema | `phantix` (used when you leave the field empty) |
+| User | A dedicated role with rights only on that database and schema |
+| Network | Hosted: allowlist the SecureGraph addresses. Private: a SecureGraph Connector. |
+| TLS | `require` for a hosted database |
 
 ---
 
-## PostgreSQL. Provider guides
+## Hosted databases
 
-### A. Supabase
-
-1. Create a project at [supabase.com](https://supabase.com).
-2. **Project Settings → Database** → copy:
-   - Host
-   - Port (usually `5432`)
-   - Database name (often `postgres`)
-   - User (often `postgres`)
-   - Password
-3. Prefer **connection pooling** host only if SSL and schema bootstrap succeed; otherwise use the **direct** connection for first bootstrap.
-4. In Phantix: **Connections → Add** → engine `postgresql`, purpose `security_data_storage`.
-5. SSL mode: typically `require`.
-6. **Test connection** → **Bootstrap schema**.
-
-> Optional: create a dedicated database/schema later for cleaner isolation from Supabase app tables.
-
-### B. Neon
+### Neon
 
 1. Create a project at [neon.tech](https://neon.tech).
-2. Copy the connection string or host and db and user and password.
-3. Ensure the compute is not suspended during a test (wake the project).
-4. SSL: `require`.
-5. Add in Phantix as PostgreSQL security storage → Test → Bootstrap.
+2. On the project dashboard, select **Connect** and copy the connection string.
+3. In Platform, open **Security database**, select **Hosted**, then the **Neon** tab.
+4. Under **Recommended: only let SecureGraph in**, copy the addresses.
+5. In Neon, open **Settings** → **Network security** → **IP Allow**, and add each address. IP Allow is part of the paid plans.
+6. Paste the connection string into **Connection URL** and click **Connect**.
+7. In the setup window, click **Test connection**, then **Prepare security database**.
 
-### C. Amazon RDS and Aurora PostgreSQL
+### Supabase
 
-1. Create a PostgreSQL instance (private subnet OK if Phantix can reach it via VPN/allowlist).
-2. Security group: allow inbound **5432** from Phantix egress IPs (ask support for the list).
-3. Create database `phantix_security` and user (see SQL below).
-4. SSL often required (`ssl_mode=require`).
-5. Connect from Phantix → Test → Bootstrap.
+1. Create a project at [supabase.com](https://supabase.com) and set a database password.
+2. Select **Connect** and copy the **Session pooler** connection string. Put your password in it.
+3. In Platform, open **Security database**, select **Hosted**, then the **Supabase** tab.
+4. Copy the addresses under **Recommended: only let SecureGraph in**.
+5. In Supabase, open **Project Settings** → **Database** → **Network Restrictions**. Add each address as a `/32` range.
+6. Paste the connection string and click **Connect**, then complete the setup window.
 
-### D. DigitalOcean Managed Postgres
+Use the Session pooler: the direct `db.<project>.supabase.co` host needs IPv6 unless you buy the IPv4 add-on.
 
-1. Create a managed database → PostgreSQL.
-2. Add Phantix IPs to **Trusted sources**.
-3. Create DB + user, or use the default and a dedicated schema.
-4. Use the provided host, port, SSL mode.
-5. Phantix → Test → Bootstrap.
+### Amazon RDS, DigitalOcean and other managed PostgreSQL
 
-### E. Railway and Render and other PaaS
+1. Create a PostgreSQL instance, a database and a dedicated user (see the SQL below).
+2. If the instance has a public endpoint, allow port `5432` from the SecureGraph addresses in its security group or trusted sources.
+3. If the instance is in a private subnet, install a SecureGraph Connector in that network instead.
+4. In Platform, click **Enter details manually**, select **Security database**, and enter the details.
 
-1. Provision **PostgreSQL** add-on.
-2. Copy `DATABASE_URL` or discrete host/user/password/db.
-3. If only one DB is available, use schema `phantix` exclusively for Phantix.
-4. Open public networking only if required; prefer private + allowlist.
-5. Phantix → Test → Bootstrap.
+### About the SecureGraph addresses
 
-### F. Self-hosted and VPS Postgres
+- Platform shows them only to signed-in organizations, on the provider tab.
+- They are outbound addresses. They accept no inbound traffic.
+- Add all of them. SecureGraph connects from any one of them.
 
-```sql
-CREATE DATABASE phantix_security;
-CREATE ROLE phantix_writer LOGIN PASSWORD '...strong...';
-GRANT CONNECT ON DATABASE phantix_security TO phantix_writer;
+---
 
-\c phantix_security
-GRANT CREATE ON DATABASE phantix_security TO phantix_writer;
--- Or pre-create:
-CREATE SCHEMA phantix AUTHORIZATION phantix_writer;
-```
+## Databases on a private network: the SecureGraph Connector
 
-Then grant DML after bootstrap (or let bootstrap run with `CREATE` privilege).
+The connector is a small agent (about 8 MB) that runs next to your database. It connects **out** to SecureGraph over TLS 1.3 on port 443, so you open no inbound port, firewall rule or public IP address.
+
+1. Open **Security database**, select **On a private network**, and click **Add connector**.
+2. Enter your database `host:port`. Copy the Docker, Docker Compose or Kubernetes command.
+3. Run it on a host or cluster that can reach the database. Wait for **Online**.
+4. Click **Add the database**, enter the credentials, then test and prepare it.
+
+| Control | Detail |
+|------|------|
+| Direction | The connector connects out. Nothing connects in. |
+| Allow list | It reaches only the `host:port` pairs in `SG_ALLOWED_TARGETS`, set on your host. SecureGraph cannot change them. |
+| Identity | Its private key stays on your host. Its certificate is renewed every 24 hours. |
+| Revocation | **Revoke** in Platform ends its session within one minute. |
+| Audit | Platform records every connector event. |
+
+Connectors support PostgreSQL today. The full procedure, with troubleshooting, is in [Install the SecureGraph Connector](../how-to/platform/14-install-connector.md).
 
 ---
 
 ## SQL template (dedicated role)
 
 ```sql
-CREATE DATABASE phantix_security OWNER postgres;
+CREATE DATABASE phantix_security;
 
 CREATE ROLE phantix_writer LOGIN PASSWORD 'use-a-long-random-password';
 GRANT CONNECT ON DATABASE phantix_security TO phantix_writer;
 
 \c phantix_security
-
-GRANT CREATE ON DATABASE phantix_security TO phantix_writer;
--- Phantix bootstrap will create schema "phantix" and tables
+CREATE SCHEMA IF NOT EXISTS phantix AUTHORIZATION phantix_writer;
 ```
 
-After bootstrap succeeds, you can tighten privileges if your DBA requires it.
+SecureGraph creates its tables in the `phantix` schema when it prepares the database.
 
 ---
 
-## In the Phantix app
+## In Platform
 
-1. Open **Database connections** (or Setup → Security storage).
-2. **Add connection**:
-   - Purpose: **Security data storage**
-   - Engine: **PostgreSQL** (or another supported engine)
-   - Host, port, database, user, password
-   - SSL mode as required by your provider
-3. **Test connection**.
-4. **Bootstrap schema** (creates Phantix tables).
-5. Mark as **primary security storage** if asked.
+1. Open **Security database** and answer **Where is your database?**
+2. Connect with a URL (hosted), or add a connector and then the database (private).
+3. To enter every field yourself, click **Enter details manually**. No field is filled in for you.
+4. In the setup window, click **Test connection**, then **Prepare security database**.
+5. Click **Continue setup** during first-run setup, or **Done**.
+
+The page reads **Bootstrap gate: ready** when the database is prepared.
 
 API equivalents (for advanced users):
 
 | Action | Endpoint |
 |--------|----------|
-| List | `GET /api/v1/db-connections` |
-| Create | `POST /api/v1/db-connections` |
-| Hints | `GET /api/v1/db-connections/connection-option-hints` |
+| List connections | `GET /api/v1/db-connections` |
+| Create a connection | `POST /api/v1/db-connections` (`network_mode`: `direct` or `connector`, with `connector_id`) |
 | Test | `POST /api/v1/db-connections/{id}/test` |
-| Bootstrap | `POST /api/v1/db-connections/{id}/bootstrap` |
+| Prepare (bootstrap) | `POST /api/v1/db-connections/{id}/bootstrap` |
 | Primary | `GET /api/v1/db-connections/primary-security-storage` |
+| Addresses to allowlist | `GET /api/v1/db-connections/network-access` |
+| List connectors | `GET /api/v1/connectors` |
+| Create a connector | `POST /api/v1/connectors` (returns a single-use enrollment token) |
+| Revoke a connector | `DELETE /api/v1/connectors/{id}` |
 
 ---
 
 ## Optional: config inspection connection
 
-A separate connection type can inspect **security metadata** (roles, grants, policies) on a production DB **without access to business rows**. Use a least-privilege inspector role. Not required for basic inventory and scans.
+A separate connection type reads **security metadata** (roles, grants and policies) on a production database, without access to business rows. Use a least-privilege inspector role. It is not required for inventory and scans.
 
 ---
 
 ## Other engines
 
-PostgreSQL is recommended. Also supported or optional for inspection:
+PostgreSQL is the security database. Other engines are for config inspection:
 
 | Engine | Notes |
 |--------|--------|
-| PostgreSQL and Supabase and Neon and RDS | First-class |
-| MSSQL | Supported for inspection (ODBC on platform) |
-| MySQL and MariaDB, MongoDB, Firestore | Optional drivers |
+| PostgreSQL (including Supabase, Neon and RDS) | Security database and inspection. Direct or through a connector. |
+| Microsoft SQL Server | Inspection, direct only |
+| MySQL, MariaDB and MongoDB | Inspection with optional drivers, direct only |
 
 ---
 
 ## Checklist
 
-- [ ] Dedicated DB (or dedicated schema)
-- [ ] Strong unique password
-- [ ] Network allowlist
-- [ ] SSL enabled
-- [ ] Test OK
-- [ ] Bootstrap OK
+- [ ] Dedicated database, or a dedicated schema
+- [ ] Strong, unique password
+- [ ] Hosted: SecureGraph addresses allowlisted. Private: connector **Online**.
+- [ ] TLS `require` for a hosted database
+- [ ] Test passed
+- [ ] Prepared (gate reads **ready**)
 - [ ] Backup policy on your side
 
 **Next:** [Email and SMTP →](./03-email-and-smtp.md)
