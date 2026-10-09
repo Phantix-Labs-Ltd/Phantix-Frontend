@@ -47,6 +47,19 @@ function Dialog({ open, onClose, labelledBy, children }: { open: boolean; onClos
  * for a one-time code instead of a second approver. The token lasts about 15
  * minutes, so a run of related actions only asks once.
  */
+/**
+ * The backend's step-up reason is written for developers ("request a code with
+ * POST /org-users/auth/step-up/send ... X-Step-Up-Token header"). Show it only
+ * when it reads as plain language.
+ */
+function friendlyReason(reason?: string | null): string {
+  const r = (reason || "").trim();
+  if (!r || /\b(GET|POST|PUT|PATCH|DELETE)\b|\/[a-z0-9-]+\/|\bX-[A-Za-z-]+|header|token/i.test(r)) {
+    return "This is a sensitive change, so we need to confirm it is you.";
+  }
+  return r;
+}
+
 export default function StepUpPrompt() {
   const { stepUpPrompt, closeStepUpPrompt, session } = useStore();
   const [sent, setSent] = useState<{ masked: string } | null>(null);
@@ -104,7 +117,7 @@ export default function StepUpPrompt() {
           <p className="text-xs text-slate-400">Needed for sensitive actions. Lasts 15 minutes.</p>
         </div>
       </div>
-      {stepUpPrompt.reason && <p className="mt-3 text-[13px] leading-5 text-slate-400">{stepUpPrompt.reason}</p>}
+      <p className="mt-3 text-[13px] leading-5 text-slate-400">{friendlyReason(stepUpPrompt.reason)}</p>
       <form onSubmit={verify} className="mt-4 space-y-3">
         <p className="text-sm text-slate-300">
           {sent ? <>We sent a code to <span className="text-white">{sent.masked}</span>.</> : busy ? "Sending a code..." : "We'll email you a code."}

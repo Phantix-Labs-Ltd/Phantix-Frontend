@@ -1,5 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import PageErrorBoundary from "@sg/components/PageErrorBoundary";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
@@ -1114,9 +1115,13 @@ export function ApplicationShell({
                   The full-screen BrandLoader is reserved for application boot /
                   switching between apps (the authReady gate above), which is a
                   fresh shell mount, not a page transition. */}
-              <Suspense fallback={<PageSkeleton />}>
-                <Outlet />
-              </Suspense>
+              {/* A page that crashes shows a recovery card here; the shell
+                  stays usable and the next route clears it. */}
+              <PageErrorBoundary resetKey={location.pathname}>
+                <Suspense fallback={<PageSkeleton />}>
+                  <Outlet />
+                </Suspense>
+              </PageErrorBoundary>
             </div>
           </main>
 
