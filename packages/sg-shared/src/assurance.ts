@@ -221,9 +221,29 @@ export interface Intelligence {
 export interface Regimes {
   detected_country: string | null;
   detected_region: string | null;
-  source: "override" | "profile" | "browser_locale" | "none";
+  source: "override" | "profile" | "registration" | "browser_locale" | "global" | "none";
   frameworks: { framework_id: string; name: string; description: string | null; match: "country" | "region" | "global" | string }[];
 }
+
+/**
+ * Countries the regulatory profile offers, matching the backend catalog.
+ * "Global" means global standards only. Phantix does not serve the United
+ * States, so it is not offered; the backend reads it as Global.
+ */
+export const GLOBAL_COUNTRY = "Global";
+export const REGIME_COUNTRIES: { group: string; countries: string[] }[] = [
+  { group: "Africa", countries: ["Nigeria", "Ghana", "Kenya", "South Africa", "Egypt"] },
+  { group: "United Kingdom", countries: ["United Kingdom"] },
+  {
+    group: "Europe (EU and EEA)",
+    countries: [
+      "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France",
+      "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Liechtenstein", "Lithuania",
+      "Luxembourg", "Malta", "Netherlands", "Norway", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia",
+      "Spain", "Sweden", "Switzerland",
+    ],
+  },
+];
 
 // ── Labels and rules ─────────────────────────────────────────────────────────
 

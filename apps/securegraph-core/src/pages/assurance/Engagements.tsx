@@ -40,10 +40,15 @@ export default function AssuranceHome() {
   if (loading && !data.intel) return <PageSkeleton />;
   if (error && !data.intel) return <ErrorState onRetry={reload} body="We couldn't load your audits. Check your connection and try again." />;
 
+  // Every rollup field is read defensively: a field missing from the response
+  // (the response model once dropped most of them) must not blank the page.
   const intel = data.intel;
+  const rows = intel?.engagements ?? [];
+  const atRisk = intel?.controls_at_risk ?? [];
+  const engagementCount = intel?.engagement_count ?? rows.length;
   const byId = new Map(data.engagements.map((e) => [e.id, e]));
-  const sev = intel?.findings.by_severity ?? {};
-  const openFindings = intel?.engagements.reduce((n, e) => n + (e.findings_open ?? 0), 0) ?? 0;
+  const sev = intel?.findings?.by_severity ?? {};
+  const openFindings = rows.reduce((n, e) => n + (e.findings_open ?? 0), 0);
 
   return (
     <div>
@@ -58,7 +63,7 @@ export default function AssuranceHome() {
         }
       />
 
-      {!intel || intel.engagement_count === 0 ? (
+      {!intel || engagementCount === 0 ? (
         <NoAudits programs={data.programs} regimes={data.regimes} />
       ) : (
         <>
@@ -68,10 +73,10 @@ export default function AssuranceHome() {
               <div className="mt-1"><OpinionBadge opinion={intel.overall_opinion} withRule /></div>
             </div>
             <dl className="ml-auto grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-5">
-              <Kpi label="Audits" value={intel.engagement_count} />
+              <Kpi label="Audits" value={engagementCount} />
               <Kpi label="Open findings" value={openFindings} />
               <Kpi label="Critical / high" value={`${sev.critical ?? 0} / ${sev.high ?? 0}`} tone={(sev.critical ?? 0) > 0 ? "bad" : undefined} />
-              <Kpi label="Correlated controls" value={intel.correlated_controls} tone={intel.correlated_controls > 0 ? "warn" : undefined} />
+              <Kpi label="Correlated controls" value={intel.correlated_controls ?? 0} tone={(intel.correlated_controls ?? 0) > 0 ? "warn" : undefined} />
               <Kpi label="Drifting controls" value={data.drift?.drift ?? "—"} tone={(data.drift?.drift ?? 0) > 0 ? "warn" : undefined} />
             </dl>
           </Card>
@@ -90,7 +95,7 @@ export default function AssuranceHome() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-phantix-700/40">
-                  {intel.engagements.map((row) => {
+                  {rows.map((row) => {
                     const e = byId.get(row.id);
                     return (
                       <tr key={row.id} className="cursor-pointer hover:bg-phantix-800/40" onClick={() => navigate(`/assurance/${row.id}`)}>
@@ -116,11 +121,11 @@ export default function AssuranceHome() {
               title="Controls at risk"
               subtitle="Controls with findings, across every audit and the findings SecureGraph already holds. Two or more independent sources agreeing is the strongest signal."
             />
-            {intel.controls_at_risk.length === 0 ? (
+            {atRisk.length === 0 ? (
               <p className="mt-3 text-sm text-slate-500">No controls have open findings.</p>
             ) : (
               <ul className="mt-3 divide-y divide-phantix-700/40">
-                {[...intel.controls_at_risk].sort((a, b) => Number(b.correlated) - Number(a.correlated) || b.source_count - a.source_count).slice(0, 10).map((c) => (
+                {[...atRisk].sort((a, b) => Number(b.correlated) - Number(a.correlated) || b.source_count - a.source_count).slice(0, 10).map((c) => (
                   <li key={`${c.framework_id}:${c.control_id}`} className="flex flex-wrap items-center gap-3 py-2.5">
                     <span className="min-w-[12rem] flex-1 font-mono text-sm text-slate-200">{c.framework_id} · {c.control_id}</span>
                     <SourceChips sources={c.sources} correlated={c.correlated} />
@@ -149,11 +154,11 @@ function NoAudits({ programs, regimes }: { programs: AuditProgram[]; regimes: Re
   const navigate = useNavigate();
   return (
     <>
-      {regimes && (regimes.source === "none" || regimes.source === "browser_locale") && (
+      {regimes && (regimes.source === "none" || regimes.source === "global" || regimes.source === "browser_locale") && (
         <Card className="mb-5 flex flex-wrap items-center gap-3">
           <Globe2 size={18} className="text-gold-400" />
           <p className="min-w-[12rem] flex-1 text-sm text-slate-300">
-            {regimes.detected_country
+            {regimes.detected_country && regimes.source === "browser_locale"
               ? <>We guessed you're in <strong className="text-white">{regimes.detected_country}</strong> from your browser. Confirm it so we suggest the right laws.</>
               : "Tell us where you operate so we can suggest the laws and standards that apply."}
           </p>
