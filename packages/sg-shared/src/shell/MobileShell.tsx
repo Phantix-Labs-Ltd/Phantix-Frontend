@@ -5,7 +5,7 @@
 
 import React, { useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { Lock, Monitor, Moon, MoreHorizontal, Sun } from "lucide-react";
 import { useTheme, type ThemeMode } from "../theme";
 import type { NavLeaf, NavSection } from "./types";
@@ -107,6 +107,10 @@ export function MobileMoreSheet({
 }) {
   const { pathname } = useLocation();
   const { mode, setTheme } = useTheme();
+  // Only the grab handle drags the sheet. When the whole sheet was draggable,
+  // framer-motion claimed every vertical swipe, so the list could not be
+  // scrolled by touch (only by dragging the scrollbar).
+  const dragControls = useDragControls();
 
   useEffect(() => { onClose(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -142,12 +146,18 @@ export function MobileMoreSheet({
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
             drag="y"
+            dragControls={dragControls}
+            dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.6 }}
             onDragEnd={(_, info) => { if (info.offset.y > 90 || info.velocity.y > 500) onClose(); }}
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto rounded-t-3xl border-t border-phantix-600/60 bg-[rgb(var(--surface-card))] pb-[calc(76px+env(safe-area-inset-bottom))] shadow-2xl md:hidden"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-phantix-600/60 bg-[rgb(var(--surface-card))] pb-[calc(76px+env(safe-area-inset-bottom))] shadow-2xl md:hidden"
           >
-            <div className="sticky top-0 z-10 flex justify-center bg-[rgb(var(--surface-card))] pb-2 pt-3">
+            {/* Drag here to close; the rest of the sheet scrolls normally. */}
+            <div
+              className="sticky top-0 z-10 flex cursor-grab touch-none justify-center bg-[rgb(var(--surface-card))] pb-3 pt-3 active:cursor-grabbing"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
               <span className="h-1.5 w-10 rounded-full bg-phantix-600/80" aria-hidden="true" />
             </div>
             <div className="space-y-5 px-4">
