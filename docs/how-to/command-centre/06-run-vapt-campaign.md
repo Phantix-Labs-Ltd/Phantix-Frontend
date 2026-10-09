@@ -27,6 +27,19 @@
 
 ## Steps
 
+### Run your first VAPT
+
+Until a campaign has started, **VAPT Campaigns** shows **Run your first VAPT**. It leads through four steps and ticks each one from your data, so you can leave and come back.
+
+1. **Add your first asset.** Select **Add an asset**. **Targets** opens with the add dialog. Save the domain, IP address or app, and SecureGraph returns you to **VAPT Campaigns**.
+2. **Verify you own it.** Select **Verify** with your domain. The Platform opens in a new tab at the domain check. The step ticks when you come back. An IP address needs no domain check.
+3. **Review the plan.** Select **Review the plan**. Read the proposed steps, turn off any vulnerability type you do not want, and select **Create draft campaign**.
+4. **Start the campaign.** Select **Start** with the draft name. An authorizer approves the campaign when one is required.
+
+![Run your first VAPT](../../screenshots/app/vapt_first.png)
+
+### Create a campaign
+
 1. Open **VAPT Campaigns**.
 2. Select **New campaign**.
 3. Unlock operate when the dual-control overlay appears.
@@ -49,7 +62,7 @@
 2. Wait for the plan. It shows the vulnerability types of each step.
 3. Read the review dialog. It names the inferred surfaces and the process flow of each step.
 4. Turn off any vulnerability type that you do not want.
-5. Select **Create draft**.
+5. Select **Create draft campaign**.
 6. Review the plan, then select **Start**.
 
 The generated plan holds one row for each step. Each row names the `process_flow` of the step, the vulnerability-type substeps and the checks that SecureGraph selected from the live catalog.

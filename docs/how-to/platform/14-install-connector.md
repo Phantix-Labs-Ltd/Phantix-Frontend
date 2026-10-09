@@ -1,6 +1,6 @@
 # Platform: Install the SecureGraph Connector
 
-**Where:** **Security database** → `/connections` → **On a private network** → **Connectors**
+**Where:** **Security database** → **Connect database** → **On a private network** (`/connections/new/private`). After setup: **Security database** → **Connectors**.
 **What:** Installs a small agent next to a database on a private network. The agent connects out to SecureGraph, so you open no inbound port.
 **Who:** The admin of the organization, and a person who can run containers next to the database.
 **Before you start:** A host or cluster that reaches the database, outbound HTTPS on port 443, and Docker, Docker Compose or Kubernetes.
@@ -29,18 +29,21 @@
 
 ## Steps
 
-1. Open **Security database**.
-2. Under **Where is your database?**, select **On a private network**.
-3. In **Connectors**, click **Add connector**.
-4. Enter a name for the place it runs, for example `Lagos data centre`. Click **Create connector**.
-5. In **Enter your database address**, type the host and port, for example `10.0.3.12:5432`.
-6. Select the installation method: **Docker**, **Docker Compose**, or **Kubernetes**.
-7. Click **Copy**. The command holds your enrollment token and the database address.
-8. Run the command on the host, or apply the manifest to the cluster.
-9. Wait for **Connected**. The window updates by itself. The list then shows **Online**.
-10. Click **Add the database**. Platform opens the connection form with this connector selected.
-11. Enter the same host and port, and the database credentials. Click **Save connection**.
-12. Click **Test connection**, then **Prepare security database**.
+1. Open **Security database**, then click **Connect database**.
+2. On **Where is your database?**, select **On a private network**.
+3. On **Create a connector**, enter a name for the place it runs, for example `Lagos data centre`. Click **Create connector**.
+4. On **Install**, in **Enter your database address**, type the host and port, for example `10.0.3.12:5432`.
+5. Select the installation method: **Docker**, **Docker Compose**, or **Kubernetes**.
+6. Click **Copy**. The command holds your enrollment token and the database address.
+7. Run the command on the host, or apply the manifest to the cluster.
+8. Wait for **Online**. The page updates by itself.
+9. Click **Add the database**. The connector is already selected.
+10. Enter the same host and port, and the database credentials. Click **Save connection**.
+11. On **Test and prepare**, click **Test connection**, then **Prepare security database**.
+
+The setup token is shown once. After a page refresh, click **Get a setup token** for a new one.
+
+To add a second connector after setup, open **Security database** and click **Add connector** in **Connectors**.
 
 **Result:** The connector reads **Online**, and the security database reads **ready** through it.
 
@@ -139,7 +142,7 @@ CREATE SCHEMA IF NOT EXISTS phantix AUTHORIZATION phantix_writer;
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| The connector stays **Waiting to start** | The token was used before, or is older than 15 minutes | Click **Setup token**, then start the connector with the new token. |
+| The connector stays **Waiting to start** | The token was used before, or is older than 15 minutes | Click **Get a setup token** (or **Setup token** in **Connectors**), then start the connector with the new token. |
 | "not enrolled yet: set SG_ENROLLMENT_TOKEN" in the log | The first start has no token | Add `SG_ENROLLMENT_TOKEN` to the command. |
 | The connector shows **Offline** | It cannot reach SecureGraph on port 443 | Allow outbound HTTPS from the host, or set `HTTPS_PROXY`. |
 | "The connector refused this database" | The host and port are not in `SG_ALLOWED_TARGETS` | Add them exactly, then restart the connector. |

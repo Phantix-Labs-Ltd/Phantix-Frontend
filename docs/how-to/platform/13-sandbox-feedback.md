@@ -11,6 +11,7 @@
 
 - SecureGraph staff enroll the organization from the staff portal. Self-enrollment is not available.
 - The program holds a maximum of 20 seats.
+- The beta cohort is separate. Organizations join it by opting in when they register during the beta, and it closes registration once 25 of them finish setup. See [01-register-and-sign-in.md](./01-register-and-sign-in.md).
 - The navigation item stays hidden until the enrollment exists. The API returns HTTP 404 before that point.
 - The member status reads `active`.
 - A rating needs a score from 1 to 5. The other rating fields are optional.

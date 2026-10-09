@@ -26,13 +26,14 @@
 ## Steps
 
 1. Open any Command Centre app. The Overview page is the landing screen.
-2. Read the app header. The backend catalog supplies the app name, the tagline and the description.
-3. Read the mini dashboard and the latest assessment panel.
-4. Read the section groups. Each group holds the pages for one job.
-5. Select a page in **Jump to** to open it.
-6. Use the app switcher in the header to move between Core, Attack, Defend and Code without a second sign-in.
-7. Open **Documentation** in the Help group when a page needs its guide.
-8. Select **Learn more** in a page header to open the matching guide in a new tab.
+2. Work through **Getting started** at the top when it shows. It lists the first things to do in this app, in order. See the reference below.
+3. Read the app header. The backend catalog supplies the app name, the tagline and the description.
+4. Read the mini dashboard and the latest assessment panel.
+5. Read the section groups. Each group holds the pages for one job.
+6. Select a page in **Jump to** to open it.
+7. Use the app switcher in the header to move between Core, Attack, Defend and Code without a second sign-in.
+8. Open **Documentation** in the Help group when a page needs its guide.
+9. Select **Learn more** in a page header to open the matching guide in a new tab.
 
 ---
 
@@ -46,6 +47,19 @@
 | Mini dashboard | A compact status view for the app |
 | Latest assessment | What the last completed assessment left for the app |
 | **Jump to** | Every page the app owns, grouped the way the sidebar groups them |
+
+### Getting started
+
+Each app lists its own first steps. In Core, the list shows on the dashboard. A step ticks itself when you do the thing, for example when the first report exists. Select a step to open its page. Select the close control to hide the list on this browser. The list goes away once every required step is done.
+
+| App | First steps, in order | Optional |
+| --- | --- | --- |
+| Core | Add your first asset, review and verify your first finding, generate your first report, invite a teammate | Start an assurance engagement |
+| Attack | Run your first VAPT, verify your first finding, retest a fixed finding | Schedule a recurring VAPT |
+| Defend | Set your compliance profile, complete the questionnaire, run your first compliance assessment, connect a cloud account or evidence connector | Install a SOC agent |
+| Code | Connect a repository provider, run your first code review, fix your first finding with a pull request, build your first threat model | Add a CI/CD gate |
+
+![Getting started in Attack](../../screenshots/app/getting_started.png)
 
 ### The four apps
 

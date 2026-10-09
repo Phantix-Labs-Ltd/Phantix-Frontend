@@ -477,7 +477,7 @@ export default function Dashboard() {
   return (
     <div>
       {data.securityDbBlocked && <SecurityDbBanner message={data.error} />}
-      <OnboardingChecklist />
+      <OnboardingChecklist application="core" />
 
       {/* Greeting */}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
