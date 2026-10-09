@@ -93,6 +93,33 @@ const EDGES: [number, number][] = [
   [7, 1],
 ];
 
+/**
+ * The automatic forward to `?next=` happens once per short window. If the target
+ * application rejects the handoff it sends the operator back to the Core login,
+ * which resumes the live Core session to this picker, which would forward again:
+ * an endless reload. A second arrival for the same application inside the
+ * window stays here and says why instead.
+ */
+const FORWARD_KEY = "sg.choose-app.forwarded";
+const FORWARD_WINDOW_MS = 30_000;
+
+function forwardedRecently(key: string): boolean {
+  try {
+    const rec = JSON.parse(sessionStorage.getItem(FORWARD_KEY) || "null") as { key?: string; at?: number } | null;
+    return Boolean(rec && rec.key === key && typeof rec.at === "number" && Date.now() - rec.at < FORWARD_WINDOW_MS);
+  } catch {
+    return false;
+  }
+}
+
+function markForwarded(key: string): void {
+  try {
+    sessionStorage.setItem(FORWARD_KEY, JSON.stringify({ key, at: Date.now() }));
+  } catch {
+    /* storage may be unavailable; the strict handoff still stops the loop */
+  }
+}
+
 const container: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07, delayChildren: 0.08 } },
@@ -111,6 +138,8 @@ export default function ChooseApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<ApplicationKey | "">("");
+  /** Why the automatic forward to an application did not happen. */
+  const [handoffError, setHandoffError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session?.authenticated) navigate("/login", { replace: true });
@@ -146,7 +175,7 @@ export default function ChooseApp() {
   const last = lastApp();
 
   const open = useCallback(
-    async (app: ApplicationCard, path?: string) => {
+    async (app: ApplicationCard, path?: string, auto = false) => {
       if (!app.accessible || opening) return;
       rememberApp(app.key);
       const target = applicationTarget(app.key, path);
@@ -155,8 +184,19 @@ export default function ChooseApp() {
         return;
       }
       setOpening(app.key);
+      setHandoffError(null);
       // Carry this session across the origin boundary (single-use, seconds-long).
-      window.location.assign(await applicationHandoffHref(app.key, path));
+      // The automatic forward is strict: a failed handoff stays on this page
+      // with the reason, instead of degrading into the sign-in loop.
+      try {
+        window.location.assign(await applicationHandoffHref(app.key, path, { strict: auto }));
+      } catch (err) {
+        setOpening("");
+        setHandoffError(
+          `Could not open ${app.label}: ${err instanceof Error ? err.message : "the sign-in handoff failed"}. ` +
+            "Choose it below to try again.",
+        );
+      }
     },
     [navigate, opening],
   );
@@ -172,7 +212,15 @@ export default function ChooseApp() {
     const app = all.find((a) => a.key === nextKey);
     if (!app?.accessible) return; // no access: the picker explains why
     setForwarded(true);
-    void open(app, nextPath);
+    if (forwardedRecently(app.key)) {
+      setHandoffError(
+        `${app.label} did not accept the sign-in, so it sent you back here. ` +
+          "Choose it below to try again, or sign out and sign back in.",
+      );
+      return;
+    }
+    markForwarded(app.key);
+    void open(app, nextPath, true);
   }, [forwarded, nextKey, nextPath, snap, all, open]);
 
   // Deliberately no auto-forward when only one application is reachable: the
@@ -356,6 +404,11 @@ export default function ChooseApp() {
 
         {!loading && !error && all.length > 0 && (
           <>
+            {handoffError && (
+              <div role="alert" className="card mx-auto mb-6 max-w-xl border-severity-high/40 p-4 text-center text-sm text-severity-high">
+                {handoffError}
+              </div>
+            )}
             {/* The hub: Core is the graph the other three hang off. */}
             {core && (
               <motion.button
