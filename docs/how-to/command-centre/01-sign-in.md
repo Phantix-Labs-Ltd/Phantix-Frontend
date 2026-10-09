@@ -56,6 +56,16 @@ The confirmation step makes this browser your primary device. No second code is 
 3. Select **Continue with link**.
 4. Read any message. SecureGraph rejects a link that is longer than 250 characters.
 
+### Open Attack, Defend or Code from a link
+
+Attack, Defend and Code have no sign-in page of their own. A link into one of them, for example **Run your first VAPT** on the Platform dashboard, opens the Command Centre sign-in on the way.
+
+1. Follow the link. The sign-in page reads **Sign in to continue to Attack**, or the application the link opens.
+2. When you are already signed in to the Command Centre, the page skips the form. It opens the application at the page the link names.
+3. When you are not signed in, sign in as usual. SecureGraph then opens the application at that page.
+
+A plain visit to `/login` always shows the form, so you can sign in as another user.
+
 ### Open the demo tenant
 
 1. Select **Explore the demo tenant** on the sign-in page.

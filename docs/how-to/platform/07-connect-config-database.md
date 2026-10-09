@@ -5,7 +5,7 @@
 **Who:** The primary user of the organization.
 **Before you start:** The security data storage connection is ready, and a read-only database account is available.
 
-![Connections](../../screenshots/platform/connections.png)
+![Security database, ready](../../screenshots/platform/connections-ready.png)
 
 ---
 
@@ -31,9 +31,9 @@
 1. Identify the database to inspect. Prefer a read replica or a dedicated account.
 2. Grant the account read access only, where the database supports it.
 3. Sign in to Platform and select **Security Database**.
-4. Click **Add connection**.
+4. Click **Add another connection**. The button shows once the security database is ready.
 5. Enter the name of the connection.
-6. Select the purpose **Config inspection**. The value is `config_inspection`.
+6. Select the purpose **Config inspection**. The value is `config_inspection`. **Security database** opens the guided journey instead. See [06-connect-security-database.md](./06-connect-security-database.md).
 7. Select the engine: `postgresql`, `mysql`, `mssql`, or `mongodb`.
 8. Enter the host, the port, the database name, and the target schema.
 9. Enter the read-only username and the password.

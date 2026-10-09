@@ -69,10 +69,12 @@ Confirm:
 
 ![Connections](../screenshots/platform/connections.png)
 
-1. Add a PostgreSQL (or supported) database for **security data storage**  
-2. **Test** connection  
-3. **Bootstrap** Phantix schema  
-4. Until bootstrap succeeds, product modules (scans, VAPT, SOC data) stay blocked  
+1. Click **Connect database** and answer **Where is your database?**  
+2. Publicly hosted: choose the provider, add every SecureGraph address to its allowlist, tick each one, then connect. Private network: install a SecureGraph Connector, then add the database  
+3. **Test** the connection and **prepare** the Phantix schema  
+4. Until the schema is prepared, product modules (scans, VAPT, SOC data) stay blocked  
+
+See [Connect a security database](../how-to/platform/06-connect-security-database.md).
 
 ---
 

@@ -19,8 +19,11 @@ Welcome. This guide walks a new organization from registration to first value.
 ## Step 1. Create your organization
 
 1. Open the Platform **Get started free** or Register page.
-2. Enter company details, primary contact, and a strong password.
-3. You will **not** stay logged in automatically. Go to **Sign in** with your **primary email**.
+2. Enter the company name, your work email and a password of 12 characters or more, or click **Continue with GitHub**.
+3. During the beta, tick **Join the beta sandbox**. Registering means joining the sandbox. The first 25 organizations to connect their security database take the beta places.
+4. Click **Create account**. Platform signs you in and asks for the code from your email.
+
+When the beta is full, registration closes and the page opens the waitlist instead. Leave your work email there. A Quick Scan of your domain puts you on the prioritized launch list, and SecureGraph invites prioritized organizations first.
 
 If login requires multi-factor, complete the email MFA step.
 

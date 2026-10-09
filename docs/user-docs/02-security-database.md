@@ -19,10 +19,10 @@ A managed security database that SecureGraph provisions for you is on the roadma
 
 | Where the database is | How SecureGraph connects | What you do |
 |------|------|------|
-| Hosted, with a public endpoint (Neon, Supabase, a cloud database) | Directly, over the internet, with TLS | Allowlist the SecureGraph addresses in the provider. |
+| Publicly hosted (Neon, Supabase, a cloud database) | Directly, over the internet, with TLS | Allowlist every SecureGraph address in the provider. This is required. |
 | On a private network (data centre, office, private cloud subnet) | Through a SecureGraph Connector | Install the connector next to the database. Open no inbound port. |
 
-Platform asks this first: **Security database** → **Where is your database?**
+Platform asks this first: **Security database** → **Connect database** → **Where is your database?** Each answer opens the next page of a guided journey.
 
 ---
 
@@ -44,35 +44,38 @@ Platform asks this first: **Security database** → **Where is your database?**
 
 1. Create a project at [neon.tech](https://neon.tech).
 2. On the project dashboard, select **Connect** and copy the connection string.
-3. In Platform, open **Security database**, select **Hosted**, then the **Neon** tab.
-4. Under **Recommended: only let SecureGraph in**, copy the addresses.
+3. In Platform, open **Security database**, click **Connect database**, select **Publicly hosted**, then **Neon**.
+4. On **Allowlist SecureGraph's IPs**, copy the addresses.
 5. In Neon, open **Settings** → **Network security** → **IP Allow**, and add each address. IP Allow is part of the paid plans.
-6. Paste the connection string into **Connection URL** and click **Connect**.
-7. In the setup window, click **Test connection**, then **Prepare security database**.
+6. Tick each address in Platform, then click **Continue to add the database**.
+7. Paste the connection string into **Connection URL** and click **Connect**.
+8. On **Test and prepare**, click **Test connection**, then **Prepare security database**.
 
 ### Supabase
 
 1. Create a project at [supabase.com](https://supabase.com) and set a database password.
 2. Select **Connect** and copy the **Session pooler** connection string. Put your password in it.
-3. In Platform, open **Security database**, select **Hosted**, then the **Supabase** tab.
-4. Copy the addresses under **Recommended: only let SecureGraph in**.
+3. In Platform, open **Security database**, click **Connect database**, select **Publicly hosted**, then **Supabase**.
+4. Copy the addresses on **Allowlist SecureGraph's IPs**.
 5. In Supabase, open **Project Settings** → **Database** → **Network Restrictions**. Add each address as a `/32` range.
-6. Paste the connection string and click **Connect**, then complete the setup window.
+6. Tick each address in Platform, then click **Continue to add the database**.
+7. Paste the connection string and click **Connect**, then test and prepare the database.
 
 Use the Session pooler: the direct `db.<project>.supabase.co` host needs IPv6 unless you buy the IPv4 add-on.
 
 ### Amazon RDS, DigitalOcean and other managed PostgreSQL
 
 1. Create a PostgreSQL instance, a database and a dedicated user (see the SQL below).
-2. If the instance has a public endpoint, allow port `5432` from the SecureGraph addresses in its security group or trusted sources.
-3. If the instance is in a private subnet, install a SecureGraph Connector in that network instead.
-4. In Platform, click **Enter details manually**, select **Security database**, and enter the details.
+2. If the instance has a public endpoint, select **Publicly hosted** and **Other PostgreSQL**. Allow port `5432` from every SecureGraph address in its security group or trusted sources, and tick each address.
+3. If the instance is in a private subnet, select **On a private network** and install a SecureGraph Connector in that network instead.
+4. On **Connect**, paste the URL, or click **Enter details manually** and enter the details.
 
 ### About the SecureGraph addresses
 
-- Platform shows them only to signed-in organizations, on the provider tab.
+- Platform shows them only to signed-in organizations, on the allowlist step.
 - They are outbound addresses. They accept no inbound traffic.
-- Add all of them. SecureGraph connects from any one of them.
+- Add all of them. SecureGraph connects from any one of them. The database cannot be added until each address is ticked, and Platform records the ticks in the audit trail.
+- When SecureGraph adds an address later, Platform shows **Your database allowlist is out of date**. Click **Update the allowlist**, add the new address and confirm.
 
 ---
 
@@ -80,7 +83,7 @@ Use the Session pooler: the direct `db.<project>.supabase.co` host needs IPv6 un
 
 The connector is a small agent (about 8 MB) that runs next to your database. It connects **out** to SecureGraph over TLS 1.3 on port 443, so you open no inbound port, firewall rule or public IP address.
 
-1. Open **Security database**, select **On a private network**, and click **Add connector**.
+1. Open **Security database**, click **Connect database**, select **On a private network**, and create a connector.
 2. Enter your database `host:port`. Copy the Docker, Docker Compose or Kubernetes command.
 3. Run it on a host or cluster that can reach the database. Wait for **Online**.
 4. Click **Add the database**, enter the credentials, then test and prepare it.
@@ -115,11 +118,11 @@ SecureGraph creates its tables in the `phantix` schema when it prepares the data
 
 ## In Platform
 
-1. Open **Security database** and answer **Where is your database?**
-2. Connect with a URL (hosted), or add a connector and then the database (private).
+1. Open **Security database**, click **Connect database**, and answer **Where is your database?**
+2. Hosted: choose the provider, allowlist and tick every address, then connect with a URL. Private: create and install a connector, then add the database.
 3. To enter every field yourself, click **Enter details manually**. No field is filled in for you.
-4. In the setup window, click **Test connection**, then **Prepare security database**.
-5. Click **Continue setup** during first-run setup, or **Done**.
+4. On **Test and prepare**, click **Test connection**, then **Prepare security database**.
+5. Click **Done**, or **Back to your Quick Scan** during first-run setup.
 
 The page reads **Bootstrap gate: ready** when the database is prepared.
 
@@ -133,6 +136,7 @@ API equivalents (for advanced users):
 | Prepare (bootstrap) | `POST /api/v1/db-connections/{id}/bootstrap` |
 | Primary | `GET /api/v1/db-connections/primary-security-storage` |
 | Addresses to allowlist | `GET /api/v1/db-connections/network-access` |
+| Confirm the allowlist | `POST /api/v1/db-connections/network-access/attest` |
 | List connectors | `GET /api/v1/connectors` |
 | Create a connector | `POST /api/v1/connectors` (returns a single-use enrollment token) |
 | Revoke a connector | `DELETE /api/v1/connectors/{id}` |

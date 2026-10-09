@@ -4,7 +4,7 @@
 
 ## Path A. Self-serve (most teams)
 
-1. **Get started free**: company name, work email and password, or **Continue with GitHub**. No card.
+1. **Get started free**: company name, work email and password, or **Continue with GitHub**. No card. During the beta, tick **Join the beta sandbox**. When the beta is full, join the **waitlist** instead: add a Quick Scan of your domain to reach the prioritized launch list
 2. Enter the 6-digit code we email you (skipped when you sign up with GitHub)
 3. Enter a domain or a GitHub repo and run a **Quick Scan**: passive checks, a few minutes, no setup
 4. Review the findings, then connect a **security database** to keep them (a free Neon or Supabase project takes about two minutes)
