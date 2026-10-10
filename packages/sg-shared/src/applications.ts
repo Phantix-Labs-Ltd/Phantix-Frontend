@@ -361,10 +361,14 @@ interface HandoffMinted {
  *
  * On any failure this degrades to the plain host: the target then sends the
  * operator to the Core login, which is the correct outcome, not a lockout.
+ * With `strict`, a failure throws instead. The picker's automatic forward uses
+ * it: degrading there sends the operator to the Core login, which resumes the
+ * live Core session straight back to the picker, which forwards again, a loop.
  */
 export async function applicationHandoffHref(
   key: ApplicationKey,
   path = "/",
+  opts: { strict?: boolean } = {},
 ): Promise<string> {
   const target = applicationTarget(key, path);
   const fallback = target.href;
@@ -384,7 +388,10 @@ export async function applicationHandoffHref(
       ? APPLICATION_HOSTS[key] || minted?.open_url
       : minted?.open_url || APPLICATION_HOSTS[key];
     const base = (preferred || "").replace(/\/+$/, "");
-    if (!minted?.code || !base) return fallback;
+    if (!minted?.code || !base) {
+      if (opts.strict) throw new Error("The sign-in handoff did not return a code.");
+      return fallback;
+    }
     // "/" is the authenticated home for Attack/Defend/Code, so a caller
     // asking for the generic "/dashboard" (or passing nothing) collapses to
     // "/" there. Core is the one app where that's wrong: its "/" is the
@@ -402,6 +409,7 @@ export async function applicationHandoffHref(
           : "/";
     return `${base}${suffix}#sg=${encodeURIComponent(minted.code)}`;
   } catch (err) {
+    if (opts.strict) throw err;
     // Expired/invalid session: go to Core sign-in (remembering the intended
     // application) instead of the target's login screen, which reads as a
     // silent logout on app switch.
