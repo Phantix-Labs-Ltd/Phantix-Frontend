@@ -63,6 +63,7 @@ export default function AgiDrawer() {
   return (
     <>
       <button
+        data-tour="agent-tab"
         onClick={() => window.dispatchEvent(new CustomEvent("phantix:agi-open"))}
         // Phones: a floating action button above the tab bar. Wider: the edge tab.
         aria-label="Open the Pentest Agent"

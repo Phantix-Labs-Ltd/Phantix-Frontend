@@ -9,6 +9,7 @@ import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { Lock, Monitor, Moon, MoreHorizontal, Sun } from "lucide-react";
 import { useTheme, type ThemeMode } from "../theme";
 import type { NavLeaf, NavSection } from "./types";
+import { navAnchor } from "../tours";
 
 const TAB_COUNT = 4;
 
@@ -56,7 +57,7 @@ export function MobileTabBar({ nav, moreOpen, onMore }: { nav: NavSection[]; mor
         {tabs.map((s) => {
           const on = current === s.label && !moreOpen;
           return (
-            <NavLink key={s.label} to={s.items[0].to} className={`${itemCls} ${on ? "text-gold-300" : "text-slate-500"}`}>
+            <NavLink key={s.label} to={s.items[0].to} data-tour={navAnchor(s.label)} className={`${itemCls} ${on ? "text-gold-300" : "text-slate-500"}`}>
               <span className={pill(on)}>{s.icon ?? s.items[0].icon}</span>
               <span className="max-w-full truncate">{tabLabel(s.label)}</span>
             </NavLink>

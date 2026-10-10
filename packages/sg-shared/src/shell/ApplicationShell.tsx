@@ -25,6 +25,7 @@ import {
   Timer,
   Unlock,
   X,
+  Compass,
 } from "lucide-react";
 import { useSidebarCollapsed } from "../useSidebarCollapsed";
 import { useApplicationNav } from "./useApplicationNav";
@@ -36,6 +37,8 @@ import { BrandLoader } from "../components/BrandLoader";
 import { PageSkeleton } from "../ui";
 import AlertNotifications, { ConnectionWatch, NotificationBell, NotificationProvider } from "../components/AlertNotifications";
 import AgiNotifications from "../components/AgiNotifications";
+import GuidedTour, { startTour } from "../components/GuidedTour";
+import { navAnchor, TOURS, tourStorageKey } from "../tours";
 import { toggleAssistant } from "../components/assistantEvents";
 import OperationsWidget from "../components/OperationsWidget";
 import FeedbackReporter from "../components/FeedbackReporter";
@@ -105,10 +108,11 @@ function activeGroupLabel(nav: NavSection[], pathname: string): string | null {
   return best?.label ?? null;
 }
 
-function NavLeafLink({ item, collapsible }: { item: NavLeaf; collapsible: boolean }) {
+function NavLeafLink({ item, collapsible, tour }: { item: NavLeaf; collapsible: boolean; tour?: string }) {
   return (
     <NavLink
       to={item.to}
+      data-tour={tour}
       end={item.to === "/"}
       title={
         item.locked
@@ -150,7 +154,7 @@ function NavGroup({
   onToggle: () => void;
 }) {
   if (section.items.length === 1) {
-    return <NavLeafLink item={section.items[0]} collapsible={collapsible} />;
+    return <NavLeafLink item={section.items[0]} collapsible={collapsible} tour={navAnchor(section.label)} />;
   }
   const listId = `nav-group-${section.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
@@ -159,6 +163,7 @@ function NavGroup({
         type="button"
         onClick={onToggle}
         title={section.label}
+        data-tour={navAnchor(section.label)}
         aria-expanded={open}
         aria-controls={listId}
         className={`nav-item w-full ${active ? "text-slate-100" : ""}`}
@@ -755,6 +760,7 @@ export function ApplicationShell({
               <button
                 onClick={() => setSwitcherOpen((v) => !v)}
                 title="Switch application"
+                data-tour="app-switcher"
                 aria-haspopup="menu"
                 aria-expanded={switcherOpen}
                 className="nav-item w-full justify-between"
@@ -827,6 +833,7 @@ export function ApplicationShell({
 
             <button
               onClick={() => setPaletteOpen(true)}
+              data-tour="search"
               className="hidden w-72 items-center gap-2.5 rounded-md border border-phantix-700 bg-phantix-900 px-3.5 py-2 text-sm text-slate-500 transition-colors hover:border-phantix-600 hover:text-slate-300 sm:flex"
             >
               <Search size={15} />
@@ -837,6 +844,7 @@ export function ApplicationShell({
             </button>
             <button
               onClick={() => setPaletteOpen(true)}
+              data-tour="search"
               aria-label="Search"
               className="rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white sm:hidden"
             >
@@ -885,6 +893,7 @@ export function ApplicationShell({
               <button
                 onClick={toggleAssistant}
                 title="AI Assistant"
+                data-tour="assistant"
                 aria-label="Open AI Assistant"
                 className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-gold-400/40 bg-gold-400/10 px-2.5 py-2 text-xs font-semibold text-gold-300 transition-colors hover:border-gold-400/70 hover:bg-gold-400/15 hover:text-gold-200"
               >
@@ -902,6 +911,7 @@ export function ApplicationShell({
                   aria-haspopup="menu"
                   aria-expanded={userMenu}
                   aria-label="Account"
+                  data-tour="account"
                   className="flex items-center gap-2.5 rounded-md border border-phantix-700 bg-phantix-900 p-1.5 transition-colors hover:border-phantix-600 md:pr-2.5"
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 font-display text-xs font-bold text-gold-300">
@@ -982,6 +992,15 @@ export function ApplicationShell({
                         >
                           <BookOpen size={15} /> Documentation
                         </CoreLink>
+                        <button
+                          onClick={() => {
+                            setUserMenu(false);
+                            startTour();
+                          }}
+                          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-phantix-800"
+                        >
+                          <Compass size={15} /> Take the tour
+                        </button>
                         <CoreLink
                           path="/support"
                           title="Support"
@@ -1234,6 +1253,9 @@ export function ApplicationShell({
             <CoreLink path="/docs" title="Documentation" className={`${SHEET_ROW} text-slate-200`}>
               <BookOpen size={17} /> Documentation
             </CoreLink>
+            <button onClick={() => { closeMore(); startTour(); }} className={`${SHEET_ROW} text-slate-200`}>
+              <Compass size={17} /> Take the tour
+            </button>
             <CoreLink path="/support" title="Support" className={`${SHEET_ROW} text-slate-200`}>
               <LifeBuoy size={17} /> Support
             </CoreLink>
@@ -1277,6 +1299,13 @@ export function ApplicationShell({
           the operator was away): hold the page and offer sign-in, rather than
           bouncing them out to Core's login. */}
       <SessionExpiredOverlay onSignIn={() => window.location.assign(coreLoginUrl(application))} />
+
+      {/* First-visit guided tour of this application; "Take the tour" replays it. */}
+      <GuidedTour
+        steps={TOURS[application]}
+        storageKey={tourStorageKey(application)}
+        autoStart={Boolean(me) || isDemoMode()}
+      />
 
       {/* Analytics consent banner — lost when the Command Centre monolith was
           retired in favor of this shared shell; nothing was tracked because
