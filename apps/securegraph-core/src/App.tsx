@@ -5,6 +5,7 @@ import type { ApplicationKey } from "@sg/shell/types";
 import { StoreProvider, ToastViewport, useStore } from "@sg/store";
 import DualControlOverlay from "@sg/components/DualControlOverlay";
 import AiBudgetOverlay from "@sg/components/AiBudgetOverlay";
+import ApprovalSentOverlay from "@sg/components/ApprovalSentOverlay";
 import BrandLoader from "@sg/components/BrandLoader";
 import { HOSTS } from "./hosts";
 import { coreNav } from "./nav";
@@ -137,6 +138,7 @@ export default function App() {
       <ToastViewport />
       <DualControlOverlay />
       <AiBudgetOverlay />
+      <ApprovalSentOverlay />
     </StoreProvider>
   );
 }

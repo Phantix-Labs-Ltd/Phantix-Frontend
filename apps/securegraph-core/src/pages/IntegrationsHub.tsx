@@ -255,8 +255,8 @@ export default function IntegrationsHub() {
                             className="btn-ghost !px-2 !py-1 !text-xs"
                             onClick={async () => {
                               const res = await rotateHubSecret(inst.installation_id);
-                              if (isPendingApproval(res)) toast("info", "Sent for approval", "Secret rotation is parked for an authorizer.");
-                              else toast("success", "Secret rotated", "New secret generated.");
+                              // A parked call opens the approval overlay (it names the authorizer).
+                              if (!isPendingApproval(res)) toast("success", "Secret rotated", "New secret generated.");
                             }}
                           >
                             <RefreshCw size={12} /> Rotate
@@ -267,8 +267,8 @@ export default function IntegrationsHub() {
                               if (!(await requireDualControl("Uninstall requires dual-control."))) return;
                               const res = await uninstallHubIntegration(inst.installation_id);
                               reload();
-                              if (isPendingApproval(res)) toast("info", "Sent for approval", `${inst.label} disconnect is parked for an authorizer.`);
-                              else toast("success", "Uninstalled", `${inst.label} disconnected.`);
+                              // A parked call opens the approval overlay (it names the authorizer).
+                              if (!isPendingApproval(res)) toast("success", "Uninstalled", `${inst.label} disconnected.`);
                             }}
                           >
                             <Trash2 size={12} />
@@ -369,9 +369,8 @@ function InstallModal({ connectorId, catalog, onClose, onInstalled }: { connecto
       body.secrets = { webhook_url: secrets.trim() };
     }
     const res = await installHubIntegration(body);
-    if (isPendingApproval(res)) {
-      toast("info", "Sent for approval", `${connector.name} install is parked for an authorizer. Approve it from Authorizations to finish.`);
-    } else {
+    // A parked call opens the approval overlay (it names the authorizer).
+    if (!isPendingApproval(res)) {
       toast("success", "Installed", `${connector.name} installed successfully.`);
     }
     onInstalled();

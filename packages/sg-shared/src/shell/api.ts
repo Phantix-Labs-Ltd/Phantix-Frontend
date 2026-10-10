@@ -13,6 +13,7 @@
  */
 import type { ApplicationKey } from "./types";
 import {
+  announcePendingApproval,
   deviceId as sharedDeviceId,
   isCookieSession,
   readSessionStoredToken,
@@ -226,7 +227,9 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promis
     throw new ApiError(res.status, detail, message);
   }
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  const body = await res.json();
+  announcePendingApproval(res.status, body);
+  return body as T;
 }
 
 export function apiGet<T>(path: string): Promise<T> {
