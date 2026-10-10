@@ -143,7 +143,7 @@ export default function ProviderConnect() {
       if (needsToken) body.secrets = { api_key: token.trim() };
       const res = await installHubIntegration(body);
       if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", "Install is parked for an authorizer. Approve it from Authorizations.");
+        // A parked call opens the approval overlay (it names the authorizer).
         await load();
         return;
       }
@@ -176,7 +176,8 @@ export default function ProviderConnect() {
       try {
         const r = await startHubOAuth(installationId);
         if (r?.authorize_url) window.location.href = r.authorize_url;
-        else toast("info", "Awaiting approval", "The OAuth start may be parked for an authorizer.");
+        // A parked start opens the approval overlay; anything else is a failure.
+        else if (!isPendingApproval(r)) toast("error", "Could not start OAuth", "No authorization address came back. Try again.");
       } catch {
         toast("error", "Could not start OAuth");
       }
@@ -189,9 +190,8 @@ export default function ProviderConnect() {
       if (!(await requireDualControl(`Disconnecting ${meta.name} requires dual-control.`))) return;
       const res = await uninstallHubIntegration(install.installation_id);
       await load();
-      if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", `${install.label} disconnect is parked for an authorizer.`);
-      } else {
+      // A parked call opens the approval overlay (it names the authorizer).
+      if (!isPendingApproval(res)) {
         toast("success", "Disconnected", `${install.label} disconnected.`);
       }
     },
