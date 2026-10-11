@@ -98,6 +98,11 @@ function AgiNotificationsInner() {
           toast("success", "Pentest Agent session completed", n.body || n.title);
         } else if (n.kind === "agi_approval_required") {
           toast("warning", "Approval needed", n.title);
+        } else if (n.kind === "agi_clarification_required") {
+          // The loop is hard-paused until the operator answers — usually "no test
+          // account is provisioned, may I register one?". Without this heads-up
+          // the run waits silently and nobody knows it is blocked.
+          toast("warning", "Pentest Agent is waiting on you", n.body || n.title);
         }
       }
     },
@@ -196,6 +201,11 @@ function AgiNotificationsInner() {
   }, []);
 
   const primary = pending[0];
+  // "May I register a test account?" arrives as a normal state-changing action;
+  // label it plainly so the operator knows what they are approving.
+  const isRegistration =
+    !!primary &&
+    (primary.tool_name === "auth_register" || primary.tool_name === "register_test_account");
   const showPopup =
     pending.length > 0 && !consoleOpen && dismissedKey !== approvalKey && Boolean(primary);
 
@@ -225,7 +235,9 @@ function AgiNotificationsInner() {
                   Approval needed
                 </p>
                 <p className="text-sm font-medium text-white">
-                  The Pentest Agent is paused
+                  {isRegistration
+                    ? "The Pentest Agent wants to register a test account"
+                    : "The Pentest Agent is paused"}
                   {pending.length > 1 ? ` · ${pending.length} steps waiting` : ""}
                 </p>
               </div>
@@ -248,6 +260,13 @@ function AgiNotificationsInner() {
               </p>
               {primary.rationale && (
                 <p className="text-xs leading-relaxed text-slate-400">{primary.rationale}</p>
+              )}
+              {isRegistration && (
+                <p className="rounded-lg border border-gold-400/25 bg-gold-400/5 px-3 py-2 text-xs leading-relaxed text-gold-200">
+                  Approving lets the agent create a throwaway test account on this target and
+                  keep the credential for the run, so it can test authenticated and
+                  authorization behaviour instead of stopping to ask you for an account.
+                </p>
               )}
 
               <div className="flex items-center gap-2 pt-1">
