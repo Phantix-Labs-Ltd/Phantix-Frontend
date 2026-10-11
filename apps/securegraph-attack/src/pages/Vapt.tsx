@@ -250,9 +250,8 @@ export default function Vapt() {
     if (!(await requireDualControl(`${action} campaign requires a dual-control operate session.`))) return;
     try {
       const res = await api.post<Record<string, unknown>>(`/vapt/campaigns/${id}/${action}`, extra || {});
-      if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", `Campaign #${id} ${action} is parked for an authorizer. Approve it from Authorizations so that it can run.`);
-      } else {
+      // A parked call opens the approval overlay (it names the authorizer).
+      if (!isPendingApproval(res)) {
         toast("success", `${action}`, `Campaign #${id} ${action} requested`);
       }
       reload();

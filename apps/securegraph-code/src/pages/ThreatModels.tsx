@@ -5,7 +5,7 @@ import {
 import { Card, CardHeader, EmptyState, ErrorState, Modal, PageHeader, StatCard, PageBodySkeleton } from "@sg/ui";
 import { CreateProductModal, ProjectInputsModal } from "@sg/components/ThreatModelInputs";
 import { useStore } from "@sg/store";
-import { ApiError, publicDetailCopy } from "@sg/api";
+import { ApiError, publicDetailCopy, showApprovalSent } from "@sg/api";
 import {
   answerThreatClarification, deliverThreatModel, exportThreatModel, generateThreatModel, getContextSummary, getThreatModel, GRADE_TONE,
   listProjects, listThreatModels, patchThreat, regenerateThreatModel,
@@ -503,8 +503,10 @@ function ThreatModelDrawer({ modelId, onClose }: { modelId: number; onClose: () 
       const res = await deliverThreatModel(modelId, { only_supported: true });
       const r = res as { pending?: boolean; ok?: boolean; failed?: number; detail?: string; status?: string };
       if (r.pending === true || r.status === "pending") {
-        // Contract: 202 pending:true means nothing was delivered yet.
-        toast("info", "Sent for approval", "The push is parked for an authorizer. Approve it from Authorizations so that the system creates the tickets.");
+        // Contract: 202 pending:true means nothing was delivered yet. The API
+        // client opens the approval overlay for that park; a "pending" status
+        // without one is announced here so it names the authorizer too.
+        if (r.pending !== true) showApprovalSent({ actionLabel: "Push the threat model to the tracker" });
       } else if (r.ok === false || (typeof r.failed === "number" && r.failed > 0)) {
         toast("warning", "Partly delivered", "Some issues were rejected by the tracker.");
       } else {

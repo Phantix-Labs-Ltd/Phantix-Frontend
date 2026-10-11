@@ -9,6 +9,7 @@ const DocsChrome = React.lazy(() => import("@sg/pages/DocsChrome"));
 import { StoreProvider, ToastViewport } from "@sg/store";
 import DualControlOverlay from "@sg/components/DualControlOverlay";
 import AiBudgetOverlay from "@sg/components/AiBudgetOverlay";
+import ApprovalSentOverlay from "@sg/components/ApprovalSentOverlay";
 import { BrandLoader } from "@sg/components/BrandLoader";
 import { APP_URL } from "@sg/config";
 import { HOSTS } from "./hosts";
@@ -101,6 +102,7 @@ export default function App() {
       <ToastViewport />
       <DualControlOverlay />
       <AiBudgetOverlay />
+      <ApprovalSentOverlay />
       <AgiDrawer />
     </StoreProvider>
   );

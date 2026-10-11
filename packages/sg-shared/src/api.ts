@@ -540,6 +540,56 @@ export function isPendingApproval(body: unknown): boolean {
   return !!body && typeof body === "object" && (body as { pending?: unknown }).pending === true;
 }
 
+/** A parked action as the backend describes it to the initiator (no email). */
+export interface PendingApprovalNotice {
+  pendingId: number | null;
+  /** Human label of the action, e.g. "Start campaign". */
+  actionLabel: string | null;
+  /** The assigned authorizer, or null when none is named. */
+  authorizer: { fullName: string; title: string | null } | null;
+}
+
+/** Window event the approval overlay listens for. */
+export const APPROVAL_PENDING_EVENT = "sg:approval-pending";
+
+/**
+ * Tell the app shell that a call was parked for an authorizer, so one overlay
+ * can say who to contact. Raised from the API clients, so every gated step on
+ * every page gets it, including ones whose page has no handling of its own.
+ * Only the middleware's 202 park counts: other endpoints use `pending` for
+ * unrelated states.
+ */
+export function announcePendingApproval(status: number, body: unknown): void {
+  if (status !== 202 || !isPendingApproval(body) || typeof window === "undefined") return;
+  const b = body as {
+    pending_id?: unknown;
+    action_label?: unknown;
+    authorizer?: { full_name?: unknown; title?: unknown } | null;
+  };
+  const fullName = typeof b.authorizer?.full_name === "string" ? b.authorizer.full_name.trim() : "";
+  const title = typeof b.authorizer?.title === "string" ? b.authorizer.title.trim() : "";
+  showApprovalSent({
+    pendingId: typeof b.pending_id === "number" ? b.pending_id : null,
+    actionLabel: typeof b.action_label === "string" && b.action_label.trim() ? b.action_label.trim() : null,
+    authorizer: fullName ? { fullName, title: title || null } : null,
+  });
+}
+
+/**
+ * Open the approval overlay directly, for a workflow that files its own
+ * approval (e.g. risk treatment submit answers 200, not a 202 park). Without an
+ * authorizer, the overlay names the one assigned in the store.
+ */
+export function showApprovalSent(notice: Partial<PendingApprovalNotice> = {}): void {
+  if (typeof window === "undefined") return;
+  const detail: PendingApprovalNotice = {
+    pendingId: notice.pendingId ?? null,
+    actionLabel: notice.actionLabel ?? null,
+    authorizer: notice.authorizer ?? null,
+  };
+  window.dispatchEvent(new CustomEvent<PendingApprovalNotice>(APPROVAL_PENDING_EVENT, { detail }));
+}
+
 // ── Correlation ID (00-shared-auth-and-client.md §6) ────────────────────────
 // Surface X-Correlation-ID on failures so support can trace a request.
 let lastCorrelationId: string | null = null;
@@ -938,7 +988,9 @@ async function request<T>(
     throw withCorrelation(new ApiError(res.status, detail, correlationId), correlationId);
   }
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  const body = await res.json();
+  announcePendingApproval(res.status, body);
+  return body as T;
 }
 
 /** True when a 401 is the retryable "token superseded by renewal" race. */
@@ -1052,7 +1104,9 @@ export const api = {
       try { detail = (await res.json()).detail; } catch { /* non-JSON */ }
       throw new ApiError(res.status, detail, res.headers.get("X-Correlation-ID") || undefined);
     }
-    return res.json() as T;
+    const body = await res.json();
+    announcePendingApproval(res.status, body);
+    return body as T;
   },
 };
 
