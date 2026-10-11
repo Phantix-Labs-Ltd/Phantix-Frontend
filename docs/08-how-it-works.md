@@ -6,7 +6,7 @@ Five steps from zero to a trusted report.
 
 ## 1. Register your organization
 
-Create a Platform account. Verify identity as required (email / company modes). Invite the right people — dual-control works better with more than one trusted admin.
+Create a Platform account. Verify identity as required (email or company modes). Invite the right people. Dual-control works better with more than one trusted admin.
 
 ---
 
@@ -46,7 +46,7 @@ Run scoped scans or launch a VAPT campaign. Sensitive steps can require approval
 
 ## Optional: AI specialists on demand
 
-When you need help triaging, writing up findings, or explaining compliance gaps, invoke a **domain agent** (SOC, GRC, VAPT, threat intel, assets). Agents call the same engines you use — they don’t replace them.
+When you need help to triage, to write up findings, or to explain compliance gaps, invoke a **domain agent** (SOC, GRC, VAPT, threat intel, assets). Agents call the same engines you use. They don’t replace them.
 
 ---
 
@@ -56,7 +56,7 @@ When you need help triaging, writing up findings, or explaining compliance gaps,
 |--------|--------|
 | Weekly | Review new assets and open risks |
 | Per release | Scoped scan or campaign on changed surface |
-| Monthly | Board pack / tracker review |
+| Monthly | Board pack and tracker review |
 | Continuous | Dual-control for sensitive tests; audit trail on |
 
 ---
@@ -71,4 +71,4 @@ Many teams can:
 4. Run a light assessment
 5. Export a first report
 
-within a guided session — then expand scope as trust grows.
+within a guided session, then expand scope as trust grows.

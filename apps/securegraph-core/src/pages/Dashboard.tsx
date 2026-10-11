@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { SeverityBadge, StatusBadge, PageSkeleton, ErrorState } from "@sg/ui";
 import SecurityDbBanner from "@sg/components/SecurityDbBanner";
+import DocLink from "@sg/components/DocLink";
 import LatestAssessmentPanel from "@sg/components/LatestAssessment";
 import CrossAppLink from "@sg/components/CrossAppLink";
 import AppSwitcher from "@sg/components/AppSwitcher";
@@ -26,6 +27,7 @@ import { useSseStream } from "@sg/useSse";
 import { timeAgo, cx, titleCase } from "@sg/utils";
 import { useStore } from "@sg/store";
 import type { CommandCenter } from "@sg/types";
+import OnboardingChecklist from "@sg/components/OnboardingChecklist";
 import {
   AreaTrend, ColumnTrend, Delta, Donut, KpiTile, MiniTable, Panel, PanelEmpty, RankedBars, ViewAll,
   type Column,
@@ -80,7 +82,7 @@ function incidentToServerEvent(i: AvailabilityIncident): ServerEvent {
     label: i.title || i.last_error || `Check ${i.check_id ?? ""}`,
     detail: open
       ? `Down since ${timeAgo(i.down_at)}`
-      : `MTTR ${i.time_to_resolve_seconds != null ? `${i.time_to_resolve_seconds}s` : "—"} · recovered ${timeAgo(i.recovered_at || i.down_at)}`,
+      : `MTTR ${i.time_to_resolve_seconds != null ? `${i.time_to_resolve_seconds}s` : "Not set"} · recovered ${timeAgo(i.recovered_at || i.down_at)}`,
     tone: open ? "text-severity-critical" : "text-emerald-300",
     ts: i.recovered_at || i.down_at,
   };
@@ -94,13 +96,13 @@ function num(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function str(v: unknown, fallback = "—"): string {
+function str(v: unknown, fallback = "Not set"): string {
   if (v == null || v === "") return fallback;
   return String(v);
 }
 
 export default function Dashboard() {
-  const { org: storeOrg, operate, requireDualControl, session } = useStore();
+  const { org: storeOrg, operate, requireDualControl, session, dualControl } = useStore();
   const { data, loading, error, reload, setData } = useResource(loadCommandCenter, emptyDash, "command-center");
 
   /* Posture and findings for the chart row. Loaded alongside the command centre
@@ -280,7 +282,7 @@ export default function Dashboard() {
               label: str(inner.title ?? inner.target, "Server incident"),
               detail: open
                 ? `Down since ${timeAgo(String(inner.downAt || evt.ts))}`
-                : `MTTR ${inner.timeToResolveSeconds ?? "—"}s`,
+                : `MTTR ${inner.timeToResolveSeconds ?? "Not set"}s`,
               tone: open ? "text-severity-critical" : "text-emerald-300",
               ts: evt.ts,
             },
@@ -339,7 +341,7 @@ export default function Dashboard() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load the command centre overview. Check your connection and retry — your session stays signed in."
+        body="We could not load the command centre overview. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -411,7 +413,7 @@ export default function Dashboard() {
       key: "open",
       header: "Open",
       className: "text-right font-mono",
-      render: (a) => (a.openFindingsCount != null || a.open_findings != null ? num(a.openFindingsCount ?? a.open_findings) : "—"),
+      render: (a) => (a.openFindingsCount != null || a.open_findings != null ? num(a.openFindingsCount ?? a.open_findings) : "Not set"),
     },
     {
       key: "risk",
@@ -421,7 +423,7 @@ export default function Dashboard() {
         a.riskLevel != null || a.risk_level != null ? (
           <SeverityBadge severity={str(a.riskLevel ?? a.risk_level, "info") as any} />
         ) : (
-          "—"
+          "Not set"
         ),
     },
   ];
@@ -475,6 +477,7 @@ export default function Dashboard() {
   return (
     <div>
       {data.securityDbBlocked && <SecurityDbBanner message={data.error} />}
+      <OnboardingChecklist application="core" />
 
       {/* Greeting */}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
@@ -508,6 +511,7 @@ export default function Dashboard() {
           <span className="inline-flex items-center gap-2 rounded-md border border-phantix-700 bg-phantix-900 px-3 py-2 text-xs font-medium text-slate-300">
             <CalendarRange size={14} className="text-gold-400" /> {rangeLabel}
           </span>
+          <DocLink docId="howto-app-29" label="Dashboard how-to" />
           <AppSwitcher current="core" />
           <Link to={href("tracker", "/tracker")} className="btn-primary">
             <KanbanSquare size={15} /> Tracker
@@ -516,11 +520,11 @@ export default function Dashboard() {
       </div>
 
       {/* Headline KPIs */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 2xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 xl:grid-cols-5">
         <KpiTile
           icon={<Gauge size={22} />}
           label="Posture score"
-          className="lg:col-span-2 2xl:col-span-1"
+          className="lg:col-span-2 xl:col-span-1"
           value={postureKnown ? postureScore : null}
           suffix="/100"
           delta={<Delta value={scoreDelta} unit=" pts" goodWhen="up" />}
@@ -531,7 +535,7 @@ export default function Dashboard() {
         <KpiTile
           icon={<Bug size={22} />}
           label="Open findings"
-          className="lg:col-span-2 2xl:col-span-1"
+          className="lg:col-span-2 xl:col-span-1"
           value={openFindings}
           delta={<Delta value={findingsDelta} goodWhen="down" />}
           hint={findingsDelta != null ? "vs 14 days ago" : "From intelligence and the tracker"}
@@ -541,7 +545,7 @@ export default function Dashboard() {
         <KpiTile
           icon={<ShieldAlert size={22} />}
           label="Open risks"
-          className="lg:col-span-2 2xl:col-span-1"
+          className="lg:col-span-2 xl:col-span-1"
           value={openRisks}
           hint={cc?.risks?.available === false ? "Risk engine unavailable" : "In the treatment queue"}
           delay={0.08}
@@ -549,7 +553,7 @@ export default function Dashboard() {
         <KpiTile
           icon={<Boxes size={22} />}
           label="Active assets"
-          className="lg:col-span-3 2xl:col-span-1"
+          className="lg:col-span-3 xl:col-span-1"
           value={activeAssets}
           hint={`${criticalAssets.length} critical at risk`}
           to={href("assets", "/assets")}
@@ -558,7 +562,7 @@ export default function Dashboard() {
         <KpiTile
           icon={<CheckCircle2 size={22} />}
           label="Fix rate"
-          className="lg:col-span-3 2xl:col-span-1"
+          className="lg:col-span-3 xl:col-span-1"
           value={fixRate}
           suffix="%"
           hint={trackedTotal ? `${fixed} of ${trackedTotal} tracked findings fixed` : "No tracked findings yet"}
@@ -575,7 +579,7 @@ export default function Dashboard() {
           action={<span className="chip border-phantix-700 bg-phantix-900 text-[12px] text-slate-400">14 days</span>}
         >
           <div className="mb-2 flex items-baseline gap-2">
-            <span className="font-mono text-[26px] font-semibold text-white">{postureKnown ? postureScore : "—"}</span>
+            <span className="font-mono text-[26px] font-semibold text-white">{postureKnown ? postureScore : "Not set"}</span>
             <Delta value={scoreDelta} unit=" pts" goodWhen="up" />
           </div>
           {trendRes.loading && !hasTrend ? (
@@ -601,7 +605,7 @@ export default function Dashboard() {
 
         <Panel
           title="Open findings per day"
-          subtitle="Findings still open at each day's close"
+          subtitle="Findings still open at the end of each day"
           delay={0.22}
           action={<Delta value={findingsDelta} goodWhen="down" />}
         >
@@ -797,9 +801,8 @@ export default function Dashboard() {
       <LatestAssessmentPanel app="core" className="mt-4" />
 
       {/* Coverage summary */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
         <KpiTile
-          size="lg"
           icon={<ShieldCheck size={24} />}
           label="Verified assets"
           value={verified}
@@ -808,7 +811,6 @@ export default function Dashboard() {
           delay={0.2}
         />
         <KpiTile
-          size="lg"
           icon={<ScanSearch size={24} />}
           label="Never scanned"
           value={neverScanned}
@@ -817,7 +819,6 @@ export default function Dashboard() {
           delay={0.24}
         />
         <KpiTile
-          size="lg"
           icon={<Radar size={24} />}
           label="Reports generated"
           value={reportsTotal}
@@ -827,7 +828,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {!operate.unlocked && (
+      {!operate.unlocked && dualControl.policy_mode !== "off" && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -835,12 +836,12 @@ export default function Dashboard() {
           className="mt-6 flex flex-wrap items-center gap-3 rounded-md border border-gold-400/30 bg-phantix-950 px-5 py-3.5"
         >
           <Zap size={16} className="shrink-0 text-gold-400" />
-          <p className="min-w-0 flex-1 text-xs leading-5 text-slate-400">
+          <p className="min-w-[12rem] flex-1 text-xs leading-5 text-slate-400">
             You&apos;re browsing read-only. Unlock operate mode for changes (tracker updates, report generation, intel refresh) when dual-control is configured.
           </p>
           <button
             type="button"
-            className="btn-primary !py-2 !text-xs"
+            className="btn-primary w-full justify-center !py-2 !text-xs sm:w-auto"
             onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}
           >
             Unlock operate

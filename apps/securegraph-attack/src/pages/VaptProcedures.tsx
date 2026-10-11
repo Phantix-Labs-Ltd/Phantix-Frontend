@@ -17,7 +17,7 @@ import DocLink from "@sg/components/DocLink";
 
 type Tab = "procedures" | "rules" | "candidates";
 
-function text(v: unknown, fallback = "—"): string {
+function text(v: unknown, fallback = "Not set"): string {
   return v == null || v === "" ? fallback : String(v);
 }
 
@@ -86,7 +86,7 @@ export default function VaptProcedures() {
   return (
     <div>
       <PageHeader
-        title="Procedures & correlation"
+        title="Procedures and correlation"
         description="Know what the engine can run and how it correlates results."
         actions={<>
             <DocLink docId="howto-app-23" label="VAPT scheduling how-to" />
@@ -156,12 +156,12 @@ export default function VaptProcedures() {
                           </div>
                         </td>
                         <td className="td font-mono text-[13px] text-slate-500">{procedureKey(p)}</td>
-                        <td className="td">{p.category ? <span className="chip border-phantix-700 text-slate-400">{text(p.category)}</span> : <span className="text-slate-600">—</span>}</td>
-                        <td className="td">{p.phase ? <span className="chip border-phantix-700 text-phantix-300">{text(p.phase)}</span> : <span className="text-slate-600">—</span>}</td>
+                        <td className="td">{p.category ? <span className="chip border-phantix-700 text-slate-400">{text(p.category)}</span> : <span className="text-slate-600">Not set</span>}</td>
+                        <td className="td">{p.phase ? <span className="chip border-phantix-700 text-phantix-300">{text(p.phase)}</span> : <span className="text-slate-600">Not set</span>}</td>
                         <td className="td text-slate-400">
                           {Array.isArray(p.steps) && p.steps.length > 0 ? (
                             <span className="inline-flex items-center gap-1"><Workflow size={10} />{p.steps.length}</span>
-                          ) : "—"}
+                          ) : "Not set"}
                         </td>
                         <td className="td">
                           {p.is_active === false ? (
@@ -201,9 +201,9 @@ export default function VaptProcedures() {
                             {r.rule_key && <span className="font-mono text-[12px] text-slate-500">{text(r.rule_key)}</span>}
                           </div>
                         </td>
-                        <td className="td max-w-[28rem] text-[13px] text-slate-400">{r.description ? <span className="block truncate" title={text(r.description)}>{text(r.description)}</span> : <span className="text-slate-600">—</span>}</td>
-                        <td className="td">{r.severity ? <SeverityBadge severity={sevOf(r.severity)} /> : <span className="text-slate-600">—</span>}</td>
-                        <td className="td">{r.source ? <span className="chip border-phantix-700 text-slate-500">{text(r.source)}</span> : <span className="text-slate-600">—</span>}</td>
+                        <td className="td max-w-[28rem] text-[13px] text-slate-400">{r.description ? <span className="block truncate" title={text(r.description)}>{text(r.description)}</span> : <span className="text-slate-600">Not set</span>}</td>
+                        <td className="td">{r.severity ? <SeverityBadge severity={sevOf(r.severity)} /> : <span className="text-slate-600">Not set</span>}</td>
+                        <td className="td">{r.source ? <span className="chip border-phantix-700 text-slate-500">{text(r.source)}</span> : <span className="text-slate-600">Not set</span>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -218,7 +218,7 @@ export default function VaptProcedures() {
                 <Lightbulb size={12} className="mt-0.5 shrink-0" />
                 <span>
                   {candidateNote ?? "Candidates require human review before activation as correlation rules."}
-                  {" "}Promotion is handled by staff — nothing here is active.
+                  {" "}Staff handle promotion. Nothing here is active.
                 </span>
               </p>
               {!candidates.length ? (
@@ -238,9 +238,9 @@ export default function VaptProcedures() {
                       {candidates.map((c, i) => (
                         <tr key={i} className="border-b border-phantix-800/40 transition-colors hover:bg-phantix-800/35">
                           <td className="td text-slate-200">{text(c.pattern ?? c.description, "Mined pattern")}</td>
-                          <td className="td text-xs leading-5 text-slate-400">{c.description && c.pattern ? text(c.description) : <span className="text-slate-600">—</span>}</td>
-                          <td className="td">{c.frequency != null ? <span className="chip border-phantix-700 text-slate-400">seen {String(c.frequency)}×</span> : <span className="text-slate-600">—</span>}</td>
-                          <td className="td">{c.confidence != null ? <span className="chip border-gold-400/30 text-gold-200">confidence {String(c.confidence)}</span> : <span className="text-slate-600">—</span>}</td>
+                          <td className="td text-xs leading-5 text-slate-400">{c.description && c.pattern ? text(c.description) : <span className="text-slate-600">Not set</span>}</td>
+                          <td className="td">{c.frequency != null ? <span className="chip border-phantix-700 text-slate-400">seen {String(c.frequency)}×</span> : <span className="text-slate-600">Not set</span>}</td>
+                          <td className="td">{c.confidence != null ? <span className="chip border-gold-400/30 text-gold-200">confidence {String(c.confidence)}</span> : <span className="text-slate-600">Not set</span>}</td>
                         </tr>
                       ))}
                     </tbody>

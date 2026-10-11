@@ -1,5 +1,5 @@
 // Central resource loaders --- demo-data only when isDemoMode() is true.
-import { api, ApiError, delay, isDemoMode, isSecurityDbBlocked, tokens, API_BASE } from "./api";
+import { api, ApiError, delay, isDemoMode, isSecurityDbBlocked, tokens, API_BASE, publicDetailCopy, sessionAuthHeaders } from "./api";
 import * as demo from "./demo-data";
 import { deriveParents } from "./assetChain";
 import type {
@@ -41,6 +41,10 @@ import type {
   PentestScopePattern,
   PentestScopeRead,
   PentestScopeList,
+  ExternalPentestFindingList,
+  ExternalPentestFindingRow,
+  ExternalPentestIntakeRequest,
+  ExternalPentestIntakeResult,
   PendingAction,
   PrioritizedAsset,
   RelationshipGraph,
@@ -63,6 +67,7 @@ import type {
   SupportTicket,
   TiSignal,
   TrackerFinding,
+  TrackerRemediation,
   TrackerSummary,
   CommandCenter,
   SocAgentInstallCatalog,
@@ -98,8 +103,6 @@ import type {
   SocWarRoomStats,
 } from "./types";
 import {
-  extractReportFindings,
-  findingDedupeKey,
   normalizeReportRow,
   normalizeTrackerFinding,
 } from "./utils";
@@ -121,6 +124,7 @@ export const emptyOrganization: Organization = {
 export const emptyDualControl: DualControlState = {
   configured: false,
   require_dual_control: false,
+  policy_mode: null,
   initiator: null,
   authorizer: null,
 };
@@ -295,6 +299,7 @@ export function normalizeDualControl(raw: unknown, users: OrgUser[] = []): DualC
   return {
     configured,
     require_dual_control: Boolean(r.require_dual_control ?? configured),
+    policy_mode: r.policy_mode === "off" || r.policy_mode === "on" || r.policy_mode === "enforced" ? r.policy_mode : null,
     initiator: initiator
       ? { id: initiator.id, full_name: initiator.full_name, email: initiator.email, title: initiator.title ?? "" }
       : null,
@@ -442,10 +447,37 @@ export async function verifyScanResult(
       },
     };
     demo.scanResults[idx] = updated;
+    // The tracker reads the same store, so the decision has to land on the board
+    // too — otherwise the demo verifies a finding and then contradicts itself.
+    // An excluded finding has no board level of its own, so it reads unverified.
+    for (const trackerRow of demo.trackerFindings) {
+      if (trackerRow.source_finding_id === resultId) {
+        trackerRow.verification_status =
+          body.verification_status === "manually_verified" ? "manually_verified" : "unverified";
+      }
+    }
     return updated;
   }
   const raw = await api.patch<any>(`/scans/results/${resultId}/verification`, body);
   return raw ? normalizeScanResult(raw) : null;
+}
+
+/**
+ * Verify, reject or mark a false positive from the findings tracker, by the
+ * row's finding key. Works for a row from any finding store: the scan-result
+ * route only knows scanner ids, so a VAPT or pentest-agent row sent there hit
+ * the wrong table and came back unverified on reload.
+ */
+export async function verifyTrackerFinding(
+  finding: Pick<TrackerFinding, "finding_key" | "source_finding_id">,
+  body: { verification_status: "manually_verified" | "rejected" | "false_positive"; note?: string },
+): Promise<void> {
+  if (isDemoMode()) {
+    // The demo's tracker rows are all scanner-backed; reuse that path.
+    if (finding.source_finding_id != null) await verifyScanResult(finding.source_finding_id, body);
+    return;
+  }
+  await api.post(`/reports/tracker/${encodeURIComponent(finding.finding_key)}/verification`, body);
 }
 
 export async function loadVaptBundle() {
@@ -516,6 +548,7 @@ export function normalizeVaptCampaign(raw: Record<string, unknown>): VaptCampaig
         (assetIds.length > 0 ? assetIds.length : assetTypes.length > 0 ? assetTypes.length : 0),
     ),
     requires_approval: Boolean(raw.requires_approval ?? raw.approval_required ?? false),
+    self_approvable: raw.self_approvable === true,
     phase: String(raw.current_phase ?? c.phase ?? ""),
     progress: Number(raw.progress ?? progress),
     created_by: String(raw.created_by ?? ""),
@@ -799,24 +832,6 @@ export async function addComplianceEvidence(body: {
   return { ok: true, evidence: raw?.evidence };
 }
 
-function trackerFromReports(reports: any[]): TrackerFinding[] {
-  const byKey = new Map<string, TrackerFinding>();
-  for (const r of reports) {
-    const campaign = String(r?.title ?? r?.subtitle ?? "Report");
-    for (const f of extractReportFindings(r)) {
-      const row = normalizeTrackerFinding(f, campaign) as TrackerFinding;
-      const key = row.finding_key || findingDedupeKey(f);
-      const prev = byKey.get(key);
-      if (!prev || String(row.updated_at) > String(prev.updated_at)) {
-        byKey.set(key, { ...row, finding_key: key });
-      }
-    }
-  }
-  return Array.from(byKey.values()).sort((a, b) =>
-    String(b.updated_at).localeCompare(String(a.updated_at)),
-  );
-}
-
 export async function loadReportsBundle() {
   if (isDemoMode()) {
     await delay();
@@ -854,19 +869,18 @@ export async function loadReportsBundle() {
   }
   const rawReports = await softList<Report>("/reports");
   const reports = rawReports.map((r) => normalizeReportRow(r) as Report);
-  let trackerFindings = (rawTrackerItems ?? []).map(
+  // The board reads the security-DB tracker only. There is deliberately no
+  // fallback that reconstructs rows from report artifacts: the security
+  // database is the store of record, so an empty tracker is an empty board.
+  const trackerFindings = (rawTrackerItems ?? []).map(
     (t) => normalizeTrackerFinding(t) as TrackerFinding,
   );
-  // AGI sessions often never seed /reports/tracker — surface session findings so the tab is usable.
-  if (trackerFindings.length === 0 && reports.length > 0) {
-    trackerFindings = trackerFromReports(reports);
-  }
   return { reports, trackerFindings, trackerSummary, trackerNote };
 }
 
-/** The findings tracker on its own: board rows + summary. Reports are only
- *  fetched when the tracker is empty, to surface findings from AGI sessions
- *  that never seeded it (same fallback the report library used). */
+/** The findings tracker on its own: board rows + summary, read from the org's
+ *  security database. There is no report-artifact fallback — the security DB is
+ *  the store of record, so an empty tracker is an empty board. */
 export async function loadTrackerBundle() {
   if (isDemoMode()) {
     const { trackerFindings, trackerSummary, trackerNote } = await loadReportsBundle();
@@ -879,12 +893,7 @@ export async function loadTrackerBundle() {
       ? ((envelope.summary ?? null) as TrackerSummary | null)
       : null;
   const trackerNote = envelope?.note != null ? String(envelope.note) : null;
-  const rawTrackerItems: any[] = items;
-  let trackerFindings = (rawTrackerItems ?? []).map((t) => normalizeTrackerFinding(t) as TrackerFinding);
-  if (trackerFindings.length === 0) {
-    const reports = (await softList<Report>("/reports")).map((r) => normalizeReportRow(r) as Report);
-    if (reports.length > 0) trackerFindings = trackerFromReports(reports);
-  }
+  const trackerFindings = (items ?? []).map((t) => normalizeTrackerFinding(t) as TrackerFinding);
   return { trackerFindings, trackerSummary, trackerNote };
 }
 
@@ -936,6 +945,36 @@ export async function retestTrackerFinding(
     body,
   );
   return raw ? (normalizeTrackerFinding(raw) as TrackerFinding) : null;
+}
+
+/** Generate (or return) AI fix guidance for a tracked finding. The tracker owns
+ *  its fix action, so the board and the guidance are one page. */
+export async function generateTrackerRemediation(
+  findingKey: string,
+): Promise<{ ok: boolean; remediation?: TrackerRemediation | null; error?: string | null }> {
+  if (isDemoMode()) {
+    await delay(900);
+    return {
+      ok: true,
+      remediation: {
+        status: "generated",
+        summary: "Upgrade the vulnerable dependency and redeploy the service.",
+        steps: [
+          "Bump the affected package to the fixed release.",
+          "Redeploy the service and clear the build cache.",
+          "Run the unit retest to confirm the finding no longer reproduces.",
+        ],
+        validation: "The retest no longer reproduces the finding.",
+        effort: "low",
+        priority: "immediate",
+        generated_by: "AI",
+      },
+    };
+  }
+  return api.post<{ ok: boolean; remediation?: TrackerRemediation | null; error?: string | null }>(
+    `/reports/tracker/${encodeURIComponent(findingKey)}/remediation`,
+    {},
+  );
 }
 
 export async function loadTrackerDetail(findingKey: string): Promise<any | null> {
@@ -1029,7 +1068,7 @@ export async function loadCommandCenter(): Promise<{
         queue: { openTotal: 3, byStatus: { open: 3 }, bySeverityOpen: { critical: 1, high: 2 } },
         topDetections: [
           { id: 1, title: "Brute force on portal login", severity: "high", status: "open", priorityScore: 88 },
-          { id: 2, title: "WAF block spike — API", severity: "medium", status: "triaged", priorityScore: 61 },
+          { id: 2, title: "WAF block spike on the API", severity: "medium", status: "triaged", priorityScore: 61 },
         ],
       },
       tracker: {
@@ -1140,9 +1179,7 @@ export async function downloadSocAgent(os: string): Promise<{ blob: Blob; filena
   }
   const path = `/soc/availability/agent/download/${encodeURIComponent(os)}`;
   const headers: Record<string, string> = {};
-  const bearer = tokens.appSession || tokens.orgUser || tokens.platform;
-  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-  if (tokens.device) headers["X-Device-Token"] = tokens.device;
+  Object.assign(headers, sessionAuthHeaders());
   const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
   if (!res.ok) throw new ApiError(res.status, res.statusText);
   const cd = res.headers.get("content-disposition") || "";
@@ -1452,13 +1489,24 @@ export async function loadPrioritizedAssets(): Promise<PrioritizedAsset[]> {
       last_seen_at: a.last_seen_at,
     }));
   }
-  const rows = await softListAll<PrioritizedAsset>("/assets/intelligence/prioritized");
+  // The endpoint returns the GraphQL-mirrored camelCase shape (PrioritizedAssetItem);
+  // the app speaks snake_case. Normalise once here, keeping the raw keys so
+  // camelCase-first readers keep working.
+  const rows = await softListAll<Record<string, unknown>>("/assets/intelligence/prioritized");
   return rows.map((a) => ({
     ...a,
     id: Number(a.id),
-    risk_score: Number(a.risk_score ?? 0),
-    open_findings: Number(a.open_findings ?? 0),
-  }));
+    asset_type: String(a.assetType ?? a.asset_type ?? ""),
+    value: String(a.value ?? ""),
+    name: String(a.name ?? a.value ?? ""),
+    criticality: String(a.criticality ?? ""),
+    risk_score: Number(a.riskScore ?? a.risk_score ?? 0),
+    risk_level: String(a.riskLevel ?? a.risk_level ?? "low"),
+    open_findings: Number(a.openFindingsCount ?? a.open_findings ?? 0),
+    exposure: String(a.exposureLevel ?? a.exposure ?? ""),
+    is_verified: Boolean(a.isVerified ?? a.is_verified ?? false),
+    last_seen_at: String(a.lastScannedAt ?? a.last_seen_at ?? ""),
+  })) as PrioritizedAsset[];
 }
 
 export async function loadAssetIntelligence(assetId: number): Promise<AssetIntelligence | null> {
@@ -1473,11 +1521,11 @@ export async function loadAssetIntelligence(assetId: number): Promise<AssetIntel
       risk_score_delta: -16,
       open_findings_count: 4,
       exposure_level: "external_facing",
-      posture_summary: "Moderate risk due to exposed public API endpoints. The asset has been scanned 3 times in the past 30 days with 4 open findings, 2 of which are high severity.",
+      posture_summary: "Moderate risk due to exposed public API endpoints. SecureGraph scanned the asset 3 times in the past 30 days and found 4 open findings. 2 are high severity.",
       recommended_actions: [
         { action_key: "scan_now", label: "Run a new scan", description: "Check for newly introduced vulnerabilities", priority: "high" },
         { action_key: "review_findings", label: "Review open findings", description: "4 findings need verification or remediation", priority: "high" },
-        { action_key: "update_firewall", label: "Review firewall rules", description: "Public-facing asset --- ensure WAF rules are current", priority: "medium" },
+        { action_key: "update_firewall", label: "Review firewall rules", description: "Public-facing asset. Make sure the WAF rules are current", priority: "medium" },
       ],
       related_assets: demo.assets.filter((x) => x.id !== a.id).slice(0, 3).map((r) => ({
         id: r.id, name: r.name, value: r.value, asset_type: r.asset_type, risk_score: 30 + Math.floor(Math.random() * 40),
@@ -1485,7 +1533,37 @@ export async function loadAssetIntelligence(assetId: number): Promise<AssetIntel
       active_threats: ["CVE-2026-12345", "OWASP A03-Injection"],
     };
   }
-  return await softOne<AssetIntelligence>(`/assets/${assetId}/intelligence`);
+  // The API returns the camelCase AssetIntelligenceRead (postureSummary,
+  // riskScoreDelta, openFindingsCount, recommendedActions, …); the app type is
+  // snake_case. Normalise here so every reader (AssetInventory modal, aiExplain)
+  // sees the same shape instead of silently reading undefined.
+  const r = await softOne<Record<string, any>>(`/assets/${assetId}/intelligence`);
+  if (!r) return null;
+  return {
+    ...r,
+    asset: {
+      id: r.id,
+      name: r.name ?? r.value ?? "",
+      value: r.value ?? "",
+      asset_type: r.assetType ?? r.asset_type ?? "",
+    },
+    risk_score: r.riskScore ?? r.risk_score ?? 0,
+    risk_level: r.riskLevel ?? r.risk_level ?? "low",
+    previous_risk_score: r.previousRiskScore ?? r.previous_risk_score ?? null,
+    risk_score_delta: r.riskScoreDelta ?? r.risk_score_delta ?? null,
+    open_findings_count: r.openFindingsCount ?? r.open_findings_count ?? 0,
+    exposure_level: r.exposureLevel ?? r.exposure_level ?? "unknown",
+    posture_summary: r.postureSummary ?? r.posture_summary ?? null,
+    recommended_actions: r.recommendedActions ?? r.recommended_actions ?? [],
+    related_assets: (r.relatedAssets ?? r.related_assets ?? []).map((x: any) => ({
+      id: x.id,
+      name: x.name,
+      value: x.value,
+      asset_type: x.assetType ?? x.asset_type ?? "",
+      risk_score: x.riskScore ?? x.risk_score ?? 0,
+    })),
+    active_threats: r.activeThreats ?? r.active_threats ?? [],
+  } as AssetIntelligence;
 }
 
 export async function loadDashboardBundle() {
@@ -1639,9 +1717,7 @@ function agentStreamHeaders(): Record<string, string> {
     "Content-Type": "application/json",
     Accept: "text/event-stream",
   };
-  const bearer = tokens.appSession || tokens.orgUser || tokens.platform;
-  if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
-  if (tokens.device) headers["X-Device-Token"] = tokens.device;
+  Object.assign(headers, sessionAuthHeaders());
   // Agent chat/run streams are mutating org POSTs — the operate middleware
   // requires the dual-control session header once dual-control is configured.
   if (tokens.dualControl) headers["X-Dual-Control-Session"] = tokens.dualControl;
@@ -1666,6 +1742,8 @@ export async function streamAgentChat(
     thinking?: boolean;
     reasoning_effort?: "low" | "high" | "max";
     scope_grant?: string;
+    /** Turn id. Reuse it when re-sending after an approval_required event. */
+    analysis_id?: string;
   },
   onEvent: (event: string, data: any) => void,
   signal?: AbortSignal,
@@ -1676,6 +1754,23 @@ export async function streamAgentChat(
     return;
   }
   await streamAgentPost("/ai/agent/chat/stream", body, onEvent, signal, onScopeRequired);
+}
+
+/**
+ * Approve or reject an action the assistant proposed (POST /ai/agent/approvals/{id}/decide).
+ * Approving mints a fresh, single-use authorization for that action on that exact
+ * turn; re-send the same chat turn (same analysis_id) and the tool will run once.
+ */
+export async function decideAgentApproval(
+  approvalId: string,
+  approve: boolean,
+  notes = "",
+): Promise<{ approval_id: string; status: string; action: string }> {
+  if (isDemoMode()) {
+    await delay(200);
+    return { approval_id: approvalId, status: approve ? "approved" : "rejected", action: "demo" };
+  }
+  return api.post(`/ai/agent/approvals/${encodeURIComponent(approvalId)}/decide`, { approve, notes });
 }
 
 /**
@@ -1746,9 +1841,7 @@ async function streamAgentPost(
     // Plan-gated: surface the paid-plan request clearly (402 from entitlement gate)
     // so the app-wide "Upgrade required" handler fires.
     if (res.status === 402) {
-      const readable = (detail && typeof detail === "object" && typeof (detail as any).message === "string")
-        ? (detail as any).message
-        : "A paid plan is required to use the SecureGraph Agent.";
+      const readable = publicDetailCopy(detail) || "A paid plan is required to use the SecureGraph Agent.";
       window.dispatchEvent(new CustomEvent("phantix:billing-required", { detail: readable }));
       onEvent("error", { type: "error", error: readable, code: "ai_agent_plan_required", status: 402 });
     } else if (res.status === 403 && /dual|operate|authenticator|session/i.test(msg)) {
@@ -1793,9 +1886,9 @@ async function streamDemoResponse(
   await delay(180);
   onEvent("meta", { type: "meta", provider: "deepseek", model: "deepseek-v4-flash", stream: true, thinking: true });
   await delay(stepMs);
-  onEvent("reasoning", { type: "reasoning", content: "I'll summarize what the user asked and check the current posture signals available in the organization's security data." });
+  onEvent("reasoning", { type: "reasoning", content: "I will summarize the request of the user and check the current posture signals in the security data of the organization." });
   await delay(stepMs);
-  const answer = `Here's what I can tell you about "${question}":\n\n• I can review open findings, risk posture, asset exposure and recent scan results.\n• In production this answer is synthesized from your live security data (verified findings only — I never invent a vulnerability without a SecureGraph finding ID).\n• Skills used are shown on the result, and every interaction is governed + audited.\n\nAsk me about assets, VAPT campaigns, critical risks, or compliance gaps for a concrete summary.`;
+  const answer = `Here is what I can tell you about "${question}":\n\n• I can review open findings, risk posture, asset exposure and recent scan results.\n• In production this answer comes from your live security data. It uses verified findings only, and SecureGraph never invents a vulnerability without a finding ID.\n• The result shows the skills that were used, and every interaction is governed and audited.\n\nAsk me about assets, VAPT campaigns, critical risks, or compliance gaps for a concrete summary.`;
   const words = answer.split(" ");
   for (const w of words) {
     onEvent("delta", { type: "delta", content: w + " " });
@@ -1822,7 +1915,7 @@ async function streamDemoRun(domain: string, objective: string, onEvent: (event:
   await delay(250);
   onEvent("reasoning", { type: "reasoning", content: `Correlating ${domain} signals across the organization.` });
   await delay(500);
-  const summary = `${domain} analysis complete. I reviewed the ${domain} inventory, verified findings and posture signals. No finding was changed or created — every item referenced is a SecureGraph finding with an ID. Skills used: phantix-${domain}@1.0.0.`;
+  const summary = `${domain} analysis complete. I reviewed the ${domain} inventory, verified findings and posture signals. No finding was changed or created. Every item referenced is a SecureGraph finding with an ID. Skills used: phantix-${domain}@1.0.0.`;
   const words = summary.split(" ");
   for (const w of words) {
     onEvent("delta", { type: "delta", content: w + " " });
@@ -1872,7 +1965,7 @@ export async function confirmAgentScope(payload: {
 export async function sendAgentMessage(message: string): Promise<string> {
   if (isDemoMode()) {
     await delay(1600);
-    return `I'm SecureGraph Agent. I understand you asked: "${message}". In production, I would analyze your assets, findings, and risk posture to answer this. Key surfaces you can explore: Assets, Scans, VAPT campaigns, Risks, Compliance, and Reports.`;
+    return `I am SecureGraph Agent. I understand you asked: "${message}". In production, I would analyze your assets, findings, and risk posture to answer this. Key surfaces you can explore: Assets, Scans, VAPT campaigns, Risks, Compliance, and Reports.`;
   }
   const out: string[] = [];
   await streamAgentChat(
@@ -2395,7 +2488,7 @@ export async function sendAvailabilityHeartbeat(body: Record<string, unknown>): 
 }
 
 export function formatDuration(sec: number | null | undefined): string {
-  if (sec == null || Number.isNaN(sec)) return "—";
+  if (sec == null || Number.isNaN(sec)) return "Not set";
   const s = Math.max(0, Math.floor(sec));
   if (s < 60) return `${s}s`;
   if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
@@ -2631,8 +2724,8 @@ export async function loadCloudPosture(): Promise<CloudPosture> {
       },
       cis_host_targets: {
         available: [
-          { name: "cis_ssh_password_auth", display_name: "CIS — SSH password auth", severity: "medium", targets: ["ip_address", "domain"] },
-          { name: "cis_rdp_exposed", display_name: "CIS — RDP exposed", severity: "high", targets: ["ip_address"] },
+          { name: "cis_ssh_password_auth", display_name: "CIS: SSH password auth", severity: "medium", targets: ["ip_address", "domain"] },
+          { name: "cis_rdp_exposed", display_name: "CIS: RDP exposed", severity: "high", targets: ["ip_address"] },
         ],
         matched: 1,
         by_pack: { cis_ssh_password_auth: 1 },
@@ -2811,6 +2904,30 @@ export async function downloadPentestDoc(id: number, document: "scope" | "roe", 
   return api.download(`/pentest-scope/${id}/download?document=${document}&format=${format}`);
 }
 
+// ── Human / external-pentest findings intake ─────────────────────────────────
+// POST /pentest-scope/findings/intake imports a human result set; the backend
+// stores it, the agent verifier adjudicates it, and it lands beside engine
+// findings in the canonical assessment store + tracker. GET lists what was
+// imported. See app/engines/reporting_engine/services/external_pentest_intake.py.
+
+export async function loadExternalPentestFindings(meta?: LoadMeta): Promise<ExternalPentestFindingList> {
+  if (isDemoMode()) { await delay(160); return { items: [], total: 0 }; }
+  const raw = await api.get<unknown>("/pentest-scope/findings?limit=200");
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const items = Array.isArray(o.items) ? (o.items as ExternalPentestFindingRow[]) : Array.isArray(raw) ? (raw as ExternalPentestFindingRow[]) : [];
+  return { items, total: Number(o.total ?? items.length) };
+}
+
+export async function intakeExternalPentestFindings(
+  body: ExternalPentestIntakeRequest,
+): Promise<ExternalPentestIntakeResult> {
+  if (isDemoMode()) {
+    await delay(400);
+    return { ok: true, source: "external_pentest", imported: body.findings.length, verified: 0, finding_ids: [] };
+  }
+  return api.post<ExternalPentestIntakeResult>("/pentest-scope/findings/intake", body);
+}
+
 // ── Orchestration: Cloud connector secret display (once) + webhook copy ──────
 export function cloudIngestUrl(connector: CloudConnector): string {
   const hint = connector.ingestUrlHint ?? connector.webhook?.ingest_url_hint ?? "";
@@ -2829,7 +2946,13 @@ export function cloudConnectUrl(connector: CloudConnector): string {
 // ── SOC War Room ──────────────────────────────────────────────────────────────
 export async function loadSocWarRoom(): Promise<SocWarRoomResponse | null> {
   if (isDemoMode()) { await delay(150); return demo.socWarRoom; }
-  return api.get<SocWarRoomResponse | null>("/soc/war-room").catch(() => null);
+  return api.get<SocWarRoomResponse | null>("/soc/war-room")
+    .then((r) =>
+      r && Array.isArray(r.playbook_catalog)
+        ? { ...r, playbook_catalog: (r.playbook_catalog as unknown as RawJson[]).map(normalizePlaybook) }
+        : r,
+    )
+    .catch(() => null);
 }
 
 export async function loadSocWarRoomCase(id: number): Promise<SocWarRoomCase | null> {
@@ -2891,6 +3014,39 @@ export async function linkWarRoomEvidence(caseId: number, logId: number): Promis
 }
 
 // ── SOC Playbooks ─────────────────────────────────────────────────────────────
+/** Loose JSON object as returned by the API before normalization. */
+type RawJson = Record<string, unknown>;
+
+/**
+ * Map a backend playbook payload to the app's ``SocPlaybook`` shape.
+ *
+ * The list endpoint returns a summary (``mitre_mappings`` array, ``phase_count``,
+ * ``is_org_custom``); the detail endpoint adds ``phases``. Both are normalized
+ * here so pages never see undefined/array mismatches.
+ */
+export function normalizePlaybook(raw: RawJson): SocPlaybook {
+  const phases = (Array.isArray(raw.phases) ? raw.phases : []) as NonNullable<SocPlaybook["phases"]>;
+  const phaseCount = Number(raw.phase_count ?? phases.length ?? 0);
+  const mappings = Array.isArray(raw.mitre_mappings) ? raw.mitre_mappings : [];
+  const firstMapping = mappings.find((m): m is string => typeof m === "string");
+  const mitreId = typeof raw.mitre_id === "string" && raw.mitre_id ? raw.mitre_id : firstMapping;
+  return {
+    id: (raw.id ?? "") as string | number,
+    title: String(raw.title ?? ""),
+    description: typeof raw.description === "string" ? raw.description : undefined,
+    category: String(raw.category ?? "uncategorized"),
+    mitre_id: mitreId,
+    severity: typeof raw.severity === "string" ? raw.severity : undefined,
+    phases,
+    phase_count: Number.isFinite(phaseCount) ? phaseCount : phases.length,
+    enabled: raw.enabled !== false,
+    org_only: Boolean(raw.is_org_custom ?? raw.org_only ?? false),
+    version: Number(raw.version ?? 1),
+    created_at: typeof raw.created_at === "string" ? raw.created_at : undefined,
+    updated_at: typeof raw.updated_at === "string" ? raw.updated_at : undefined,
+  };
+}
+
 export async function loadPlaybooks(params?: { category?: string; mitre_id?: string; enabled?: boolean }): Promise<SocPlaybook[]> {
   if (isDemoMode()) {
     await delay(150);
@@ -2900,12 +3056,16 @@ export async function loadPlaybooks(params?: { category?: string; mitre_id?: str
     return items;
   }
   const qs = params ? "?" + new URLSearchParams(params as Record<string, string>).toString() : "";
-  return (await api.get<{ items: SocPlaybook[] } | SocPlaybook[]>(`/soc/provisioning/playbooks${qs}`)) as unknown as SocPlaybook[];
+  const res = await api.get<{ items?: RawJson[] } | RawJson[]>(`/soc/provisioning/playbooks${qs}`);
+  const items = Array.isArray(res) ? res : res.items ?? [];
+  return items.map(normalizePlaybook);
 }
 
-export async function loadPlaybook(id: number): Promise<SocPlaybook | null> {
-  if (isDemoMode()) { await delay(100); return demo.socPlaybooks.find((p) => p.id === id) ?? null; }
-  return api.get<SocPlaybook | null>(`/soc/provisioning/playbooks/${id}`).catch(() => null);
+export async function loadPlaybook(id: string | number): Promise<SocPlaybook | null> {
+  if (isDemoMode()) { await delay(100); return demo.socPlaybooks.find((p) => String(p.id) === String(id)) ?? null; }
+  return api.get<RawJson | null>(`/soc/provisioning/playbooks/${id}`)
+    .then((r) => (r ? normalizePlaybook(r) : null))
+    .catch(() => null);
 }
 
 export async function loadRunbooks(): Promise<SocRunbook[]> {
@@ -2934,35 +3094,192 @@ export async function loadMitreTechnique(id: string): Promise<MitreTechnique | n
   return api.get<MitreTechnique | null>(`/soc/provisioning/mitre/techniques/${id}`).catch(() => null);
 }
 
+/** The backend returns per-tactic technique objects; collapse them to counts. */
+export function normalizeMitreMatrix(raw: RawJson | null): MitreMatrix | null {
+  if (!raw || !Array.isArray(raw.tactics)) return null;
+  let total = 0;
+  let covered = 0;
+  const tactics = (raw.tactics as RawJson[]).map((t) => {
+    const techs = Array.isArray(t.techniques) ? (t.techniques as RawJson[]) : [];
+    const mapped = techs.filter((x) => x.mapped === true).length;
+    total += techs.length;
+    covered += mapped;
+    return {
+      id: String(t.id ?? t.tactic_id ?? ""),
+      name: String(t.name ?? t.tactic_name ?? ""),
+      techniques: techs.length,
+      coverage: techs.length ? Math.round((mapped / techs.length) * 100) : 0,
+    };
+  });
+  return {
+    tactics,
+    total_techniques: total,
+    covered_techniques: covered,
+    coverage_pct: total ? Math.round((covered / total) * 100) : 0,
+  };
+}
+
+export function normalizeMitreStats(raw: RawJson | null): MitreStats | null {
+  if (!raw) return null;
+  const total = Number(raw.total_techniques ?? 0);
+  const covered = Number(raw.techniques_mapped_to_playbooks ?? raw.covered ?? 0);
+  return {
+    total_techniques: total,
+    covered,
+    not_covered: Math.max(0, total - covered),
+    by_tactic: (raw.covered_tactics ?? raw.by_tactic ?? {}) as MitreStats["by_tactic"],
+  };
+}
+
 export async function loadMitreMatrix(): Promise<MitreMatrix | null> {
   if (isDemoMode()) { await delay(150); return demo.mitreMatrix; }
-  return api.get<MitreMatrix | null>("/soc/provisioning/mitre/matrix").catch(() => null);
+  return api.get<RawJson | null>("/soc/provisioning/mitre/matrix")
+    .then(normalizeMitreMatrix)
+    .catch(() => null);
 }
 
 export async function loadMitreStats(): Promise<MitreStats | null> {
   if (isDemoMode()) { await delay(100); return demo.mitreStats; }
-  return api.get<MitreStats | null>("/soc/provisioning/mitre/stats").catch(() => null);
+  return api.get<RawJson | null>("/soc/provisioning/mitre/stats")
+    .then(normalizeMitreStats)
+    .catch(() => null);
 }
 
 // ── SOC Advisor ───────────────────────────────────────────────────────────────
+/** Backend priority codes → app priority words. */
+const ADVISOR_PRIORITY: Record<string, SocAdvisorRecommendation["priority"]> = {
+  p0: "critical", p1: "high", p2: "medium", p3: "low",
+  critical: "critical", high: "high", medium: "medium", low: "low",
+};
+
+export function normalizeAdvisorRecommendation(raw: RawJson): SocAdvisorRecommendation {
+  const priority = ADVISOR_PRIORITY[String(raw.priority ?? "").toLowerCase()] ?? "medium";
+  return {
+    id: Number(raw.id ?? 0),
+    title: String(raw.title ?? ""),
+    description: typeof raw.description === "string" ? raw.description : undefined,
+    priority,
+    status: (raw.status as SocAdvisorRecommendation["status"]) ?? "open",
+    assignee: (raw.assigned_to ?? raw.assignee ?? null) as string | null,
+    notes: (raw.resolution_notes ?? raw.notes ?? null) as string | null,
+    created_at: typeof raw.created_at === "string" ? raw.created_at : undefined,
+  };
+}
+
+export function normalizeAdvisorReport(raw: RawJson): SocAdvisorReport {
+  return {
+    id: Number(raw.id ?? 0),
+    report_type: String(raw.report_type ?? "posture"),
+    title: String(raw.title ?? ""),
+    status: String(raw.status ?? "draft"),
+    score: raw.score == null ? undefined : Number(raw.score),
+    executive_summary: typeof raw.executive_summary === "string" ? raw.executive_summary : undefined,
+    recommendations: Array.isArray(raw.recommendations)
+      ? (raw.recommendations as RawJson[]).map(normalizeAdvisorRecommendation)
+      : undefined,
+    created_at: typeof raw.created_at === "string"
+      ? raw.created_at
+      : typeof raw.generated_at === "string" ? raw.generated_at : undefined,
+    published_at: (raw.published_at ?? null) as string | null,
+  };
+}
+
+/** Frameworks the Advisor dashboard shows readiness for. */
+const ADVISOR_FRAMEWORKS = ["NIST CSF 2.0", "ISO 27001:2022", "NDPR", "SOC 2"];
+
+/**
+ * The backend exposes the advisor as separate endpoints (dashboard, trends,
+ * benchmarks, readiness). The page wants one dashboard object, so compose them
+ * here and normalize the shapes.
+ */
 export async function loadAdvisorDashboard(): Promise<SocAdvisorDashboard | null> {
   if (isDemoMode()) { await delay(150); return demo.advisorDashboard; }
-  return api.get<SocAdvisorDashboard | null>("/soc/advisor/dashboard").catch(() => null);
+
+  const [dash, trends, benchmarks, readinessPairs] = await Promise.all([
+    api.get<RawJson>("/soc/advisor/dashboard").catch(() => null),
+    api.get<RawJson>("/soc/advisor/trends").catch(() => null),
+    api.get<RawJson>("/soc/advisor/benchmarks").catch(() => null),
+    Promise.all(
+      ADVISOR_FRAMEWORKS.map((f) =>
+        api.get<RawJson>(`/soc/advisor/readiness/${encodeURIComponent(f)}`).catch(() => null),
+      ),
+    ),
+  ]);
+  if (!dash && !trends && !benchmarks) return null;
+
+  // ``open_recommendations`` is a {priority: count} map on the backend.
+  const openByPriority = (dash?.open_recommendations ?? {}) as Record<string, unknown>;
+  const openCount = Object.values(openByPriority).reduce<number>((n, v) => n + Number(v ?? 0), 0);
+
+  const latest = Array.isArray(dash?.latest_reports) ? (dash?.latest_reports as RawJson[]) : [];
+  const benchScore = benchmarks?.org_posture_score;
+  const score = benchScore != null
+    ? Number(benchScore)
+    : latest.map((r) => Number(r.score)).find((n) => Number.isFinite(n)) ?? 0;
+
+  const series = (trends?.series ?? {}) as Record<string, RawJson[]>;
+  const trendSeries = series.posture ?? Object.values(series)[0] ?? [];
+  const trend = trendSeries
+    .map((pt) => ({ date: String(pt.generated_at ?? pt.date ?? "").slice(0, 10), score: Number(pt.score ?? 0) }))
+    .filter((pt) => pt.date)
+    .slice(-12);
+
+  const readiness: SocAdvisorDashboard["readiness"] = {};
+  ADVISOR_FRAMEWORKS.forEach((framework, i) => {
+    const r = readinessPairs[i];
+    if (!r) return;
+    const total = Number(r.total_controls ?? 0);
+    const passed = Number(r.covered_controls ?? r.passed ?? 0);
+    readiness[framework] = {
+      score: Number(r.readiness_pct ?? (total ? (passed / total) * 100 : 0)),
+      total_controls: total,
+      passed,
+    };
+  });
+
+  const industry = Array.isArray(benchmarks?.industry) ? (benchmarks?.industry as RawJson[]) : [];
+  const benchList = industry.map((b) => ({
+    name: String(b.segment ?? b.name ?? ""),
+    score,
+    industry_avg: Number(b.median ?? b.industry_avg ?? 0),
+  }));
+
+  return { score, trend, benchmarks: benchList, readiness, open_recommendations: openCount };
 }
 
-export async function loadAdvisorTrends(): Promise<unknown> {
+export async function loadAdvisorTrends(): Promise<Array<{ date: string; score: number }>> {
   if (isDemoMode()) { await delay(100); return demo.advisorDashboard.trend; }
-  return api.get("/soc/advisor/trends").catch(() => null);
+  const raw = await api.get<RawJson>("/soc/advisor/trends").catch(() => null);
+  const series = (raw?.series ?? {}) as Record<string, RawJson[]>;
+  const pts = series.posture ?? Object.values(series)[0] ?? [];
+  return pts
+    .map((pt) => ({ date: String(pt.generated_at ?? pt.date ?? "").slice(0, 10), score: Number(pt.score ?? 0) }))
+    .filter((p) => p.date);
 }
 
-export async function loadAdvisorBenchmarks(): Promise<unknown> {
+export async function loadAdvisorBenchmarks(): Promise<SocAdvisorDashboard["benchmarks"]> {
   if (isDemoMode()) { await delay(100); return demo.advisorDashboard.benchmarks; }
-  return api.get("/soc/advisor/benchmarks").catch(() => null);
+  const raw = await api.get<RawJson>("/soc/advisor/benchmarks").catch(() => null);
+  const score = Number(raw?.org_posture_score ?? 0);
+  const industry = Array.isArray(raw?.industry) ? (raw?.industry as RawJson[]) : [];
+  return industry.map((b) => ({
+    name: String(b.segment ?? b.name ?? ""),
+    score,
+    industry_avg: Number(b.median ?? b.industry_avg ?? 0),
+  }));
 }
 
-export async function loadAdvisorReadiness(framework: string): Promise<unknown> {
+export async function loadAdvisorReadiness(framework: string): Promise<SocAdvisorDashboard["readiness"][string] | null> {
   if (isDemoMode()) { await delay(100); return demo.advisorDashboard.readiness[framework] ?? null; }
-  return api.get(`/soc/advisor/readiness/${encodeURIComponent(framework)}`).catch(() => null);
+  const raw = await api.get<RawJson>(`/soc/advisor/readiness/${encodeURIComponent(framework)}`).catch(() => null);
+  if (!raw) return null;
+  const total = Number(raw.total_controls ?? 0);
+  const passed = Number(raw.covered_controls ?? raw.passed ?? 0);
+  return {
+    score: Number(raw.readiness_pct ?? (total ? (passed / total) * 100 : 0)),
+    total_controls: total,
+    passed,
+  };
 }
 
 export async function loadAdvisorRecommendations(status?: string): Promise<SocAdvisorRecommendation[]> {
@@ -2971,7 +3288,9 @@ export async function loadAdvisorRecommendations(status?: string): Promise<SocAd
     return status ? demo.advisorRecommendations.filter((r) => r.status === status) : demo.advisorRecommendations;
   }
   const qs = status ? `?status=${encodeURIComponent(status)}` : "";
-  return api.get<SocAdvisorRecommendation[] | { items: SocAdvisorRecommendation[] }>(`/soc/advisor/recommendations${qs}`).then(r => (r as { items: SocAdvisorRecommendation[] }).items ?? r as SocAdvisorRecommendation[]);
+  const res = await api.get<{ items?: RawJson[] } | RawJson[]>(`/soc/advisor/recommendations${qs}`);
+  const items = Array.isArray(res) ? res : res.items ?? [];
+  return items.map(normalizeAdvisorRecommendation);
 }
 
 export async function updateAdvisorRecommendation(id: number, body: Record<string, unknown>): Promise<void> {
@@ -2986,7 +3305,9 @@ export async function generateAdvisorReport(body: Record<string, unknown>): Prom
 
 export async function loadAdvisorReports(): Promise<SocAdvisorReport[]> {
   if (isDemoMode()) { await delay(150); return demo.advisorReports; }
-  return api.get<SocAdvisorReport[] | { items: SocAdvisorReport[] }>("/soc/advisor/reports").then(r => (r as { items: SocAdvisorReport[] }).items ?? r as SocAdvisorReport[]);
+  const res = await api.get<{ items?: RawJson[] } | RawJson[]>("/soc/advisor/reports");
+  const items = Array.isArray(res) ? res : res.items ?? [];
+  return items.map(normalizeAdvisorReport);
 }
 
 export async function publishAdvisorReport(id: number, reviewedBy?: string): Promise<void> {
@@ -3256,9 +3577,9 @@ function trackerSummaryFrom(raw: unknown): TrackerSummary | null {
  */
 export async function loadTrackerSummary(): Promise<TrackerSummary | null> {
   if (isDemoMode()) { await delay(250); return demo.trackerSummary; }
-  // One page at the backend ceiling is enough: the counts come back computed
-  // server-side, and the local derivation below only needs representative rows.
-  const raw = await softOne<any>(`/reports/tracker?limit=${LIST_PAGE_SIZE}`);
+  // Dashboards count **verified** findings only; the tracker page keeps the full
+  // board itself. The summary comes back computed server-side over the filter.
+  const raw = await softOne<any>(`/reports/tracker?verification=verified&limit=${LIST_PAGE_SIZE}`);
   return trackerSummaryFrom(raw);
 }
 

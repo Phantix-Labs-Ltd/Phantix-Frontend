@@ -1,8 +1,10 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Loader2, ShieldCheck, Info, Globe, Building2, Server, ChevronDown, WifiOff, RefreshCw } from "lucide-react";
+import { X, Loader2, ShieldCheck, Info, Globe, Building2, Server, ChevronDown, WifiOff, RefreshCw, MessageSquareWarning } from "lucide-react";
 import { cx, severityMeta, verificationMeta, statusColor, titleCase, impactLevelColor, categoryLabels, blastRadiusLabels, impactLevelRank } from "./utils";
+import { openFeedbackReporter } from "./feedback";
 import type { Severity, VerificationStatus } from "./types";
+import { usePageTitle } from "./pageTitle";
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 export function SeverityBadge({ severity, className }: { severity: Severity; className?: string }) {
@@ -53,7 +55,7 @@ export function StatusBadge({ status }: { status: string | null | undefined }) {
 
 export function ImpactBadge({ level, score }: { level?: string; score?: number }) {
   const cls = impactLevelColor(level);
-  const label = level ?? "—";
+  const label = level ?? "Not set";
   const num = score != null ? `· ${score}` : "";
   return <span className={cx("chip capitalize", cls)}>{label} {num}</span>;
 }
@@ -86,22 +88,30 @@ export function ImpactPanel({ impact }: { impact: any }) {
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
+// Card padding steps. "md" is the default; "sm" is for strips and callouts that
+// carry one line of content; "none" is for cards whose children pad themselves
+// (tables, divided lists), so the padding is never applied twice.
+const CARD_PAD = { none: "", sm: "px-4 py-3", md: "p-4" } as const;
+
 export function Card({
   children,
   className,
   hover,
   onClick,
+  pad = "md",
 }: {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
   onClick?: () => void;
+  pad?: keyof typeof CARD_PAD;
 }) {
   return (
     <div
       onClick={onClick}
       className={cx(
-        "card p-5",
+        "card",
+        CARD_PAD[pad],
         hover && "transition-colors duration-200 hover:border-phantix-600",
         className,
       )}
@@ -121,8 +131,8 @@ export function CardHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-      <div className="min-w-0 flex-1 basis-[12rem]">
+    <div className="mb-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div className="min-w-[12rem] flex-1 basis-[12rem]">
         <h3 className="font-display text-[15px] font-semibold leading-snug text-slate-100">{title}</h3>
         {subtitle && <p className="mt-1 text-xs leading-5 text-slate-400 break-words">{subtitle}</p>}
       </div>
@@ -132,6 +142,10 @@ export function CardHeader({
 }
 
 // ── Page header ───────────────────────────────────────────────────────────────
+// Compact button height for header actions (~34px instead of ~44px).
+const HEADER_BTN =
+  "[&_.btn-primary]:py-1.5 [&_.btn-secondary]:py-1.5 [&_.btn-ghost]:py-1.5 [&_.btn-danger]:py-1.5";
+
 export function PageHeader({
   title,
   description,
@@ -141,23 +155,25 @@ export function PageHeader({
   description?: string;
   actions?: React.ReactNode;
 }) {
+  usePageTitle(title);
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="mb-6 flex flex-wrap items-end justify-between gap-4"
+      className="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-2"
     >
       {/* The basis keeps the title column readable: when the actions do not fit
           beside it, they wrap underneath instead of squeezing the text. */}
-      <div className="min-w-0 flex-1 basis-[18rem]">
-        <h1 className="font-display text-[26px] font-bold tracking-tight text-white">{title}</h1>
-        {description && <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">{description}</p>}
+      <div className="min-w-[12rem] flex-1 basis-[18rem]">
+        <h1 className="font-display text-[24px] font-bold leading-tight tracking-tight text-white">{title}</h1>
+        {description && <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{description}</p>}
       </div>
       {/* Pages often nest their buttons in a non-wrapping row; let that row wrap
-          too so a phone gets two lines of buttons, not a sideways-scrolling page. */}
+          too so a phone gets two lines of buttons, not a sideways-scrolling page.
+          Header buttons run compact: they sit beside a title, not a form. */}
       {actions && (
-        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2.5 [&>div]:flex-wrap">{actions}</div>
+        <div className={cx("flex min-w-0 max-w-full flex-wrap items-center gap-2 [&>div]:flex-wrap", HEADER_BTN)}>{actions}</div>
       )}
     </motion.div>
   );
@@ -205,12 +221,12 @@ export function StatCard({
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="card relative overflow-hidden p-5"
+      className="card relative overflow-hidden px-4 py-3"
     >
       <div className="relative">
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-400">{label}</p>
-        <p className="mt-2 font-mono text-[28px] font-semibold leading-none tracking-tight text-white">{value}</p>
-        {hint && <div className="mt-2 text-xs text-slate-400">{hint}</div>}
+        <p className="truncate text-xs font-medium uppercase tracking-wider text-slate-400">{label}</p>
+        <p className="mt-1.5 font-mono text-[22px] font-semibold leading-none tracking-tight text-white">{value}</p>
+        {hint && <div className="mt-1.5 text-xs text-slate-400">{hint}</div>}
       </div>
     </motion.div>
   );
@@ -400,7 +416,7 @@ export function SkeletonBlock({ className }: { className?: string }) {
 /** Page title / subtitle / actions area. */
 export function PageHeaderSkeleton({ actions = false }: { actions?: boolean }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div>
         <div className="skeleton mb-2 h-5 w-48 rounded" />
         <div className="skeleton h-8 w-72 max-w-full rounded" />
@@ -416,13 +432,13 @@ export function PageHeaderSkeleton({ actions = false }: { actions?: boolean }) {
  *  nothing shifts when the numbers arrive. */
 export function StatCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cx("card relative overflow-hidden p-5", className)}>
+    <div className={cx("card relative overflow-hidden px-4 py-3", className)}>
       <div className="flex items-center justify-between">
         <div className="skeleton h-3 w-20 rounded" />
         <div className="skeleton h-[18px] w-[18px] rounded" />
       </div>
-      <div className="skeleton mt-2 h-7 w-24 rounded" />
-      <div className="skeleton mt-2 h-3 w-28 rounded" />
+      <div className="skeleton mt-1.5 h-[22px] w-24 rounded" />
+      <div className="skeleton mt-1.5 h-3 w-28 rounded" />
     </div>
   );
 }
@@ -763,14 +779,31 @@ export function ErrorState({
         {icon ?? <WifiOff size={22} />}
       </div>
       <h3 className="font-display text-base font-semibold text-slate-200">{title ?? "Server not responding"}</h3>
-      <p className="mt-1.5 max-w-md text-sm leading-6 text-slate-400">
-        {body ?? "We could not reach the SecureGraph API. Check your connection and retry — your session stays signed in."}
+      {/* Error text can carry a long unbroken token (a URL, an id); let it wrap
+          instead of widening the page on a phone. */}
+      <p className="mt-1.5 max-w-md text-sm leading-6 text-slate-400 [overflow-wrap:anywhere]">
+        {body ?? "We could not reach the SecureGraph API. Check your connection and try again. Your session stays signed in."}
       </p>
       {onRetry && (
         <button onClick={onRetry} className="btn-primary mt-5 !py-2 text-xs">
           <RefreshCw size={13} className="mr-1.5 inline" /> Retry
         </button>
       )}
+      {/* The failure is right in front of the operator — let them say so without
+          leaving the page. Filed against the route's service by the reporter. */}
+      <button
+        onClick={() =>
+          openFeedbackReporter({
+            category: "error",
+            severity: "high",
+            message: title ?? "Server not responding",
+            context: { error: body ?? "We could not reach the SecureGraph API." },
+          })
+        }
+        className={cx("btn-ghost !py-2 text-xs", onRetry ? "mt-2" : "mt-5")}
+      >
+        <MessageSquareWarning size={13} className="mr-1.5 inline" /> Report this
+      </button>
     </div>
   );
 }
@@ -788,13 +821,13 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-md border border-phantix-700 bg-phantix-900 text-phantix-300">
+    <div className="flex flex-col items-center justify-center px-6 py-8 text-center">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-phantix-700 bg-phantix-900 text-phantix-300 [&_svg]:h-[18px] [&_svg]:w-[18px]">
         {icon}
       </div>
       <h3 className="font-display text-base font-semibold text-slate-200">{title}</h3>
-      {body && <p className="mt-1.5 max-w-sm text-sm text-slate-400">{body}</p>}
-      {action && <div className="mt-5">{action}</div>}
+      {body && <p className="mt-1 max-w-sm text-sm text-slate-400">{body}</p>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }
@@ -810,13 +843,13 @@ export function Tabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-1 rounded-md bg-phantix-900 border border-phantix-700 p-1 w-fit">
+    <div className="mb-4 flex flex-wrap items-center gap-1 rounded-md bg-phantix-900 border border-phantix-700 p-1 w-fit">
       {tabs.map((t) => (
         <button
           key={t.id}
           onClick={() => onChange(t.id)}
           className={cx(
-            "relative rounded-md px-3.5 py-2 text-sm font-medium transition-colors",
+            "relative rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
             active === t.id ? "text-slate-100" : "text-slate-400 hover:text-slate-100",
           )}
         >

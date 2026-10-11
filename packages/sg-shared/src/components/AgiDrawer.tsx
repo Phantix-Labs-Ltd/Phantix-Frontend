@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Maximize2, Minimize2, Radar, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import AgiWorkspace from "./AgiWorkspace";
 import { ResizeHandle } from "./workbench";
+
+// The workspace (console, attack tree, terminal, Markdown) is most of the
+// Attack app's code. It still mounts right after load — a session keeps running
+// while the drawer is closed — but from its own chunk, not the first-paint one.
+const AgiWorkspace = React.lazy(() => import("./AgiWorkspace"));
 import { readPersistedAgiSession } from "../agi";
 import { useDragResize } from "../useDragResize";
 import { cx } from "../utils";
@@ -60,8 +64,18 @@ export default function AgiDrawer() {
     <>
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("phantix:agi-open"))}
-        className="fixed right-0 top-1/2 z-[70] -translate-y-1/2 flex items-center gap-2 rounded-l-xl border border-r-0 border-phantix-700/50 bg-phantix-900/90 px-2.5 py-3 text-gold-300 shadow-card backdrop-blur-xl transition-colors hover:border-gold-400/40 hover:bg-phantix-800/90"
-        title={live ? "Pentest Agent — session running" : "Autonomous Pentest Agent"}
+        // Phones: a floating action button above the tab bar. Wider: the edge
+        // tab, tucked off the right edge so it never covers the page. A 14px
+        // strip stays visible (green while a session runs) and the whole tab
+        // slides out on hover or keyboard focus.
+        aria-label="Open the Pentest Agent"
+        className={cx(
+          "fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-3 z-[70] flex items-center gap-2 rounded-full border border-gold-400/40 bg-phantix-900/95 p-3.5 text-gold-300 shadow-card backdrop-blur-xl transition-colors hover:border-gold-400/40 hover:bg-phantix-800/90",
+          "md:bottom-auto md:right-0 md:top-1/2 md:-translate-y-1/2 md:rounded-none md:rounded-l-xl md:border-r-0 md:border-phantix-700/50 md:bg-phantix-900/90 md:px-2.5 md:py-3",
+          "md:translate-x-[calc(100%-14px)] md:border-l-[3px] md:transition-[transform,background-color,border-color] md:duration-300 md:ease-out md:hover:translate-x-0 md:focus-visible:translate-x-0 motion-reduce:transition-none",
+          live ? "md:border-l-emerald-400" : "md:border-l-gold-400/70",
+        )}
+        title={live ? "Pentest Agent: session running" : "Autonomous Pentest Agent"}
       >
         <span className="relative">
           <Radar size={16} />
@@ -117,14 +131,16 @@ export default function AgiDrawer() {
             <button
               onClick={hide}
               className="rounded-lg border border-phantix-700/40 p-2 text-slate-400 transition-colors hover:border-severity-critical/40 hover:text-severity-critical"
-              title="Hide console — session keeps running"
+              title="Hide console. The session keeps running."
             >
               <X size={14} />
             </button>
           </div>
         </div>
         <div className="wb-pane min-h-0 flex-1 bg-phantix-950/95">
-          <AgiWorkspace variant={fullscreen ? "console" : "drawer"} />
+          <Suspense fallback={null}>
+            <AgiWorkspace variant={fullscreen ? "console" : "drawer"} />
+          </Suspense>
         </div>
       </aside>
     </>
@@ -132,7 +148,8 @@ export default function AgiDrawer() {
 }
 
 function cxPanel(fullscreen: boolean, open: boolean): string {
-  const base = "fixed z-[85] flex flex-col overflow-hidden bg-phantix-950/95 shadow-card border-l border-phantix-700/40 transition-transform duration-300";
+  // Phones: the agent takes the whole screen like a native app view.
+  const base = "fixed z-[85] flex flex-col overflow-hidden bg-phantix-950/95 shadow-card border-l border-phantix-700/40 transition-transform duration-300 max-md:left-0 max-md:!w-auto max-md:border-l-0 max-md:pt-[env(safe-area-inset-top)]";
   const hidden = open ? "" : "pointer-events-none translate-x-full";
   if (fullscreen) return cx(base, "inset-0 !border-l-0", hidden);
   return cx(base, "right-0 top-0 bottom-0", hidden);

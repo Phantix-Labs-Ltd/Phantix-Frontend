@@ -108,9 +108,9 @@ export interface CreateTicketInput {
 export const TICKET_CATEGORIES: { id: TicketCategory; label: string }[] = [
   { id: "general", label: "General question" },
   { id: "technical", label: "Technical issue" },
-  { id: "billing", label: "Billing & plan" },
+  { id: "billing", label: "Billing and plan" },
   { id: "security_incident", label: "Security incident" },
-  { id: "onboarding", label: "Onboarding & setup" },
+  { id: "onboarding", label: "Onboarding and setup" },
   { id: "other", label: "Other" },
 ];
 
@@ -156,7 +156,7 @@ const demo: SupportTicket[] = [
         id: 2,
         author_type: "admin",
         author_name: "SecureGraph Support",
-        body: "Thanks — a worker had dropped. I've requeued the job; it should start within a few minutes.",
+        body: "Thank you. A worker had dropped. I have requeued the job, and it should start within a few minutes.",
         created_at: new Date(Date.now() - 20 * 60_000).toISOString(),
       },
     ],

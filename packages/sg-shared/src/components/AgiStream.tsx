@@ -13,6 +13,7 @@ import { personaForChunk, PHASE_ACTIVITY, PHASE_ACTIVITY_BY_ID, activityFor, typ
 import type { AgiTranscriptChunk, Severity } from "../types";
 import { cx, humanize } from "../utils";
 import CrossAppLink from "./CrossAppLink";
+import { AutofixToolCard, autofixFromChunk } from "./AgiAutofix";
 
 // ── Shared live-stream primitives for the Autonomous Pentest Agent console ────
 // Used by the fullscreen operator console (AgiConsole) and the compact drawer
@@ -143,7 +144,7 @@ export function TurnBriefCard({ content, dense = false }: { content: string; den
         <span className="min-w-0 flex-1">
           <span className={cx("block truncate font-semibold text-slate-200", dense ? "text-[13px]" : "text-xs")}>
             {activity}
-            {b.workingOn ? <span className="text-slate-400"> — {b.workingOn}</span> : null}
+            {b.workingOn ? <span className="text-slate-400"> · {b.workingOn}</span> : null}
           </span>
           <span className={cx("block text-[12px] text-slate-500", dense ? "hidden" : "")}>
             {b.turn ? `Turn ${b.turn}` : "Turn"}
@@ -282,6 +283,8 @@ function ToolCallCard({ t, dense = false }: { t: AgiTranscriptChunk; dense?: boo
 
   const pretty = useMemo(() => (body ? prettyJson(body) : null), [body]);
   const output = pretty ?? body;
+  const autofixes = useMemo(() => autofixFromChunk(t), [t]);
+  if (autofixes.length > 0) return <AutofixToolCard fixes={autofixes} dense={dense} />;
 
   return (
     <div className="group relative min-w-0">
@@ -363,6 +366,13 @@ export function ToolGroupCard({
       }),
     [runs],
   );
+  // Autofix results carry steps and a before/after example; the raw JSON box
+  // cut them off, so they get their own card with a full overlay.
+  const autofixes = useMemo(
+    () => (tool === "autofix_subagent" ? runs.flatMap((r) => autofixFromChunk(r)) : []),
+    [tool, runs],
+  );
+  if (autofixes.length > 0) return <AutofixToolCard fixes={autofixes} dense={dense} />;
   if (!hasPayload) return null;
   return (
     <div className="group relative min-w-0 overflow-hidden rounded-xl border border-phantix-700/40 bg-phantix-950/70">
@@ -641,7 +651,7 @@ function SystemEventCard({ t, dense = false }: { t: AgiTranscriptChunk; dense?: 
         {kind === "finding_dropped" && (
           <div className="space-y-1">
             <p className="wb-sm text-slate-300">{t.content}</p>
-            <p className="wb-2xs text-slate-500">Dropped before recording — the evidence is kept, the noise is not.</p>
+            <p className="wb-2xs text-slate-500">Removed before the system records it. The evidence is kept, the noise is not.</p>
           </div>
         )}
         {(kind === "loop_paused" || kind === "loop_resumed") && <p className="wb-sm text-slate-300">{t.content}</p>}
@@ -812,7 +822,7 @@ function PiHelperCard({ t, dense = false, observe = false }: { t: AgiTranscriptC
           </span>
           <span className={cx("block truncate text-slate-400", dense ? "text-[12px]" : "wb-xs")}>
             {p.failed && p.error
-              ? `Helper unavailable (${p.error}) — the main agent continues.`
+              ? `Helper unavailable (${p.error}). The main agent continues.`
               : observe
                 ? "Helper result attached"
                 : p.task}
@@ -902,6 +912,18 @@ export const StreamMessage = memo(function StreamMessage({ t, last = false, dens
         className="flex justify-start"
       >
         <PiHelperCard t={t} dense={dense} observe />
+      </motion.div>
+    );
+  }
+
+  if (t.role === "system" && t.meta?.kind === "autofix") {
+    const fixes = autofixFromChunk(t);
+    if (fixes.length === 0) return null;
+    return (
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: "easeOut" }}>
+        <div className={cx("min-w-0", dense ? "w-full" : "max-w-[94%]")}>
+          <AutofixToolCard fixes={fixes} dense={dense} />
+        </div>
       </motion.div>
     );
   }
@@ -1079,7 +1101,7 @@ export function TypingIndicator({ label, tool, workingOn, phaseId }: { label?: s
         <TextShimmer as="span" duration={3} className="font-semibold">
           {activity}
         </TextShimmer>
-        {detail && <span className="text-slate-500"> — {detail}</span>}
+        {detail && <span className="text-slate-500"> · {detail}</span>}
       </span>
       {tool && <span className="chip shrink-0 !px-1.5 !py-0 wb-2xs font-mono text-gold-300">{tool}</span>}
     </motion.div>
@@ -1129,7 +1151,7 @@ export function QueuedPromptStrip({ prompts, dense = false }: { prompts: QueuedP
           <div className="min-w-0 flex-1">
             <p className={cx("truncate font-medium text-gold-100", dense ? "text-[13px]" : "wb-sm")}>{p.content}</p>
             <p className={cx("text-gold-300/60", dense ? "text-[12px]" : "wb-2xs")}>
-              {p.delivered ? "Received — waiting for the agent to act on it" : "Queued — the agent picks this up on its next turn"}
+              {p.delivered ? "Received. Waiting for the agent to act on it" : "Queued. The agent picks this up on its next turn"}
             </p>
           </div>
         </motion.div>
@@ -1258,22 +1280,22 @@ export function AgentActivityLine({ activity, dense = false }: { activity: Agent
 
   if (activity.connError) {
     dot = "bg-severity-critical";
-    label = "Connection issue — retrying";
+    label = "Connection issue. Retrying";
   } else if (activity.paused) {
     dot = "bg-severity-medium";
-    label = "Paused — chat is queued until you resume";
+    label = "Paused. Chat is queued until you resume";
   } else if (activity.clarification) {
     dot = "bg-gold-400";
-    label = "Waiting for your answer — the loop is hard-paused";
+    label = "Waiting for your answer. The loop is paused";
   } else if ((activity.approvals ?? 0) > 0) {
     dot = "bg-severity-medium";
-    label = `Waiting for your approval — ${activity.approvals} step${(activity.approvals ?? 0) > 1 ? "s" : ""} in the Human gate`;
+    label = `Waiting for your approval: ${activity.approvals} step${(activity.approvals ?? 0) > 1 ? "s" : ""} in the Human gate`;
   } else if (working || activity.thinking) {
     shimmer = streaming;
-    label = detail ? <>{primary}<span className="text-slate-500"> — {detail}</span></> : primary;
+    label = detail ? <>{primary}<span className="text-slate-500"> · {detail}</span></> : primary;
   } else if (["stopped", "torn_down", "failed"].includes(activity.sessionStatus ?? "")) {
     dot = "bg-slate-600";
-    label = "Session ended — start a new session to continue";
+    label = "Session ended. Start a new session to continue";
   } else {
     dot = "bg-slate-600";
     label = "Idle";
@@ -1364,7 +1386,7 @@ export function ApprovalNotice({
         </span>
         <div className="min-w-0">
           <p className={cx("font-semibold text-amber-200", dense ? "wb-xs" : "wb-sm")}>
-            Paused — awaiting authorization{count > 1 ? ` (${count} steps)` : ""}
+            Paused. Waiting for authorization.{count > 1 ? ` (${count} steps)` : ""}
           </p>
           <p className={cx("mt-0.5 leading-relaxed text-slate-400", dense ? "wb-2xs" : "wb-xs")}>
             {stateChanging

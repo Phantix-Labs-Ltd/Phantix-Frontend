@@ -101,7 +101,7 @@ export function formatDateTime(
   options?: Intl.DateTimeFormatOptions,
 ): string {
   const d = toDate(value);
-  if (!d) return "—";
+  if (!d) return "Not set";
   return d.toLocaleString(undefined, { timeZone: userTimeZone(), ...options });
 }
 
@@ -111,7 +111,7 @@ export function formatDate(
   options?: Intl.DateTimeFormatOptions,
 ): string {
   const d = toDate(value);
-  if (!d) return "—";
+  if (!d) return "Not set";
   return d.toLocaleDateString(undefined, {
     timeZone: userTimeZone(),
     year: "numeric",
@@ -127,7 +127,7 @@ export function formatTime(
   options?: Intl.DateTimeFormatOptions,
 ): string {
   const d = toDate(value);
-  if (!d) return "—";
+  if (!d) return "Not set";
   return d.toLocaleTimeString(undefined, {
     timeZone: userTimeZone(),
     hour: "2-digit",
@@ -161,7 +161,7 @@ export function formatRelative(
   now: number = Date.now(),
 ): string {
   const d = toDate(value);
-  if (!d) return "—";
+  if (!d) return "Not set";
   const delta = now - d.getTime();
   if (delta < MINUTE) return "just now";
   if (delta < HOUR) return `${Math.round(delta / MINUTE)} min ago`;

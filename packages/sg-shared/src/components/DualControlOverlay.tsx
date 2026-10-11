@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ShieldCheck, Mail, KeyRound, Smartphone, Loader2, X, Lock } from "lucide-react";
 import { useStore } from "../store";
 import { listenDeviceConfirmed } from "../deviceConfirm";
+import StepUpPrompt, { AupAcceptPrompt, TargetUnverifiedNotice } from "./StepUpPrompt";
 
 function maskEmail(email: string): string {
   return email.replace(/(.{2}).+(@.+)/, "$1***$2");
@@ -13,7 +14,7 @@ function maskEmail(email: string): string {
  * Opens via requireDualControl() whenever a mutation needs an operate session.
  * Flow: email → OTP (purpose=dual_control) → optional new-device confirm.
  */
-export default function DualControlOverlay() {
+function OperateUnlockOverlay() {
   const {
     dualControlPrompt,
     closeDualControlPrompt,
@@ -117,7 +118,7 @@ export default function DualControlOverlay() {
     const attempt = () => {
       void confirmDualControlDevice().then((r) => {
         if (!disposed && r.done) {
-          toast("success", "Operate mode unlocked", "Device confirmed --- dual-control session is active.");
+          toast("success", "Operate mode unlocked", "Device confirmed. The dual-control session is active.");
           closeDualControlPrompt(true);
           stop();
         }
@@ -188,7 +189,7 @@ export default function DualControlOverlay() {
         setStage("device");
         return;
       }
-      toast("success", "Operate mode unlocked", "Dual-control session active --- mutations enabled for ~3 minutes of idle time.");
+      toast("success", "Operate mode unlocked", "Dual-control session active. Mutations stay enabled for about 3 minutes of idle time.");
       closeDualControlPrompt(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed");
@@ -248,7 +249,7 @@ export default function DualControlOverlay() {
               )}
               {demoActive && (
                 <p className="mt-2 flex items-center gap-1.5 text-[13px] text-gold-300">
-                  <Loader2 size={11} className="animate-spin" /> Demo tenant — dual-control is completing automatically
+                  <Loader2 size={11} className="animate-spin" /> Demo tenant. Dual-control is completing automatically.
                 </p>
               )}
             </div>
@@ -296,7 +297,7 @@ export default function DualControlOverlay() {
                           onKeyDown={(e) => e.key === "Enter" && void sendCode()}
                         />
                       </div>
-                      <p className="mt-1 text-[13px] text-slate-500">Your own organization address --- the code goes to this account.</p>
+                      <p className="mt-1 text-[13px] text-slate-500">Your own organization address. The code goes to this account.</p>
                     </div>
                   )}
                   {error && <p className="text-sm text-severity-critical">{error}</p>}
@@ -358,7 +359,7 @@ export default function DualControlOverlay() {
                     <p className="mt-2 text-sm font-medium text-slate-200">Confirm this new device</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">
                       A confirmation link was sent to {masked || maskEmail(email)}. Open it to start the operate
-                      session — no additional code needed.
+                      session. No additional code is necessary.
                     </p>
                   </div>
                   <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
@@ -380,5 +381,21 @@ export default function DualControlOverlay() {
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * Every app mounts this once. Alongside the dual-control unlock it carries the
+ * solo-mode step-up prompt and the "verify the target first" notice, so no app
+ * has to mount those separately.
+ */
+export default function DualControlOverlay() {
+  return (
+    <>
+      <OperateUnlockOverlay />
+      <StepUpPrompt />
+      <TargetUnverifiedNotice />
+      <AupAcceptPrompt />
+    </>
   );
 }

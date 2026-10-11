@@ -1,0 +1,68 @@
+<svg style="background:#0A0A0A" xmlns="http://www.w3.org/2000/svg" width="900" height="450" viewBox="0 0 900 450" font-family="Geist Variable, Space Grotesk, Inter, system-ui, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Exposed database endpoint compared with an outbound-only connector</title>
+  <desc id="d">Left: the firewall opens the database port to the internet, so scanners and the vendor both reach the database. Right: the firewall opens no inbound ports; a connector inside the network dials out to SecureGraph over TLS, and scanners are blocked.</desc>
+  <defs>
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0A0A0A"/><stop offset="100%" stop-color="#2A2A2E"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A1A1AA"/>
+    </marker>
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#E8B54D"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#F43F5E"/>
+    </marker>
+  </defs>
+  <rect width="900" height="450" fill="#0A0A0A"/>
+  <text x="450" y="40" text-anchor="middle" font-size="20" font-weight="700" fill="#F4F4F5">Exposed Endpoint vs. Outbound-Only Connection</text>
+  <text x="450" y="63" text-anchor="middle" font-size="13" fill="#A1A1AA">The safest database accepts no connections from the internet</text>
+
+  <!-- Left: exposed -->
+  <rect x="30" y="86" width="410" height="334" rx="12" fill="#111113" stroke="#27272A"/>
+  <text x="50" y="114" font-size="14" font-weight="700" fill="#F43F5E">Exposed: a public database endpoint</text>
+  <text x="50" y="134" font-size="11" fill="#71717A">INTERNET</text>
+  <rect x="60" y="144" width="160" height="52" rx="8" fill="#2A1017" stroke="#F43F5E" stroke-width="1.5"/>
+  <text x="140" y="166" text-anchor="middle" font-size="12.5" font-weight="600" fill="#F43F5E">Scanners and bots</text>
+  <text x="140" y="184" text-anchor="middle" font-size="11" fill="#A1A1AA">Sweep every IP, daily</text>
+  <rect x="250" y="144" width="160" height="52" rx="8" fill="url(#boxGrad)" stroke="#A1A1AA" stroke-width="1.5"/>
+  <text x="330" y="166" text-anchor="middle" font-size="12.5" font-weight="600" fill="#E4E4E7">Security vendor</text>
+  <text x="330" y="184" text-anchor="middle" font-size="11" fill="#A1A1AA">Connects inbound</text>
+  <line x1="50" y1="256" x2="420" y2="256" stroke="#F43F5E" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="50" y="274" font-size="11" fill="#F43F5E">Firewall: 5432 open</text>
+  <text x="50" y="294" font-size="11" fill="#71717A">YOUR NETWORK</text>
+  <line x1="140" y1="198" x2="208" y2="304" stroke="#F43F5E" stroke-width="1.6" marker-end="url(#arrowRed)"/>
+  <line x1="330" y1="198" x2="262" y2="304" stroke="#A1A1AA" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect x="155" y="306" width="160" height="56" rx="8" fill="url(#boxGrad)" stroke="#F43F5E" stroke-width="1.5"/>
+  <text x="235" y="330" text-anchor="middle" font-size="12.5" font-weight="600" fill="#E4E4E7">Your database</text>
+  <text x="235" y="349" text-anchor="middle" font-size="11" fill="#A1A1AA">Public IP, port 5432</text>
+  <text x="50" y="400" font-size="12" fill="#A1A1AA">Anyone who finds the open port can try to get in.</text>
+
+  <!-- Right: outbound-only -->
+  <rect x="460" y="86" width="410" height="334" rx="12" fill="#111113" stroke="#3F3418"/>
+  <text x="480" y="114" font-size="14" font-weight="700" fill="#E8B54D">Private: an outbound-only connector</text>
+  <text x="480" y="134" font-size="11" fill="#71717A">INTERNET</text>
+  <rect x="480" y="144" width="140" height="52" rx="8" fill="#2A1017" stroke="#F43F5E" stroke-width="1.5"/>
+  <text x="550" y="166" text-anchor="middle" font-size="12.5" font-weight="600" fill="#F43F5E">Scanners and bots</text>
+  <text x="550" y="184" text-anchor="middle" font-size="11" fill="#A1A1AA">Find nothing to try</text>
+  <rect x="690" y="144" width="160" height="52" rx="8" fill="#241E10" stroke="#E8B54D" stroke-width="2"/>
+  <text x="770" y="166" text-anchor="middle" font-size="12.5" font-weight="600" fill="#F3CD7E">SecureGraph</text>
+  <text x="770" y="184" text-anchor="middle" font-size="11" fill="#A1A1AA">Accepts the connector</text>
+  <line x1="480" y1="256" x2="850" y2="256" stroke="#34D399" stroke-width="1.5"/>
+  <text x="480" y="274" font-size="11" fill="#34D399">Firewall: no inbound ports open</text>
+  <text x="480" y="294" font-size="11" fill="#71717A">YOUR NETWORK</text>
+  <line x1="550" y1="198" x2="550" y2="232" stroke="#F43F5E" stroke-width="1.6"/>
+  <circle cx="550" cy="242" r="9" fill="#0A0A0A" stroke="#F43F5E" stroke-width="1.5"/>
+  <path d="M545,237 L555,247 M555,237 L545,247" stroke="#F43F5E" stroke-width="1.8"/>
+  <line x1="770" y1="304" x2="770" y2="200" stroke="#E8B54D" stroke-width="1.8" marker-end="url(#arrowGold)"/>
+  <text x="760" y="226" text-anchor="end" font-size="11" fill="#E8B54D">Outbound TLS, port 443</text>
+  <rect x="690" y="306" width="160" height="56" rx="8" fill="#241E10" stroke="#E8B54D" stroke-width="2"/>
+  <text x="770" y="330" text-anchor="middle" font-size="12.5" font-weight="600" fill="#F3CD7E">Connector</text>
+  <text x="770" y="349" text-anchor="middle" font-size="11" fill="#A1A1AA">Runs beside the database</text>
+  <line x1="688" y1="334" x2="642" y2="334" stroke="#A1A1AA" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect x="480" y="306" width="160" height="56" rx="8" fill="url(#boxGrad)" stroke="#34D399" stroke-width="1.5"/>
+  <text x="560" y="330" text-anchor="middle" font-size="12.5" font-weight="600" fill="#E4E4E7">Your database</text>
+  <text x="560" y="349" text-anchor="middle" font-size="11" fill="#A1A1AA">Private IP only</text>
+  <text x="480" y="400" font-size="12" fill="#A1A1AA">The connection starts inside. Nothing listens on the internet.</text>
+</svg>

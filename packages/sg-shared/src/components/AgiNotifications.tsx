@@ -103,6 +103,10 @@ function AgiNotificationsInner() {
           // account is provisioned, may I register one?". Without this heads-up
           // the run waits silently and nobody knows it is blocked.
           toast("warning", "Pentest Agent is waiting on you", n.body || n.title);
+        } else if (n.kind === "cicd_scan_triggered") {
+          // The CI/CD popup: a push/deployment started a scan. The durable row is
+          // the bell/inbox item; this is the immediate transient notice.
+          toast("info", n.title, n.body || "A CI/CD push or deployment started a scan.");
         }
       }
     },
@@ -152,7 +156,8 @@ function AgiNotificationsInner() {
       if (
         evt.event === "notificationCreated" ||
         evt.event === "agiApprovalRequired" ||
-        evt.event === "agiSessionCompleted"
+        evt.event === "agiSessionCompleted" ||
+        evt.event === "ciScanTriggered"
       ) {
         void refreshNotifications();
         void refreshApprovals();

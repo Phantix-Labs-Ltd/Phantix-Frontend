@@ -1,45 +1,105 @@
-# Platform: Complete the setup wizard
+# Platform: Complete the setup
 
-**Where:** `/setup` (auto after first login)  
-**Goal:** Mark the organization setup complete so product modules can run.
+**Where:** `/setup`, then **Get started** (`/get-started`), which open after the first sign in
+**What:** Takes a new organization from its first sign in to people using the applications: verify the email, run a Quick Scan, choose solo mode or dual control, connect the security database, then choose a plan and the applications and send login links.
+**Who:** The primary user of the organization.
+**Before you start:** A signed-in Platform session, and the work email open for the verification code.
 
-![Dashboard / setup context](../../screenshots/platform/dashboard.png)
+![Choose your applications](../../screenshots/platform/setup-applications.png)
+
+---
+
+## Before you start
+
+- Email verification is the one gate that setup enforces. The rest of setup can wait, and **Skip to dashboard** is on every step.
+- The Quick Scan runs passive checks on a domain or a GitHub repository. Nothing is attacked.
+- Saving the Quick Scan results needs the security database. See [06-connect-security-database.md](./06-connect-security-database.md).
+- Active testing needs a verified domain, so setup asks for it after the Quick Scan.
+- The plan step shows only where billing is enforced. Free needs no card.
+- Nobody uses the applications until a login link is sent. The applications accept only users who arrive through their link.
 
 ---
 
 ## Process flow
 
-```mermaid
-flowchart LR
-  A[Get setup state · which step is next?] --> B{Step}
-  B -->|1. Privacy · required| C[Accept notice]
-  B -->|2. Profile · optional| D[Legal name, website…]
-  B -->|3. Email OTP · required| E[Verify contact email]
-  B -->|4. Company verification · optional| F[DNS / file / CAC / manual]
-  B -->|5. Complete| G[setup_complete = true]
-  C & D & E & F --> G
-  G --> H[/dashboard/]
-```
+![Platform: Complete the setup process flow](../../diagrams/how-to-platform-02-complete-setup-wizard.svg)
 
 ---
 
 ## Steps
 
-1. Open Platform after sign-in. If setup is incomplete you stay on **Organization setup**.
-2. **Privacy notice** — read and accept (required).
-3. **Company profile** — fill optional identity fields; continue.
-4. **Email verification** — request OTP, enter code (required to finish).
-5. **Company verification** (optional):
-   - DNS TXT, or  
-   - HTTP well-known file, or  
-   - CAC / registration details, or  
-   - Request **manual review** (staff approves later)
-6. Click **Complete** when required steps show done.
-7. You should land on **Dashboard** with progress 100%.
+1. Sign in to Platform. Setup opens at `/setup` while the email is not verified.
+2. Click **Send verification code**, then enter the code from the email. Click **Verify email**.
+3. On **What do you want to protect?**, enter a domain or a GitHub repository. Click **Run Quick Scan**.
+4. Read the results when the scan completes. You can leave the page while it runs.
+5. Click **Continue setup** on the results card.
+6. On **How should sensitive changes be approved?**, select **Solo mode** or **Dual control**, then click **Continue**.
+   - **Solo mode**: you act on your own, and sensitive actions ask for a code from your email.
+   - **Dual control**: a second person, the authorizer, approves sensitive actions. With no second person yet, **Add your second person** opens **People**. Add the person and assign the initiator and the authorizer. Dual control then turns on.
+7. Setup then asks, in order and only when missing, for the service key and the security database.
+8. Connect the security database. At the end of the journey, click **Back to your Quick Scan**.
+9. Click **Save results**. The results move into your security database.
+10. On **Verify your domain**, prove ownership of the domain with a DNS record or an HTTP file. Click **Continue**.
+11. On **Choose your plan**, select **Free**, **Starter** or **Growth**. Starter and Growth open Paystack checkout, then return here to confirm the payment.
+12. On **Choose your applications**, keep **Core** and **Attack** on. Your first VAPT runs in Attack. Switch on **Defend** and **Code** if you want them.
+13. On **Give your team access**, add the people who use the applications. Click **Email login link** for each person, starting with yourself.
+14. Open your own email and follow the link to sign in to the Command Centre.
+
+**Result:** The organization has a security database, a plan and its applications, and its people can sign in. During the beta, connecting the security database also takes the place of the organization in the sandbox.
 
 ---
 
-## Tips
+## Reference
 
-- Domain / CAC verification is **not** required to use Command Centre if privacy + email are done and security DB is bootstrapped.
-- Rehydrate always comes from the API; refreshing the page resumes the correct step.
+### Setup steps
+
+| Step | Route | Blocks progress | Notes |
+| --- | --- | --- | --- |
+| Verify email | `/setup` | Yes | The code goes to the work email. |
+| Quick Scan | `/get-started` | No | Results stay as a 7-day preview until they are saved. |
+| Approvals | `/get-started/approvals` | No | Solo mode or dual control. Change it later in **Identity**. |
+| Audit control | `/users` | When dual control is chosen | Add the second person, assign the initiator and the authorizer. |
+| Service key | `/get-started/service-key` | When missing | The applications need the service key of the organization. |
+| Security database | `/connections/new` | To save results | The guided journey. |
+| Verify your domain | `/get-started/verify-domain` | No | Active testing needs it. |
+| Choose your plan | `/get-started/plan` | No | Shown only where billing is enforced. |
+| Choose your applications | `/get-started/applications` | No | Core and Attack start on. |
+| Give your team access | `/get-started/app-access` | No | Send at least one login link. |
+
+### Plans
+
+| Plan | Payment |
+| --- | --- |
+| Free | No card |
+| Starter | Paystack checkout, monthly or yearly |
+| Growth | Paystack checkout, monthly or yearly |
+
+Yearly billing charges ten months for twelve. Platform reads the plan prices from `GET /billing/plans`.
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| No code arrives | The message went to spam | Click **Resend code** after the countdown, then read the spam folder. |
+| "You've used today's Quick Scans" | The daily Quick Scan limit is reached | Try again tomorrow, or connect the security database to run full scans. |
+| **Save results** is missing | The security database is not ready | Connect it, then click **Back to your Quick Scan**. |
+| "This preview expired" | The results are older than 7 days | Run the Quick Scan again. |
+| The plan step does not show | Billing is not enforced in this environment | Continue. Every application is open. |
+| "Payment not confirmed" | The checkout did not complete | Try again, or pay later from **Billing**. |
+| "Attack is off. You need it to run your first VAPT." | Attack is switched off | Switch on Attack on **Choose your applications**. |
+| A person cannot sign in to the applications | No login link was sent to them | Click **Email login link** for that person. |
+| "Add a second person and assign the initiator and authorizer roles first." | Dual control needs both roles | Click **Add your second person** and assign the roles on **People**. |
+| "Sent to your authorizer" after selecting solo mode | Turning dual control off needs the authorizer's approval | Ask the authorizer to approve it in **Authorizations**. |
+
+---
+
+## Related
+
+- Previous: [01-register-and-sign-in.md](./01-register-and-sign-in.md)
+- Next step: [06-connect-security-database.md](./06-connect-security-database.md)
+- [04-assign-dual-control.md](./04-assign-dual-control.md)
+- [05-issue-app-login-link.md](./05-issue-app-login-link.md)
+- [11-billing-and-subscribe.md](./11-billing-and-subscribe.md)
+- [Platform how-tos](./README.md)

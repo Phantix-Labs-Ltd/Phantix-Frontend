@@ -1,4 +1,4 @@
-# Daily & weekly activities
+# Daily and weekly activities
 
 Practical rhythms for operators using Phantix.
 
@@ -8,7 +8,7 @@ Practical rhythms for operators using Phantix.
 
 | Activity | Where | Why |
 |----------|-------|-----|
-| Check **alerts** | Alerts / email / Telegram | Catch failed scans and critical risks |
+| Check **alerts** | Alerts or email or Telegram | Catch failed scans and critical risks |
 | Review **open risks** (P1–P2) | Risks | Keep critical items owned |
 | Approve **pending dual-control** actions | Approvals | Don’t block campaigns |
 | Skim **new assets** from discovery | Assets | Unexpected exposure |
@@ -19,23 +19,23 @@ Practical rhythms for operators using Phantix.
 
 | Activity | Where | Why |
 |----------|-------|-----|
-| Run or schedule **scoped scans** on crown jewels | Scans / VAPT | Continuous assurance |
-| Review **unverified** findings (if shown) | Findings / report appendix | Decide manual verify or dismiss |
-| Update **tags / criticality** | Assets | Better prioritization |
+| Run or schedule **scoped scans** on crown jewels | Scans and VAPT | Continuous assurance |
+| Review **unverified** findings (if shown) | Findings and report appendix | Decide manual verify or dismiss |
+| Update **tags and criticality** | Assets | Better prioritization |
 | Sync **GitHub** repos if engineering moved fast | GitHub | Keep inventory fresh |
 | Check **tracker** remediation dates | Reports → Tracker | Drive closure |
 
 ---
 
-## Every month / board cycle
+## Every month and board cycle
 
 | Activity | Where | Why |
 |----------|-------|-----|
-| Generate **executive report** (Premium) | Reports | Board / auditor pack |
-| Confirm **impact** language on top findings | Findings / report | Business conversation |
+| Generate **executive report** (Premium) | Reports | Board and auditor pack |
+| Confirm **impact** language on top findings | Findings and report | Business conversation |
 | Review **compliance gaps** | Compliance | GRC progress |
 | Optional: invoke **GRC or VAPT agent** for narrative assist | AI Agent | Faster write-ups |
-| Billing: confirm subscription / seats | Billing | Avoid surprise locks |
+| Billing: confirm subscription and seats | Billing | Avoid surprise locks |
 
 ---
 
@@ -43,7 +43,7 @@ Practical rhythms for operators using Phantix.
 
 ### A. “We launched a new subdomain”
 
-1. Assets → Add domain / run discovery
+1. Assets → Add domain and run discovery
 2. Tag criticality
 3. Scan (as entitled)
 4. Review findings → risks
@@ -62,11 +62,11 @@ Practical rhythms for operators using Phantix.
 2. Review verified findings + impact
 3. Generate report
 4. Optional: **VAPT agent** write-up assist
-5. Share PDF / tracker with IT
+5. Share PDF or tracker with IT
 
 ### D. “Auditor asked for evidence”
 
-1. Compliance → frameworks / gaps
+1. Compliance → frameworks and gaps
 2. Link technical findings where mapped
 3. Export report section
 4. Optional: **GRC agent** for narrative (evidence still from engines)

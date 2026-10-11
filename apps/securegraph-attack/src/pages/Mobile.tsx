@@ -18,6 +18,8 @@ import { UpsellBanner } from "@sg/components/UpgradeGate";
 interface UploadResult {
   package_name?: string | null;
   sha256?: string;
+  /** Org-scoped object-storage key for the stored binary (from the upload). */
+  storage_key?: string;
   size_bytes?: number;
   findings_count?: number;
   findings_preview?: Array<Record<string, unknown>>;
@@ -63,6 +65,9 @@ export default function Mobile() {
       form.append("confirm_ownership", "true");
       const res = await api.upload<UploadResult>("/assets/upload/apk", form);
       setResult(res);
+      // Pre-fill the "analyze stored" field with the key the upload returned, so
+      // re-analysis uses a valid org-scoped key instead of a hand-typed path.
+      if (res.storage_key) setStorageKey(res.storage_key);
       toast("success", "Package analyzed", "A mobile_apk asset was created or updated.");
     } catch (e: unknown) {
       const err = e as { message?: string; detail?: { message?: string } };
@@ -98,8 +103,8 @@ export default function Mobile() {
     <div>
       <PageHeader
         title="Mobile"
-        description="Static analysis of Android APK/AAB and iOS IPA packages"
-        actions={<DocLink docId="howto-app-21" label="Mobile testing how-to" />}
+        description="Static analysis of Android APK files, Android App Bundles and iOS app packages"
+        actions={<DocLink docId="howto-app-32" label="Mobile testing how-to" />}
       />
 
       {/* Dynamic runtime (AVD) testing is an engagement, not a self-serve scan. */}
@@ -110,10 +115,10 @@ export default function Mobile() {
           <Card>
             <CardHeader
               title="Analyze a package"
-              subtitle="Upload an APK for inventory analysis. Runs statically — the binary is never executed."
+              subtitle="Upload an APK for inventory analysis. SecureGraph analyzes it statically and never runs the binary."
               action={<Upload size={16} className="text-gold-300" />}
             />
-            <div className="space-y-3 p-4">
+            <div className="space-y-3">
               <div>
                 <label className="label">Package file (.apk)</label>
                 <input
@@ -129,10 +134,10 @@ export default function Mobile() {
                   }}
                 />
                 <p className="mt-1 text-[13px] text-slate-500">
-                  For AAB/IPA, upload to storage first and analyze by storage key below.
+                  For an Android App Bundle or an iOS app package, upload the file to storage first, then analyze it by storage key below.
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="label">Display name</label>
                   <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Customer app" />
@@ -141,15 +146,15 @@ export default function Mobile() {
                   <label className="label">Environment</label>
                   <input className="input" value={environment} onChange={(e) => setEnvironment(e.target.value)} placeholder="production" />
                 </div>
-              </div>
-              <div>
-                <label className="label">Criticality</label>
-                <select className="input" value={criticality} onChange={(e) => setCriticality(e.target.value)}>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
+                <div>
+                  <label className="label">Criticality</label>
+                  <select className="input" value={criticality} onChange={(e) => setCriticality(e.target.value)}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
               </div>
               <button className="btn-primary w-full" disabled={busy || !file} onClick={() => void upload()}>
                 {busy ? <Loader2 size={14} className="mr-1.5 inline animate-spin" /> : <Smartphone size={14} className="mr-1.5 inline" />}
@@ -164,10 +169,10 @@ export default function Mobile() {
           <Card>
             <CardHeader
               title="Analyze a stored package"
-              subtitle="AAB / IPA or an object already in storage — analyze by storage key."
+              subtitle="An Android App Bundle or an iOS app package, or an object that is already in storage. Analyze it by storage key."
               action={<ScanSearch size={16} className="text-gold-300" />}
             />
-            <div className="space-y-3 p-4">
+            <div className="space-y-3">
               <div>
                 <label className="label">Storage key</label>
                 <input

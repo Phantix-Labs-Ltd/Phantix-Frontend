@@ -71,7 +71,7 @@ export default function DeviceConfirm() {
               <h1 className="mt-5 font-display text-2xl font-bold text-white">Device confirmed</h1>
               <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-400">
                 This browser is now your primary device for <span className="text-slate-200">{org}</span>. You can return
-                to the sign-in tab — it will finish automatically.
+                to the sign-in tab. It will finish automatically.
               </p>
               <Link to="/login" className="btn-primary mt-6 inline-flex w-full items-center justify-center !py-3">
                 Return to sign in

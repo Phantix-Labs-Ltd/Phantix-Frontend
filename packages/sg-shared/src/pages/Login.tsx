@@ -5,20 +5,37 @@ import {
   ArrowRight, KeyRound, Mail, ShieldCheck, Smartphone, Loader2, PlayCircle,
   Link2, Building2, User, AlertOctagon, AlertTriangle, Check, Send, RefreshCw,
 } from "lucide-react";
-import { api, ApiError, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId } from "@sg/api";
+import { api, ApiError, publicDetailCopy, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId, adoptAppSession, type IssuedAppSession } from "@sg/api";
 import { useStore } from "@sg/store";
 import { PLATFORM_URL } from "@sg/links";
 import { cx, humanize } from "@sg/utils";
 import { listenDeviceConfirmed, claimExchange, newExchangeGuard } from "@sg/deviceConfirm";
 import { BrandWordmark } from "@sg/components/BrandLogo";
 import AuthShowcase from "@sg/components/AuthShowcase";
+import { BrandLoader } from "@sg/components/BrandLoader";
+import { loadAppIdentity } from "@sg/applications";
 import { ThemeToggle } from "@sg/ThemeToggle";
 
 /** After sign-in, go to the picker — remembering the application the operator
  *  was sent here from (`?next=`) so RBAC can hand the session straight back. */
 function chooseAppHref(): string {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get("next");
+  if (!next) return "/choose-app";
+  const q = new URLSearchParams({ next });
+  const path = params.get("path");
+  if (path) q.set("path", path);
+  return `/choose-app?${q.toString()}`;
+}
+
+const NEXT_LABEL: Record<string, string> = { attack: "Attack", defend: "Defend", code: "Code" };
+
+/** Says where sign-in leads when the operator was sent here on the way to an
+ *  application, so the form does not read as being signed out. */
+function destinationNote(): string | null {
   const next = new URLSearchParams(window.location.search).get("next");
-  return next ? `/choose-app?next=${encodeURIComponent(next)}` : "/choose-app";
+  const label = next ? NEXT_LABEL[next] : undefined;
+  return label ? `Sign in to continue to ${label}.` : null;
 }
 
 
@@ -49,6 +66,35 @@ function serviceKeyMessage(err: unknown): string | null {
     return "Application access is not enabled for this company yet. An admin must create a service key on the Platform before operators can sign in.";
   }
   return null;
+}
+
+/**
+ * What a failed sign-in step should say. The backend answers every sign-in
+ * failure with 401, which the shared client words as "Your session has
+ * expired" — wrong before anyone has signed in. Say what actually went wrong:
+ * a replaced or expired link, a password that was never set, wrong details.
+ */
+function signInError(err: unknown, fallback: string): string {
+  if (!(err instanceof ApiError)) return err instanceof Error ? err.message : fallback;
+  if (err.status !== 401) return err.message;
+  const raw = (err.serverMessage || "").toLowerCase();
+  if (raw.includes("password not set")) {
+    return "You have not set a password yet. Open the login link your administrator emailed you and set one there first.";
+  }
+  if (raw.includes("sign-in link expired")) {
+    return "This login link has expired. Ask your administrator to send you a new one.";
+  }
+  if (raw.includes("sign-in link") || raw.includes("user not found")) {
+    return "This login link is no longer valid. Sending a new link replaces the old one, so use the latest email you received, or ask your administrator to send a new link.";
+  }
+  if (raw.includes("invalid email or password")) return "Incorrect email or password.";
+  if (raw.includes("multiple organizations")) {
+    return "This email belongs to more than one organization. Sign in from the login link your administrator emailed you.";
+  }
+  if (raw.includes("login session") || raw.includes("confirmation link")) {
+    return "This sign-in attempt has timed out. Start again.";
+  }
+  return publicDetailCopy(err.detail) ?? fallback;
 }
 
 /** Detect the device-bound 401 so the UI can offer rotation. */
@@ -106,6 +152,27 @@ export default function Login() {
   useEffect(() => { if (API_BASE && isDemoFlagSet()) exitDemoMode(); }, []);
 
   const demoMode = isDemoMode();
+
+  // Already signed in to Core (e.g. an application sent the operator here with
+  // `?next=attack`): skip the form and go on to the picker, which hands the
+  // session to that application. A rejected session just shows the form, and a
+  // plain visit to /login (no `next`) still shows it, e.g. to switch accounts.
+  const resumable = !demoMode && !isInvite && Boolean(searchParams.get("next")) && Boolean(tokens.appSession);
+  const [resuming, setResuming] = useState(resumable);
+  useEffect(() => {
+    if (!resumable) return;
+    let alive = true;
+    loadAppIdentity({ force: true })
+      .then((me) => {
+        if (!alive) return;
+        if (me) navigate(chooseAppHref(), { replace: true });
+        else setResuming(false);
+      })
+      .catch(() => { if (alive) setResuming(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (resuming) return <BrandLoader message="Checking your session" />;
 
   // No invite link and not demo → show returning sign-in (email + password) + paste-link option.
   if (!demoMode && !isInvite) {
@@ -217,7 +284,7 @@ function ReturningLogin({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else setError(err instanceof Error ? err.message : "Invalid email or password");
+      else setError(signInError(err, "Invalid email or password"));
     } finally {
       setBusy(false);
     }
@@ -231,9 +298,7 @@ function ReturningLogin({
     setError("A new code was sent. Enter the latest code.");
   };
 
-  type MfaResult = {
-    access_token?: string;
-    device_token?: string;
+  type MfaResult = IssuedAppSession & {
     device_verification_required?: boolean;
     user?: { full_name?: string; email?: string };
     user_email?: string;
@@ -252,8 +317,7 @@ function ReturningLogin({
   };
 
   const finishLogin = (res: MfaResult, rotated = false) => {
-    tokens.appSession = res.access_token ?? "";
-    tokens.device = res.device_token ?? "";
+    adoptAppSession(res);
     const dcSessionToken = res.dual_control_session_token ?? res.dual_control?.session_token;
     if (dcSessionToken) tokens.dualControl = dcSessionToken;
 
@@ -262,7 +326,7 @@ function ReturningLogin({
     const isInit = res.is_initiator === true || res.dual_control?.is_initiator === true;
     const isAuth = res.is_authorizer === true || res.dual_control?.is_authorizer === true;
     completeAppLogin(emailAddr, name, isInit, isAuth);
-    toast("success", rotated ? "Device confirmed" : "Signed in", rotated ? "Welcome" + (name ? " " + name : "") + " — this browser is now your primary device." : "Welcome" + (name ? " " + name : " back"));
+    toast("success", rotated ? "Device confirmed" : "Signed in", rotated ? "Welcome" + (name ? " " + name : "") + " This browser is now your primary device." : "Welcome" + (name ? " " + name : " back"));
     navigate(chooseAppHref());
   };
 
@@ -288,7 +352,7 @@ function ReturningLogin({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else { setError(err instanceof Error ? err.message : "Verification failed"); setCode(""); }
+      else { setError(signInError(err, "Verification failed")); setCode(""); }
     } finally {
       setBusy(false);
     }
@@ -306,7 +370,7 @@ function ReturningLogin({
         device_id: deviceId(),
       }, { realm: "application" });
       if (res && res.confirmed === false) return false;
-      if (!res?.access_token) {
+      if (!res?.access_token && res?.session_transport !== "cookie") {
         // Someone already finished this sign-in with this link. Say so rather
         // than waiting out the timeout on a link that can never complete here.
         if (res?.already_completed) {
@@ -375,7 +439,7 @@ function ReturningLogin({
   return (
     <LoginChrome>
       <motion.div initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }} className="w-full max-w-[420px]">
-        <LoginBrand subtitle="Application sign-in" note="Returning user? Sign in with your email and password." />
+        <LoginBrand subtitle="Application sign-in" note={destinationNote() ?? "Returning user? Sign in with your email and password."} />
         <div className="card p-7">
           <AuthErrorBanner message={error} />
           {showInvite ? (
@@ -432,7 +496,7 @@ function ReturningLogin({
                 </div>
                 <OtpInput value={code} onChange={setCode} onEnter={() => retryIn === 0 && code.length === 6 && void verify()} />
                 <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0 || code.length !== 6} onClick={() => void verify()}>
-                  {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Verifying...</> : <>Verify & sign in</>}
+                  {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Verifying...</> : <>Verify and sign in</>}
                 </button>
                 <button type="button" onClick={() => void resendCode()} disabled={busy || retryIn > 0} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">Resend code</button>
                 <button type="button" onClick={() => { setStage("email"); setError(null); }} disabled={busy} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">Use a different account</button>
@@ -446,7 +510,7 @@ function ReturningLogin({
                   <p className="mt-2 text-sm font-medium text-slate-200">Confirm this new device</p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
                     A confirmation link was sent to {maskedDest || "your organization address"}. Open it to make
-                    this browser your primary device — no additional code needed.
+                    this browser your primary device. No additional code is necessary.
                   </p>
                 </div>
                 <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
@@ -534,7 +598,7 @@ function AppLoginFlow({
         if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
         else setError(err instanceof ApiError && err.status === 403
           ? "This login link requires an active service key. Contact your organization admin to create one on the platform."
-          : err instanceof Error ? err.message : "Login link validation failed");
+          : signInError(err, "Login link validation failed"));
       } finally {
         setBusy(false);
       }
@@ -568,7 +632,7 @@ function AppLoginFlow({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else setError(err instanceof Error ? err.message : "Could not save password");
+      else setError(signInError(err, "Could not save password"));
     } finally {
       setBusy(false);
     }
@@ -598,7 +662,7 @@ function AppLoginFlow({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else setError(err instanceof Error ? err.message : "Password verification failed");
+      else setError(signInError(err, "Password verification failed"));
     } finally {
       setBusy(false);
     }
@@ -610,9 +674,7 @@ function AppLoginFlow({
     setBusy(true);
     setError(null);
     try {
-      const res = await api.post<{
-        access_token?: string;
-        device_token?: string;
+      const res = await api.post<IssuedAppSession & {
         device_verification_required?: boolean;
         user?: { full_name?: string; email?: string };
         user_email?: string;
@@ -644,8 +706,7 @@ function AppLoginFlow({
         return;
       }
 
-      tokens.appSession = res.access_token ?? "";
-      tokens.device = res.device_token ?? "";
+      adoptAppSession(res);
       const devId2 = localStorage.getItem("phantix_device_id") ?? crypto.randomUUID();
       localStorage.setItem("phantix_device_id", devId2);
 
@@ -666,7 +727,7 @@ function AppLoginFlow({
     } catch (err) {
       const sk = serviceKeyMessage(err);
       if (sk) { setBlocked(sk); setStage("service_key_blocked"); }
-      else { setError(err instanceof Error ? err.message : "Verification failed"); setCode(""); }
+      else { setError(signInError(err, "Verification failed")); setCode(""); }
     } finally {
       setBusy(false);
     }
@@ -679,12 +740,12 @@ function AppLoginFlow({
   const checkDeviceConfirmed = useCallback(async (): Promise<boolean> => {
     if (!deviceToken) return false;
     const exchange = async (): Promise<boolean> => {
-      const res = await api.post<{ access_token?: string; device_token?: string; confirmed?: boolean; already_completed?: boolean; user?: { full_name?: string; email?: string }; user_email?: string; dual_control?: { session_token?: string; can_operate?: boolean; is_initiator?: boolean; is_authorizer?: boolean }; dual_control_session_token?: string }>("/app/auth/device-status", {
+      const res = await api.post<IssuedAppSession & { confirmed?: boolean; already_completed?: boolean; user?: { full_name?: string; email?: string }; user_email?: string; dual_control?: { session_token?: string; can_operate?: boolean; is_initiator?: boolean; is_authorizer?: boolean }; dual_control_session_token?: string }>("/app/auth/device-status", {
         device_token: deviceToken,
         device_id: deviceId(),
       }, { realm: "application" });
       if (!res || res.confirmed === false) return false;
-      if (!res.access_token) {
+      if (!res.access_token && res.session_transport !== "cookie") {
         // Someone already finished this sign-in with this link. Say so rather
         // than waiting out the timeout on a link that can never complete here.
         if (res.already_completed) {
@@ -694,8 +755,7 @@ function AppLoginFlow({
         return false;
       }
 
-      tokens.appSession = res.access_token ?? "";
-      tokens.device = res.device_token ?? "";
+      adoptAppSession(res);
       const dcSessionToken = res.dual_control_session_token ?? res.dual_control?.session_token;
       if (dcSessionToken) tokens.dualControl = dcSessionToken;
 
@@ -777,7 +837,7 @@ function AppLoginFlow({
       setCode("");
       setError("A new code was sent. Enter the latest code.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not resend code");
+      setError(signInError(err, "Could not resend code"));
     } finally {
       setBusy(false);
     }
@@ -788,7 +848,7 @@ function AppLoginFlow({
     return (
       <LoginChrome>
         <motion.div initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[420px] text-center">
-          <LoginBrand subtitle="Application sign-in" note="Demo mode --- explore features instantly" />
+          <LoginBrand subtitle="Application sign-in" note="Demo mode. Explore features instantly" />
           <button
             onClick={() => { enterDemo(); navigate("/choose-app"); }}
             className="mt-2 inline-flex items-center gap-2 rounded-md border border-gold-400/40 bg-phantix-800 px-6 py-3 font-semibold text-gold-300 hover:bg-phantix-850"
@@ -860,7 +920,7 @@ function AppLoginFlow({
                   </div>
                 </div>
                 <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0 || !password || !confirmPassword}>
-                  {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Saving...</> : <>Set password & continue <ArrowRight size={15} /></>}
+                  {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Saving...</> : <>Set password and continue <ArrowRight size={15} /></>}
                 </button>
               </motion.form>
             )}
@@ -891,7 +951,7 @@ function AppLoginFlow({
                       <p className="mt-2 text-sm font-medium text-slate-200">Confirm this new device</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">
                         A confirmation link was sent to {maskedDest || "your organization address"}. Open it to make
-                        this browser your primary device — no additional code needed.
+                        this browser your primary device. No additional code is necessary.
                       </p>
                       {(orgName || userName) && (
                         <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[12px] text-slate-600">
@@ -930,7 +990,7 @@ function AppLoginFlow({
                     </div>
                     <OtpInput value={code} onChange={setCode} onEnter={() => retryIn === 0 && code.length === 6 && void verifyMfa()} />
                     <button className="btn-primary w-full !py-3" disabled={busy || retryIn > 0 || code.length !== 6} onClick={() => void verifyMfa()}>
-                      {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Verifying...</> : "Verify & sign in"}
+                      {retryIn > 0 ? `Try again in ${retryIn}s` : busy ? <><Loader2 size={14} className="mr-1.5 inline animate-spin" /> Verifying...</> : "Verify and sign in"}
                     </button>
                     <button type="button" onClick={() => void resendInviteOtp()} disabled={busy || retryIn > 0} className="w-full text-center text-xs text-slate-500 hover:text-slate-300 disabled:opacity-50">
                       Resend code
@@ -1035,15 +1095,15 @@ function PasteLinkBox({ onCancel }: { onCancel?: () => void }) {
     setError("");
     const trimmed = link.trim();
     if (!trimmed) { setError("Paste your login link from the platform"); return; }
-    if (trimmed.length > MAX_LINK_LENGTH) { setError(`Link is too long --- max ${MAX_LINK_LENGTH} characters`); return; }
+    if (trimmed.length > MAX_LINK_LENGTH) { setError(`Link is too long. The maximum is ${MAX_LINK_LENGTH} characters.`); return; }
     try {
       const url = new URL(trimmed);
       if (!url.hostname.includes("phantix") && !url.hostname.includes("localhost")) {
-        setError("This doesn't look like a SecureGraph login link. Expected domain: app.phantixlabs.com");
+        setError("This does not look like a SecureGraph login link. Expected domain: app.phantixlabs.com");
         return;
       }
       if (!url.pathname.startsWith("/login")) {
-        setError("This URL doesn't point to the login page. Expected path: /login");
+        setError("This URL does not point to the login page. Expected path: /login");
         return;
       }
       const params = url.searchParams;

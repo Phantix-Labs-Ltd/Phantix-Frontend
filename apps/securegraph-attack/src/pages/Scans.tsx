@@ -12,6 +12,7 @@ import { useOperations } from "@sg/operations";
 import { timeAgo, formatDateTime, cx, severityHex, humanize } from "@sg/utils";
 import { useStore } from "@sg/store";
 import type { VerificationStatus, ScanResult, ScanJob } from "@sg/types";
+import { SetupRequired } from "@sg/platformSetup";
 
 
 /** "asset_types: web_app, api" instead of raw JSON, so the scope fits one line. */
@@ -25,7 +26,7 @@ function scopeLabel(filter: unknown): string {
 }
 
 export default function Scans() {
-  const { toast, requireDualControl } = useStore();
+  const { toast, requireDualControl, dualControl } = useStore();
   const { data, loading, error, reload } = useResource(loadScansBundle, {
     scanJobs: [],
     scanResults: [],
@@ -156,14 +157,14 @@ export default function Scans() {
 
   const handleVerify = async (status: VerificationStatus) => {
     if (!selected) return;
-    if (!(await requireDualControl("Changing a finding's verification status requires a dual-control operate session."))) return;
+    if (!(await requireDualControl("Use a dual-control operate session to change the verification status of a finding."))) return;
     setVerifyBusy(status);
     try {
       const updated = await verifyScanResult(selected.id, { verification_status: status as "manually_verified" | "rejected" | "false_positive", note: note || undefined });
       if (updated) {
         setSelected(updated);
         setNote("");
-        toast("success", "Verification updated", `${status.replace(/_/g, " ")} — the reporting gate now reflects this decision.`);
+        toast("success", "Verification updated", `${status.replace(/_/g, " ")}. The reporting gate now reflects this decision.`);
         reload();
       }
     } catch (e: any) {
@@ -181,7 +182,7 @@ export default function Scans() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load scan jobs. Check your connection and retry — your session stays signed in."
+        body="We could not load the scan jobs. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -213,6 +214,7 @@ export default function Scans() {
           </>
         }
       />
+      <SetupRequired action="run active scans" needs={dualControl.policy_mode === "off" ? ["database", "verified_domain"] : ["database"]} />
 
       {/* Active job banner */}
       {active && (
@@ -223,7 +225,7 @@ export default function Scans() {
                 <Radar size={19} />
                 <span className="absolute inset-0 animate-ping rounded-xl bg-severity-low/20" />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[12rem] flex-1">
                 <div className="flex items-center gap-2.5">
                   <p className="font-semibold text-slate-100">Job #{active.id} --- {(active.tools ?? []).join(" + ")}</p>
                   <StatusBadge status={active.status} />
@@ -242,7 +244,7 @@ export default function Scans() {
                 onClick={() =>
                   void (async () => {
                     if (!(await requireDualControl("Cancelling a scan requires a dual-control operate session."))) return;
-                    toast("info", "Cancel requested", "The scan is being stopped — its status updates shortly.");
+                    toast("info", "Cancel requested", "The scan is stopping. Its status updates shortly.");
                   })()
                 }
               >
@@ -262,7 +264,7 @@ export default function Scans() {
                 <Github size={19} />
                 <span className="absolute inset-0 animate-ping rounded-xl bg-phantix-500/20" />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[12rem] flex-1">
                 <div className="flex items-center gap-2.5">
                   <p className="font-semibold text-slate-100">GitHub analysis #{githubActive.id}</p>
                   <StatusBadge status={githubActive.status} />
@@ -334,7 +336,7 @@ export default function Scans() {
                     <td className="td"><StatusBadge status={j.status} /></td>
                     <td className="td font-semibold text-slate-200">{j.findings_count}</td>
                     <td className="td text-xs text-slate-400">{j.initiated_by}</td>
-                    <td className="td whitespace-nowrap text-[13px] text-slate-400">{j.finished_at ? formatDateTime(j.finished_at) : "—"}</td>
+                    <td className="td whitespace-nowrap text-[13px] text-slate-400">{j.finished_at ? formatDateTime(j.finished_at) : "Not set"}</td>
                     <td className="td">
                       {resumableJob(j) ? (
                         <button
@@ -345,7 +347,7 @@ export default function Scans() {
                           {resumeBusy === j.id ? "Resuming..." : "Resume"}
                         </button>
                       ) : (
-                        <span className="text-xs text-slate-600">—</span>
+                        <span className="text-xs text-slate-600">Not set</span>
                       )}
                     </td>
                   </tr>
@@ -407,10 +409,10 @@ export default function Scans() {
                   <Card hover className="!p-4">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: severityHex[r.severity], boxShadow: `0 0 10px ${severityHex[r.severity]}88` }} />
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-[12rem] flex-1">
                         <p className="font-medium text-slate-100">{r.title}</p>
                         <p className="mt-0.5 text-xs text-slate-500">
-                          <span className="font-mono">{r.asset_value || "—"}</span> · {r.tool} · job #{r.scan_job_id} · {timeAgo(r.created_at)}
+                          <span className="font-mono">{r.asset_value || "Not set"}</span> · {r.tool} · job #{r.scan_job_id} · {timeAgo(r.created_at)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -468,7 +470,7 @@ export default function Scans() {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-lg bg-phantix-950/50 border border-phantix-700/40 px-3 py-2">
                 <p className="text-[12px] uppercase tracking-wider text-slate-500">Asset</p>
-                <p className="mt-0.5 font-mono text-slate-200">{selected.asset_value || "—"}</p>
+                <p className="mt-0.5 font-mono text-slate-200">{selected.asset_value || "Not set"}</p>
               </div>
               <div className="rounded-lg bg-phantix-950/50 border border-phantix-700/40 px-3 py-2">
                 <p className="text-[12px] uppercase tracking-wider text-slate-500">Tool / Job</p>

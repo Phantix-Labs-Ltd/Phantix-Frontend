@@ -162,7 +162,7 @@ function IncidentScene() {
           <span className="ml-auto font-mono text-[12px] text-slate-500">8.4K events / 6m</span>
         </div>
         <p className="mt-2.5 text-sm leading-6 text-slate-200">
-          <span className="font-semibold text-white">Lateral movement</span> detected on api.acme.ng — playbook
+          <span className="font-semibold text-white">Lateral movement</span> . Playbook
           <span style={{ color: GOLD }}> IR-03</span> invoked, scope auto-contained.
         </p>
         <div className="mt-3 grid grid-cols-4 gap-2">
@@ -309,7 +309,7 @@ const INSIGHTS: Insight[] = [
     icon: <Radar size={20} />,
     kicker: "Continuous asset discovery",
     title: "A security layer that watches and never sleeps.",
-    body: "Every domain, API, repo and port you own is watched around the clock. Anything new or drifting gets scanned the moment it appears.",
+    body: "Every domain, API, repo and port you own is watched around the clock. Anything new, or anything that drifts, gets scanned the moment it appears.",
     stat: { label: "assets tracked", value: 1284 },
     scene: <GlobeScene />,
   },
@@ -327,7 +327,7 @@ const INSIGHTS: Insight[] = [
     icon: <Siren size={20} />,
     kicker: "Incident response",
     title: "Detect → triage → contain → recover.",
-    body: "Playbooks move incidents along a governed timeline with ownership, scope and evidence at every phase — so a breach becomes a documented recovery.",
+    body: "Playbooks move incidents along a governed timeline with ownership, scope and evidence . A breach then becomes a documented recovery.",
     stat: { label: "mean time to contain", value: 23 },
     scene: <IncidentScene />,
   },
@@ -336,7 +336,7 @@ const INSIGHTS: Insight[] = [
     icon: <BellRing size={20} />,
     kicker: "Real-time alerting",
     title: "Critical findings, delivered in seconds.",
-    body: "Verified alerts pulse to Email, WhatsApp and Telegram the instant they're confirmed — with dual-control for sensitive actions.",
+    body: "Verified alerts go to Email, WhatsApp and Telegram immediately after confirmation, with dual-control for sensitive actions.",
     stat: { label: "median alert time", value: 9 },
     scene: <AlertsScene />,
   },
@@ -345,7 +345,7 @@ const INSIGHTS: Insight[] = [
     icon: <TerminalSquare size={20} />,
     kicker: "AI pentest agent",
     title: "An autonomous agent that earns its skills.",
-    body: "The agent plans, scans and correlates with approved, anonymized skills — and a human reviews every step before anything is minted.",
+    body: "The agent plans, scans and correlates with approved, anonymized skills. A human reviews every step before anything is minted.",
     stat: { label: "remediation coverage", value: 85 },
     scene: <AgentScene />,
   },
@@ -353,8 +353,8 @@ const INSIGHTS: Insight[] = [
     id: "ai",
     icon: <Cpu size={20} />,
     kicker: "SecureGraph AI agent",
-    title: "SecureGraph Agent — AI that never clocks out.",
-    body: "SecureGraph Agent plans, scans and correlates across your assets around the clock — every action governed, audited and human-approved.",
+    title: "SecureGraph Agent: AI that works around the clock.",
+    body: "SecureGraph Agent plans, scans and correlates across your assets . Every action is governed, audited and human-approved.",
     stat: { label: "coverage", value: 24 },
     scene: <AgentBotScene />,
   },

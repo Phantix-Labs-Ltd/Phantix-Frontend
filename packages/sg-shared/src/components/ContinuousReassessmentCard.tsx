@@ -4,6 +4,7 @@ import { AlertTriangle, GitBranch, Loader2, Play, RefreshCw, CalendarClock } fro
 import { Card, CardHeader, EmptyState, CardListSkeleton } from "../ui";
 import { api, publicErrorMessage } from "../api";
 import { useStore } from "../store";
+import { listProjects } from "../productContext";
 import { cx, timeAgo } from "../utils";
 import {
   enableContinuousReassessment,
@@ -39,7 +40,8 @@ export default function ContinuousReassessmentCard() {
     try {
       const [sched, proj] = await Promise.all([
         listContinuousReassessment(),
-        api.get<any>("/context/projects").catch(() => null),
+        // listProjects serves the demo tenant its fixture projects.
+        listProjects(false).catch(() => null),
       ]);
       setRows(Array.isArray(sched?.schedules) ? sched.schedules : []);
       const items = Array.isArray(proj) ? proj : (proj?.items ?? []);

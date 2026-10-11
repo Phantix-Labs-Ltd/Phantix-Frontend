@@ -53,8 +53,11 @@ export type AgiClarification = {
 
 function normalizeClarification(c: Record<string, unknown>): AgiClarification {
   return {
-    clarification_id: String(c.clarification_id ?? ""),
-    question: String(c.question ?? ""),
+    // `clarification_id` is the documented key; accept a bare `id` too so an ask
+    // shaped that way still carries an identity (without one it is dropped, and
+    // the prompt never renders).
+    clarification_id: String(c.clarification_id ?? c.id ?? ""),
+    question: String(c.question ?? c.prompt ?? c.message ?? ""),
     options: Array.isArray(c.options) ? c.options.map((o) => String(o)).filter(Boolean) : undefined,
     allow_free_text: typeof c.allow_free_text === "boolean" ? c.allow_free_text : true,
     context: c.context ? String(c.context) : undefined,
@@ -63,11 +66,40 @@ function normalizeClarification(c: Record<string, unknown>): AgiClarification {
   };
 }
 
-/** The job view's `open_clarification`, whichever shape the job payload is. */
-function clarificationCarrier(job: unknown): Record<string, unknown> | null {
+// A clarification is only hidden once it reaches a terminal state. Gating the
+// prompt on the status being literally "open" parked the run whenever the
+// backend labelled a live ask anything else ("pending", "waiting", "asked", …)
+// or added a new status the frontend had never seen: the turn brief still
+// counted it as an open information request, but no form was drawn to answer it.
+const SETTLED_CLARIFICATION_STATUS = new Set([
+  "answered", "resolved", "closed", "done", "complete", "completed",
+  "cancelled", "canceled", "dismissed", "expired", "skipped", "settled",
+]);
+
+function isSettledStatus(status?: string): boolean {
+  return SETTLED_CLARIFICATION_STATUS.has((status ?? "").trim().toLowerCase());
+}
+
+/**
+ * Candidate ask records held by one carrier. A carrier is normally a single ask
+ * object, but the backend sometimes publishes a list (`[{…}]`); an array is
+ * still `typeof "object"`, so the old single-object read handed it straight to
+ * `normalizeClarification`, which found no id on the array and dropped it —
+ * leaving the run parked with a count but no prompt.
+ */
+function clarificationCandidates(carrier: unknown): Record<string, unknown>[] {
+  if (!carrier || typeof carrier !== "object") return [];
+  if (Array.isArray(carrier)) {
+    return carrier.filter((c): c is Record<string, unknown> => !!c && typeof c === "object");
+  }
+  return [carrier as Record<string, unknown>];
+}
+
+/** The job view's open ask, under either documented key and whatever shape. */
+function jobClarification(job: unknown): unknown {
   if (!job || typeof job !== "object") return null;
-  const ask = (job as Record<string, unknown>).open_clarification;
-  return ask && typeof ask === "object" ? (ask as Record<string, unknown>) : null;
+  const o = job as Record<string, unknown>;
+  return o.open_clarification ?? o.clarification ?? null;
 }
 
 /**
@@ -96,25 +128,25 @@ export function openClarificationFrom(
   transcript?: AgiTranscriptChunk[] | null,
   answeredClarificationId?: string | null,
 ): AgiClarification | null {
-  const carriers = [
+  const carriers: unknown[] = [
     session?.clarification,
     session?.open_clarification,
-    clarificationCarrier(session?.job),
+    jobClarification(session?.job),
   ];
   let settled = false;
   for (const carrier of carriers) {
-    if (!carrier || typeof carrier !== "object") continue;
-    const c = normalizeClarification(carrier as Record<string, unknown>);
-    if (!c.clarification_id) continue;
-    // Answered recently → hide even if the session poll hasn't cleared it yet.
-    if (c.clarification_id === answeredClarificationId) {
-      settled = true;
-      continue;
+    for (const raw of clarificationCandidates(carrier)) {
+      const c = normalizeClarification(raw);
+      if (!c.clarification_id) continue;
+      // Answered recently, or reached a terminal state → hide even if the
+      // session poll hasn't cleared it yet. Anything else is a live ask.
+      if (c.clarification_id === answeredClarificationId || isSettledStatus(c.status)) {
+        settled = true;
+        continue;
+      }
+      // Authoritative: an ask that is still live outranks any settled copy.
+      return c;
     }
-    // Authoritative: an ask that is still open outranks any settled copy.
-    const status = (c.status ?? "").toLowerCase();
-    if (!status || status === "open") return c;
-    settled = true;
   }
   if (settled) return null;
   if (Array.isArray(transcript)) {
@@ -123,7 +155,7 @@ export function openClarificationFrom(
       const kind = String(t.meta?.kind ?? "").toLowerCase();
       if (kind === "clarification_needed" && t.meta?.clarification && typeof t.meta.clarification === "object") {
         const c = normalizeClarification(t.meta.clarification as Record<string, unknown>);
-        if (c.clarification_id && c.clarification_id !== answeredClarificationId) return c;
+        if (c.clarification_id && c.clarification_id !== answeredClarificationId && !isSettledStatus(c.status)) return c;
         return null;
       }
     }

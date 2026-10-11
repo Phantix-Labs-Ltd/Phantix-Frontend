@@ -82,7 +82,7 @@ export default function SocWarRoom() {
                             >
                               <td className="td"><SeverityBadge severity={c.severity as Severity} /></td>
                               <td className="td font-medium text-slate-200">{c.title}</td>
-                              <td className="td text-xs text-slate-500">{c.opened_at ? timeAgo(c.opened_at) : "—"}</td>
+                              <td className="td text-xs text-slate-500">{c.opened_at ? timeAgo(c.opened_at) : "Not set"}</td>
                               <td className="td"><StatusBadge status={c.status} /></td>
                               <td className="td">
                                 {slaBreached ? (
@@ -111,7 +111,7 @@ export default function SocWarRoom() {
               ) : playbookCatalog.map((pb) => (
                 <Card key={pb.id} className="!p-4">
                   <CardHeader title={pb.title} subtitle={humanize(pb.category)} />
-                  <p className="mt-2 text-xs text-slate-400">{pb.phases?.length || 0} phases</p>
+                  <p className="mt-2 text-xs text-slate-400">{pb.phase_count ?? pb.phases?.length ?? 0} phases</p>
                 </Card>
               ))}
             </motion.div>

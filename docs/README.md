@@ -1,22 +1,22 @@
-# Phantix — Public & landing documentation
+# Phantix. Public and landing documentation
 
 **Tagline:** PROTECT. PREVENT. PERFORM.
 **Audience:** Website visitors, buyers, investors, design partners, first-contact organizations, developers, founders
-**Tone:** Clear, confident, honest — outcomes first; no internal engineering jargon on the homepage path
+**Tone:** Clear, confident, honest. Outcomes first; no internal engineering jargon on the homepage path
 
 These documents are **client-facing**. Use them for:
 
 - Landing page copy and structure
-- Investor / partner one-pagers
+- Investor and partner one-pagers
 - First sales conversations
 - Public developer overview
-- Trust & privacy answers
+- Trust and privacy answers
 
 **Not for this folder:** internal API dumps, Celery queues, migration IDs. Deep technical catalogs live under `docs/` (engineering).
 
 ---
 
-## A. Marketing / audience pages (this folder)
+## A. Marketing and audience pages (this folder)
 
 | File | Best for |
 |------|----------|
@@ -24,9 +24,9 @@ These documents are **client-facing**. Use them for:
 | [02-for-business-leaders.md](./02-for-business-leaders.md) | CEOs, founders, boards |
 | [03-for-security-and-it.md](./03-for-security-and-it.md) | CISOs, IT managers, security engineers |
 | [04-for-investors-and-partners.md](./04-for-investors-and-partners.md) | Investors, MSSPs, resellers |
-| [05-product-capabilities.md](./05-product-capabilities.md) | Product depth (tabs / features) |
+| [05-product-capabilities.md](./05-product-capabilities.md) | Product depth (tabs and features) |
 | [06-privacy-and-trust.md](./06-privacy-and-trust.md) | Privacy model, NDPA, dual-control |
-| [07-pricing-and-plans.md](./07-pricing-and-plans.md) | Free / Premium / add-ons / engagements |
+| [07-pricing-and-plans.md](./07-pricing-and-plans.md) | Free or Premium or add-ons and engagements |
 | [08-how-it-works.md](./08-how-it-works.md) | Journey from signup to report |
 | [09-ai-with-accountability.md](./09-ai-with-accountability.md) | AI that advises, never invents facts |
 | [10-for-developers.md](./10-for-developers.md) | Public API overview (high level) |
@@ -38,9 +38,9 @@ These documents are **client-facing**. Use them for:
 
 ---
 
-## B. Help Centre / setup documentation (standard docs site)
+## B. Help Centre and setup documentation (standard docs site)
 
-**Folder:** [user-docs/](./user-docs/) — **use this for Documentation in the site nav.**
+**Folder:** [user-docs/](./user-docs/). **Use this for Documentation in the site nav.**
 
 | Doc | Content |
 |-----|---------|
@@ -49,22 +49,22 @@ These documents are **client-facing**. Use them for:
 | [user-docs/02-security-database.md](./user-docs/02-security-database.md) | PostgreSQL from Supabase, Neon, RDS, DO, Railway… + **Phantix-hosted DB coming soon** |
 | [user-docs/03-email-and-smtp.md](./user-docs/03-email-and-smtp.md) | SES, Brevo, Mailgun, SendGrid, Google, M365 |
 | [user-docs/04-alert-channels.md](./user-docs/04-alert-channels.md) | Telegram BotFather, WhatsApp Meta |
-| [user-docs/05-github-connection.md](./user-docs/05-github-connection.md) | GitHub App connect & analyze |
-| [user-docs/06-plans-and-billing.md](./user-docs/06-plans-and-billing.md) | Free / Premium / AI Agent API plan |
-| [user-docs/07-daily-activities.md](./user-docs/07-daily-activities.md) | Day / week / month workflows |
+| [user-docs/05-github-connection.md](./user-docs/05-github-connection.md) | GitHub App connect and analyze |
+| [user-docs/06-plans-and-billing.md](./user-docs/06-plans-and-billing.md) | Free or Premium or AI Agent API plan |
+| [user-docs/07-daily-activities.md](./user-docs/07-daily-activities.md) | Day and week and month workflows |
 | [user-docs/08-features-overview.md](./user-docs/08-features-overview.md) | Public feature list |
-| [user-docs/09-users-and-approvals.md](./user-docs/09-users-and-approvals.md) | Users & dual-control |
+| [user-docs/09-users-and-approvals.md](./user-docs/09-users-and-approvals.md) | Users and dual-control |
 | [user-docs/10-ai-agent-api.md](./user-docs/10-ai-agent-api.md) | Public AI Agent API only |
 | [user-docs/11-privacy-and-security.md](./user-docs/11-privacy-and-security.md) | Customer privacy view |
 | [user-docs/12-troubleshooting.md](./user-docs/12-troubleshooting.md) | Common fixes |
 
 ---
 
-## C. Brand & social
+## C. Brand and social
 
-**File:** [brand/social-profiles.md](./brand/social-profiles.md) — profile copy for LinkedIn, X,
+**File:** [brand/social-profiles.md](./brand/social-profiles.md). Profile copy for LinkedIn, X,
 Instagram, Facebook, YouTube and GitHub (name, tagline, About, bio), the handle plan, an asset
-matrix mapping the repo's logos, scene renders and screenshots to each platform slot, the
+matrix mapping the logos, scene renders and screenshots of the repo to each platform slot, the
 `sameAs` patch for `landing/index.html`, governance rules and the launch checklist.
 
 Drafts are length-checked against real platform field limits:
@@ -85,13 +85,13 @@ npm run validate:social
 
 ---
 
-## Contact / CTA defaults
+## Contact and CTA defaults
 
 | CTA | Destination |
 |-----|-------------|
 | Get started free | Platform registration |
-| Sign in | Platform / App (label clearly) |
-| Talk to us / Book engagement | Sales or contact form |
+| Sign in | Platform and App (label clearly) |
+| Talk to us and Book engagement | Sales or contact form |
 | Developer docs | Link to public API section or status |
 
-Update live NGN prices from the Platform billing API when the site goes live — do not hardcode stale amounts on the marketing site without a refresh path.
+Update live NGN prices from the Platform billing API when the site goes live. Do not hardcode stale amounts on the marketing site without a refresh path.

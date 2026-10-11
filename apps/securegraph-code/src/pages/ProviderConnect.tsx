@@ -108,7 +108,7 @@ export default function ProviderConnect() {
     navigator.clipboard
       ?.writeText(text)
       .then(() => toast("success", `${what} copied`))
-      .catch(() => toast("info", `${what} — select to copy`, text));
+      .catch(() => toast("info", `${what}. Select it to copy`, text));
 
   const connectGithub = useCallback(async () => {
     setBusy(true);
@@ -143,7 +143,7 @@ export default function ProviderConnect() {
       if (needsToken) body.secrets = { api_key: token.trim() };
       const res = await installHubIntegration(body);
       if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", "Install is parked for an authorizer — approve it from Authorizations.");
+        // A parked call opens the approval overlay (it names the authorizer).
         await load();
         return;
       }
@@ -176,7 +176,8 @@ export default function ProviderConnect() {
       try {
         const r = await startHubOAuth(installationId);
         if (r?.authorize_url) window.location.href = r.authorize_url;
-        else toast("info", "Awaiting approval", "The OAuth start may be parked for an authorizer.");
+        // A parked start opens the approval overlay; anything else is a failure.
+        else if (!isPendingApproval(r)) toast("error", "Could not start OAuth", "No authorization address came back. Try again.");
       } catch {
         toast("error", "Could not start OAuth");
       }
@@ -189,9 +190,8 @@ export default function ProviderConnect() {
       if (!(await requireDualControl(`Disconnecting ${meta.name} requires dual-control.`))) return;
       const res = await uninstallHubIntegration(install.installation_id);
       await load();
-      if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", `${install.label} disconnect is parked for an authorizer.`);
-      } else {
+      // A parked call opens the approval overlay (it names the authorizer).
+      if (!isPendingApproval(res)) {
         toast("success", "Disconnected", `${install.label} disconnected.`);
       }
     },
@@ -260,7 +260,7 @@ export default function ProviderConnect() {
               <div className="space-y-4 p-4">
                 <p className="text-sm leading-6 text-slate-300">
                   SecureGraph reviews every push to watched branches and opens <strong className="text-slate-100">draft pull requests</strong> for
-                  verified fixes. No token is stored — access is granted through the App installation.
+                  verified fixes. SecureGraph stores no token. Access comes through the App installation.
                 </p>
                 {!githubConnected ? (
                   <button className="btn-primary w-full" disabled={busy} onClick={() => void connectGithub()}>
@@ -335,7 +335,7 @@ export default function ProviderConnect() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <Card className="h-full">
             <CardHeader title="Setup" subtitle="What to configure on the provider side" action={<Webhook size={16} className="text-gold-300" />} />
-            <div className="space-y-3 p-4">
+            <div className="space-y-3">
               <ol className="space-y-2 text-sm leading-6 text-slate-300">
                 {steps.map((step, i) => (
                   <li key={i} className="flex gap-2">
@@ -431,7 +431,7 @@ export default function ProviderConnect() {
                       <td className="td text-xs text-slate-400">{humanize(i.auth_mode)}</td>
                       <td className="td"><span className={cx("chip text-[12px]", providerTone(i.status))}>{humanize(i.status)}</span></td>
                       <td className="td text-xs text-slate-500">
-                        {i.last_test_at ? `${timeAgo(i.last_test_at)}${i.last_test_ok === false ? " · failed" : ""}` : "—"}
+                        {i.last_test_at ? `${timeAgo(i.last_test_at)}${i.last_test_ok === false ? " · failed" : ""}` : "Not set"}
                       </td>
                       <td className="td text-right">
                         <div className="flex justify-end gap-1">

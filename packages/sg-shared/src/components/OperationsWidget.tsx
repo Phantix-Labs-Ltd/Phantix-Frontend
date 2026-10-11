@@ -52,7 +52,7 @@ export default function OperationsWidget() {
   const style = STATUS_STYLE[summaryStatus];
 
   return (
-    <div className="fixed bottom-6 left-[264px] z-[72] flex flex-col items-start">
+    <div className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] left-3 z-[72] flex max-w-[calc(100vw-24px)] flex-col items-start md:bottom-6 md:left-6 lg:left-[264px]">
       <AnimatePresence>
         {open && (
           <>

@@ -62,14 +62,14 @@ export const PRODUCT_INFORMATION_FIELDS: ProductInformationField[] = [
   { key: "description", label: "Purpose and description", hint: "What the product does and the problem it solves.", placeholder: "A payments API that lets merchants refund customers…" },
   { key: "users", label: "Users and actors", hint: "Who uses it and with what roles.", placeholder: "Merchants (admin), support agents (read), customers (self-service)…" },
   { key: "dataHandled", label: "Data handled", hint: "What the product stores, processes or moves.", placeholder: "Card tokens, refund amounts, bank account references…" },
-  { key: "dataClassification", label: "Data classification", hint: "PII / PCI / PHI / secrets / regulatory categories.", placeholder: "PCI-DSS cardholder data; PII (names, emails)…" },
-  { key: "criticality", label: "Business criticality", hint: "Impact of compromise or outage.", placeholder: "High — refunds move real money…" },
+  { key: "dataClassification", label: "Data classification", hint: "Personal data, PCI, PHI, secrets and regulatory categories.", placeholder: "PCI-DSS cardholder data; PII (names, emails)…" },
+  { key: "criticality", label: "Business criticality", hint: "Impact of compromise or outage.", placeholder: "High: refunds move real money…" },
   { key: "compliance", label: "Compliance scope", hint: "Frameworks that apply.", placeholder: "PCI-DSS, SOC 2, GDPR/NDPR…" },
   { key: "entryPoints", label: "Entry points and authentication", hint: "Interfaces, APIs, authn/authz.", placeholder: "Public REST API (OAuth2), merchant dashboard (SSO), webhooks…" },
   { key: "trustBoundaries", label: "Trust boundaries", hint: "Where trust changes between zones.", placeholder: "Internet → DMZ → payments core; internal → bank partner…" },
   { key: "objectives", label: "Security objectives", hint: "What must hold for the product to be safe.", placeholder: "Only the owning merchant can refund its own payments…" },
   { key: "assumptions", label: "Assumptions", hint: "What the model may take as given.", placeholder: "The bank partner authenticates callbacks…" },
-  { key: "outOfScope", label: "Out of scope", hint: "What the model should not consider.", placeholder: "The legacy admin console is being retired…" },
+  { key: "outOfScope", label: "Out of scope", hint: "What the model should not consider.", placeholder: "The legacy admin console will retire soon…" },
 ];
 
 /** Compose the structured fields into one markdown document. Empty fields are dropped. */
@@ -195,7 +195,7 @@ export interface ProductContextSummary {
 const CONTEXT_INPUT_CATALOGUE: Array<{ key: string; label: string; hint: string }> = [
   { key: PRODUCT_INFORMATION_KIND, label: "Product information", hint: "Purpose, users, data handled, criticality and compliance scope." },
   { key: "architecture", label: "Architecture diagram", hint: "Upload a .drawio with components, trust boundaries and flows." },
-  { key: "requirements", label: "Requirements / design notes", hint: "Security requirements, roles, data classification and assumptions." },
+  { key: "requirements", label: "Requirements and design notes", hint: "Security requirements, roles, data classification and assumptions." },
   { key: "trust_boundaries", label: "Trust boundaries", hint: "Zones the diagram marks trusted or untrusted." },
   { key: "data_flows", label: "Data flows", hint: "Direction-aware flows between components." },
 ];
@@ -291,7 +291,7 @@ export async function ingestDocument(projectId: number, input: { text: string; t
     return {
       execution: "celery",
       task_id: `demo-ingest-${projectId}-${Date.now()}`,
-      message: "Document queued for chunking.",
+      message: "The system queued the document to split it into chunks.",
     };
   }
   return api.post<{ execution?: string; task_id?: string; message?: string }>(
@@ -431,7 +431,7 @@ export async function generateThreatModel(projectId: number, stage?: string) {
       project_id: projectId,
       execution: "celery",
       task_id: `demo-threat-model-${projectId}-${Date.now()}`,
-      message: "Generation queued. In this demo tenant, models 9001 and 9002 are already built — open one by id.",
+      message: "Generation queued. In this demo tenant, models 9001 and 9002 are already built. Open one by ID.",
     };
   }
   return api.post<{ project_id: number; execution: string; task_id: string; message?: string }>(
@@ -489,7 +489,7 @@ export type ThreatModelExportFormat = "md" | "html" | "pdf";
  */
 export async function exportThreatModel(modelId: number, format: ThreatModelExportFormat): Promise<Blob> {
   if (isDemoMode()) {
-    throw new Error("Exports are available on a real organisation, not in the demo tenant.");
+    throw new Error("Exports are available on a real organization, not in the demo tenant.");
   }
   return api.postDownload(`/threat-models/${modelId}/export`, { format });
 }

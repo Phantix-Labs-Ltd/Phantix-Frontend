@@ -38,7 +38,7 @@ export function UpgradeGate({
   const detail =
     body ??
     up?.blurb ??
-    "Your current plan does not include this. Upgrading unlocks it immediately — nothing you have already configured is lost.";
+    "Your current plan does not include this. Upgrading unlocks it immediately, and nothing that you already configured is lost.";
   return (
     <Card className={cx("mx-auto max-w-2xl text-center", className)}>
       <div className="flex flex-col items-center gap-3 py-6">
@@ -54,7 +54,7 @@ export function UpgradeGate({
             : "Ask your organization admin to upgrade the plan"}
         </p>
         <p className="text-[13px] text-slate-500">
-          Plan changes and billing are managed on the Platform by your company admin. Cards are charged per company —
+          Plan changes and billing are managed on the Platform by your company admin. Cards are charged per company.
           nothing you have already configured is lost while you wait.
         </p>
       </div>
@@ -90,12 +90,12 @@ export function UpsellBanner({
   return (
     <div
       className={cx(
-        "mb-4 flex flex-wrap items-center gap-3 rounded-md border border-gold-400/30 bg-gold-400/[0.07] px-3.5 py-2.5",
+        "mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-gold-400/30 bg-gold-400/[0.07] px-3 py-1.5",
         className,
       )}
     >
       <Sparkle size={14} className="shrink-0 text-gold-300" />
-      <p className="min-w-0 flex-1 text-[13px] leading-5 text-gold-100/90">
+      <p className="min-w-[12rem] flex-1 text-[13px] leading-5 text-gold-100/90">
         <span className="font-semibold text-gold-200">{label}.</span> {detail}
       </p>
       <span className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-gold-300">

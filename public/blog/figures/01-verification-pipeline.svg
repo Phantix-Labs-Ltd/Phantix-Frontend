@@ -1,0 +1,43 @@
+<svg style="background:#0A0A0A" xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" font-family="Geist Variable, Space Grotesk, Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0A0A0A"/><stop offset="100%" stop-color="#2A2A2E"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A1A1AA"/>
+    </marker>
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#E8B54D"/>
+    </marker>
+  </defs>
+  <rect width="900" height="470" fill="#0A0A0A"/>
+  <text x="450.0" y="40" text-anchor="middle" font-size="20" font-weight="700" fill="#F4F4F5">From Raw Result to Verified Finding</text>
+  <text x="450.0" y="63" text-anchor="middle" font-size="13" fill="#A1A1AA">Every candidate passes a filter before it reaches a person</text>
+  <text x="60" y="104" font-size="13" font-weight="700" fill="#A1A1AA">The pipeline</text>
+  <rect x="60" y="120" width="132" height="64" rx="8" fill="url(#boxGrad)" stroke="#E8B54D" stroke-width="1.5"/>
+  <text x="126.0" y="148.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#E4E4E7">Raw results</text>
+  <text x="126.0" y="167.0" text-anchor="middle" font-size="11" fill="#A1A1AA">Every tool hit</text>
+  <rect x="228" y="120" width="132" height="64" rx="8" fill="url(#boxGrad)" stroke="#E8B54D" stroke-width="1.5"/>
+  <text x="294.0" y="148.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#E4E4E7">Deduplicated</text>
+  <text x="294.0" y="167.0" text-anchor="middle" font-size="11" fill="#A1A1AA">Same issue, one row</text>
+  <rect x="396" y="120" width="132" height="64" rx="8" fill="#241E10" stroke="#E8B54D" stroke-width="2"/>
+  <text x="462.0" y="148.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#F3CD7E">Verified</text>
+  <text x="462.0" y="167.0" text-anchor="middle" font-size="11" fill="#A1A1AA">Reproduced with proof</text>
+  <rect x="564" y="120" width="132" height="64" rx="8" fill="url(#boxGrad)" stroke="#E8B54D" stroke-width="1.5"/>
+  <text x="630.0" y="148.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#E4E4E7">Reported</text>
+  <text x="630.0" y="167.0" text-anchor="middle" font-size="11" fill="#A1A1AA">In the board pack</text>
+  <rect x="732" y="120" width="132" height="64" rx="8" fill="#241E10" stroke="#E8B54D" stroke-width="2"/>
+  <text x="798.0" y="148.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#F3CD7E">Closed</text>
+  <text x="798.0" y="167.0" text-anchor="middle" font-size="11" fill="#A1A1AA">Fix proven</text>
+  <line x1="192" y1="152" x2="226" y2="152" stroke="#E8B54D" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="360" y1="152" x2="394" y2="152" stroke="#E8B54D" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="528" y1="152" x2="562" y2="152" stroke="#E8B54D" stroke-width="1.6" marker-end="url(#arrowGold)"/>
+  <line x1="696" y1="152" x2="730" y2="152" stroke="#E8B54D" stroke-width="1.6" marker-end="url(#arrowGold)"/>
+  <text x="60" y="240" text-anchor="start" font-size="12.5" font-weight="400" fill="#F43F5E">Noise leaves here</text>
+  <line x1="294" y1="186" x2="294" y2="250" stroke="#F43F5E" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect x="228" y="252" width="132" height="52" rx="8" fill="#2A1017" stroke="#F43F5E" stroke-width="1.5"/>
+  <text x="294.0" y="274.0" text-anchor="middle" font-size="12.5" font-weight="600" fill="#F43F5E">Excluded</text>
+  <text x="294.0" y="293.0" text-anchor="middle" font-size="11" fill="#A1A1AA">Not reproducible</text>
+  <text x="60" y="348" text-anchor="start" font-size="13" font-weight="400" fill="#A1A1AA">A result enters the report only after a second person can reproduce it.</text>
+  <text x="60" y="372" text-anchor="start" font-size="13" font-weight="400" fill="#A1A1AA">The filter is the product. Without it, a queue becomes a rumor mill.</text>
+</svg>

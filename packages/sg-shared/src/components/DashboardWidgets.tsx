@@ -83,30 +83,31 @@ export function KpiTile({
   size?: "md" | "lg";
 }) {
   const body = (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
+      {/* A small marker, not a feature graphic: the number is the content. */}
       <span
         className={cx(
-          "flex shrink-0 items-center justify-center rounded-full border border-gold-400/30 bg-gold-400/10 text-gold-300",
-          size === "lg" ? "h-14 w-14" : "h-12 w-12",
+          "flex shrink-0 items-center justify-center rounded-full border border-gold-400/30 bg-gold-400/10 text-gold-300 [&_svg]:h-4 [&_svg]:w-4",
+          size === "lg" ? "h-9 w-9" : "h-8 w-8",
         )}
       >
         {icon}
       </span>
       <div className="min-w-0">
         <p className="truncate text-[13px] font-medium text-slate-400">{label}</p>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
           <span
             className={cx(
               "font-mono font-semibold leading-none tracking-tight text-white",
-              size === "lg" ? "text-[30px]" : "text-[26px]",
+              size === "lg" ? "text-[26px]" : "text-[22px]",
             )}
           >
-            {value == null ? "—" : <AnimatedNumber value={value} />}
+            {value == null ? "Not set" : <AnimatedNumber value={value} />}
             {value != null && suffix ? <span className="text-[0.6em] text-slate-400">{suffix}</span> : null}
           </span>
           {delta}
         </div>
-        <p className="mt-1 truncate text-[12px] text-slate-500">{hint}</p>
+        <p className="mt-0.5 truncate text-[12px] text-slate-500">{hint}</p>
       </div>
     </div>
   );
@@ -118,11 +119,11 @@ export function KpiTile({
       className={className}
     >
       {to ? (
-        <Link to={to} className="card block h-full p-4 transition-colors hover:border-phantix-600">
+        <Link to={to} className="card block h-full px-4 py-3 transition-colors hover:border-phantix-600">
           {body}
         </Link>
       ) : (
-        <div className="card h-full p-4">{body}</div>
+        <div className="card h-full px-4 py-3">{body}</div>
       )}
     </motion.div>
   );
@@ -357,17 +358,26 @@ export interface Slice {
   color: string;
 }
 
-/** Donut with the total in the hole and a labeled legend (never color alone). */
+/**
+ * Donut with the total in the hole and a labeled legend (never color alone).
+ *
+ * Hovering a slice (or its legend row) swaps the hole's figure for that slice's
+ * count and share. There is no floating tooltip: the ring is only 160px wide,
+ * so Recharts drew the tooltip inside it, right over the total, and neither
+ * could be read.
+ */
 export function Donut({ slices, centerLabel }: { slices: Slice[]; centerLabel: string }) {
-  const { c, tip } = useChartTheme();
+  const { c } = useChartTheme();
+  const [activeKey, setActiveKey] = React.useState<string | null>(null);
   const total = slices.reduce((s, x) => s + x.value, 0);
   const shown = slices.filter((s) => s.value > 0);
+  const active = shown.find((s) => s.key === activeKey) ?? null;
+  const pct = (v: number) => (total ? Math.round((v / total) * 100) : 0);
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="relative h-[160px] w-[160px] shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Tooltip {...tip} formatter={(v: number, n: string) => [`${v} (${total ? Math.round((v / total) * 100) : 0}%)`, n]} />
             <Pie
               data={shown.length ? shown : [{ key: "none", label: "None", value: 1, color: c.grid }]}
               dataKey="value"
@@ -378,27 +388,54 @@ export function Donut({ slices, centerLabel }: { slices: Slice[]; centerLabel: s
               stroke={c.surface}
               strokeWidth={2}
               isAnimationActive
+              onMouseEnter={(_: unknown, i: number) => setActiveKey(shown[i]?.key ?? null)}
+              onMouseLeave={() => setActiveKey(null)}
             >
               {(shown.length ? shown : [{ key: "none", color: c.grid }]).map((s) => (
-                <Cell key={s.key} fill={s.color} />
+                <Cell
+                  key={s.key}
+                  fill={s.color}
+                  fillOpacity={active && active.key !== s.key ? 0.35 : 1}
+                  style={{ transition: "fill-opacity 150ms ease-out", outline: "none" }}
+                />
               ))}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-mono text-2xl font-semibold text-white">{total.toLocaleString()}</span>
-          <span className="text-[12px] text-slate-500">{centerLabel}</span>
+        <div
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
+          aria-live="polite"
+        >
+          {active ? (
+            <>
+              <span className="font-mono text-2xl font-semibold text-white">{active.value.toLocaleString()}</span>
+              <span className="max-w-[92px] truncate text-[12px] font-medium" style={{ color: active.color }}>
+                {active.label} · {pct(active.value)}%
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-2xl font-semibold text-white">{total.toLocaleString()}</span>
+              <span className="text-[12px] text-slate-500">{centerLabel}</span>
+            </>
+          )}
         </div>
       </div>
       <ul className="grid w-full min-w-0 grid-cols-1 gap-x-5 gap-y-1.5 sm:grid-cols-2">
         {slices.map((s) => (
-          <li key={s.key} className="flex items-center gap-2.5 text-[13px]">
+          <li
+            key={s.key}
+            onMouseEnter={() => s.value > 0 && setActiveKey(s.key)}
+            onMouseLeave={() => setActiveKey(null)}
+            className={cx(
+              "-mx-1.5 flex items-center gap-2.5 rounded px-1.5 text-[13px] transition-colors",
+              active?.key === s.key && "bg-white/[0.04]",
+            )}
+          >
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} aria-hidden />
             <span className="min-w-0 flex-1 truncate text-slate-300">{s.label}</span>
             <span className="font-mono text-slate-200">{s.value}</span>
-            <span className="w-10 text-right font-mono text-[12px] text-slate-500">
-              {total ? Math.round((s.value / total) * 100) : 0}%
-            </span>
+            <span className="w-10 text-right font-mono text-[12px] text-slate-500">{pct(s.value)}%</span>
           </li>
         ))}
       </ul>

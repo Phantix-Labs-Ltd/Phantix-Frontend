@@ -7,7 +7,7 @@ import SecurityDbBanner from "@sg/components/SecurityDbBanner";
 import VaptPlanReview from "@sg/components/VaptPlanReview";
 import DocLink from "@sg/components/DocLink";
 import { loadVaptBundle } from "@sg/data";
-import { api, isDemoMode, isPendingApproval } from "@sg/api";
+import { api, isDemoMode, isPendingApproval, publicDetailCopy } from "@sg/api";
 import { useResource } from "@sg/useResource";
 import { useOperations } from "@sg/operations";
 import { timeAgo, titleCase, cx, humanize, isReportable, impactLevelRank, formatDateTime } from "@sg/utils";
@@ -16,6 +16,8 @@ import { executeVaptPlan, generateVaptPlan } from "@sg/vaptOps";
 import type { VaptPlan } from "@sg/vaptOps";
 import type { VaptCampaign, VaptFinding, VaptQuota } from "@sg/types";
 import { UpsellBanner } from "@sg/components/UpgradeGate";
+import { SetupRequired } from "@sg/platformSetup";
+import FirstVaptJourney from "../FirstVaptJourney";
 
 /**
  * Free-plan quota strip. The shared free pool is 10 campaigns/day across every
@@ -248,9 +250,8 @@ export default function Vapt() {
     if (!(await requireDualControl(`${action} campaign requires a dual-control operate session.`))) return;
     try {
       const res = await api.post<Record<string, unknown>>(`/vapt/campaigns/${id}/${action}`, extra || {});
-      if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", `Campaign #${id} ${action} is parked for an authorizer — approve it from Authorizations for it to run.`);
-      } else {
+      // A parked call opens the approval overlay (it names the authorizer).
+      if (!isPendingApproval(res)) {
         toast("success", `${action}`, `Campaign #${id} ${action} requested`);
       }
       reload();
@@ -264,7 +265,7 @@ export default function Vapt() {
   };
 
   const handleApprove = async (approvalId: number, approve: boolean) => {
-    if (!(await requireDualControl("Approval requires the assigned controller's dual-control session."))) return;
+    if (!(await requireDualControl("Approval needs the dual-control session of the assigned controller."))) return;
     try {
       if (isDemoMode()) {
         // Demo dual control is auto-provisioned: flip the local approval so the
@@ -361,11 +362,13 @@ export default function Vapt() {
         typeof detail === "object" &&
         (detail as Record<string, unknown>).campaign_id != null;
       if (draftCreated) {
-        toast("warning", "Draft created", (detail as { message?: string })?.message || "Review the plan and start when ready.");
+        toast("warning", "Draft created", publicDetailCopy((detail as { message?: string })?.message) || "Review the plan and start when ready.");
         setPendingPlan(null);
         reload();
       } else if (e?.status === 400) {
-        const msg = typeof detail === "string" ? detail : (detail as { message?: string })?.message || e.message || "";
+        // e.message is already normalized (api.ts publicErrorCopy) — prefer it,
+        // and fall back to the sanitized detail for the draft-created shape.
+        const msg = e.message || publicDetailCopy(detail) || "";
         toast("error", "Could not create campaign", msg);
         // Keep the review open so the operator can retry once the refusal is
         // resolved (quota rollover, billing) without regenerating the plan.
@@ -443,6 +446,9 @@ export default function Vapt() {
     });
   }, [vaptCampaigns, register, update]);
 
+  // No campaign has been started yet (none, or only drafts).
+  const firstVapt = vaptCampaigns.every((c) => c.status === "draft");
+
   if (loading) {
     return <PageSkeleton variant="split" rows={4} actions />;
   }
@@ -451,7 +457,7 @@ export default function Vapt() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load VAPT campaigns. Check your connection and retry — your session stays signed in."
+        body="We could not load the VAPT campaigns. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -485,31 +491,41 @@ export default function Vapt() {
           </>
         }
       />
+      {/* Until a campaign has been started, the first-VAPT journey walks
+          through asset → ownership → plan → start (it covers the domain step). */}
+      <SetupRequired action="run a VAPT campaign" needs={dualControl.policy_mode === "off" && !firstVapt ? ["database", "verified_domain"] : ["database"]} />
+      {firstVapt && !securityDbBlocked && (
+        <FirstVaptJourney
+          campaigns={vaptCampaigns}
+          planning={planning}
+          onPlan={() => void handlePlan()}
+          onStart={(c) => void handleCampaignAction(c.id, "start")}
+        />
+      )}
 
       <UpsellBanner feature="continuous_pentest" />
 
       {/* Pending approvals strip */}
       {pending.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-          <Card className="border-severity-medium/30 bg-severity-medium/5">
-            <div className="flex flex-wrap items-center gap-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-severity-medium/15 text-severity-medium">
-                <UserCheck size={18} />
-              </span>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-100">{pending.length} approval{pending.length > 1 ? "s" : ""} waiting</p>
-                <p className="text-xs text-slate-400">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-3">
+          {/* One line: what waits, who must act, and the two actions. */}
+          <Card pad="sm" className="border-severity-medium/30 bg-severity-medium/5 !py-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <UserCheck size={16} className="shrink-0 text-severity-medium" />
+              <div className="min-w-[12rem] flex-1 text-sm">
+                <span className="font-semibold text-slate-100">{pending.length} approval{pending.length > 1 ? "s" : ""} waiting</span>
+                <span className="ml-2 text-xs text-slate-400">
                   {pending[0].step} --- requires the <strong>{pending[0].role_required}</strong>
                   {(pending[0].role_required === "authorizer"
                     ? dualControl.authorizer?.full_name
                     : dualControl.initiator?.full_name) && (
                     <> ({pending[0].role_required === "authorizer" ? dualControl.authorizer?.full_name : dualControl.initiator?.full_name})</>
                   )}
-                </p>
+                </span>
               </div>
               <div className="flex gap-2">
-                <button className="btn-primary !py-2" onClick={() => handleApprove(pending[0].id, true)}>Approve</button>
-                <button className="btn-danger !py-2" onClick={() => handleApprove(pending[0].id, false)}>Reject</button>
+                <button className="btn-primary !py-1" onClick={() => handleApprove(pending[0].id, true)}>Approve</button>
+                <button className="btn-danger !py-1" onClick={() => handleApprove(pending[0].id, false)}>Reject</button>
               </div>
             </div>
           </Card>
@@ -526,19 +542,19 @@ export default function Vapt() {
       />
 
       {tab === "campaigns" && (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-5 xl:items-start">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-5 xl:items-start">
           {/* What is still running — the operator can end it here. Hidden once
               the detail column is scrolled, so it doesn't eat into the space
               freed up by the split-pane layout below. */}
           {activeCampaigns.length > 0 && !detailScrolled && (
-            <div className="xl:col-span-5 flex flex-wrap items-center gap-2 rounded-xl border border-severity-medium/30 bg-severity-medium/8 px-3.5 py-2.5 text-xs text-severity-medium">
+            <div className="xl:col-span-5 flex flex-wrap items-center gap-2 rounded-lg border border-severity-medium/30 bg-severity-medium/8 px-3 py-1.5 text-xs text-severity-medium">
               <AlertTriangle size={14} className="shrink-0" />
               <span>
                 <strong>{activeCampaigns[0].name}</strong>{" "}
                 {activeCampaigns[0].status === "pending_approval"
                   ? "is awaiting approval"
                   : `is ${activeCampaigns[0].status}`}
-                {activeCampaigns.length > 1 ? ` (+${activeCampaigns.length - 1} more)` : ""} — no new
+                {activeCampaigns.length > 1 ? ` (+${activeCampaigns.length - 1} more)` : ""}. No new
                 campaign can start until it is resumed, paused or cancelled.
               </span>
               <button className="btn-ghost !px-2 !py-1 text-xs" onClick={() => setSelected(activeCampaigns[0])}>
@@ -621,17 +637,17 @@ export default function Vapt() {
                   action={<StatusBadge status={activeSelected.status} />}
                 />
 
-                {/* Stats row */}
-                <div className="grid grid-cols-4 gap-2 mb-4">
+                {/* Stats row: one inline strip, not four boxed tiles. */}
+                <div className="mb-4 grid grid-cols-4 divide-x divide-phantix-700/40 rounded-md border border-phantix-700/40 bg-phantix-950/50">
                   {[
                     [activeSelected.asset_count ?? "---", "Assets", "text-blue-400"],
                     [activeSelected.findings_count ?? "---", "Findings", "text-emerald-400"],
                     [(activeSelected as any).procedure_snapshot?.steps?.length ?? "---", "Steps", "text-phantix-300"],
                     [activeSelected.requires_approval ? "Yes" : "No", "Approval", activeSelected.requires_approval ? "text-severity-medium" : "text-slate-400"],
                   ].map(([v, l, c]) => (
-                    <div key={String(l)} className="rounded-lg bg-phantix-950/50 border border-phantix-700/40 px-3 py-2.5 text-center">
-                      <p className={cx("font-display text-lg font-bold", c)}>{v}</p>
-                      <p className="text-[12px] uppercase tracking-wider text-slate-500">{l}</p>
+                    <div key={String(l)} className="flex items-baseline justify-center gap-1.5 px-2 py-1.5">
+                      <span className={cx("font-display text-base font-bold", c)}>{v}</span>
+                      <span className="truncate text-[12px] text-slate-500">{l}</span>
                     </div>
                   ))}
                 </div>
@@ -771,8 +787,8 @@ export default function Vapt() {
                               <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                               <p className="leading-5">
                                 {awaitingAck.length} technique{awaitingAck.length > 1 ? "s" : ""} need PoC acknowledgment
-                                {awaitingAck.length === 1 && awaitingAck[0]?.tool ? ` (${awaitingAck[0].tool})` : ""} —
-                                re-run with <strong>Extended PoC</strong> to allow controlled proofs.
+                                {awaitingAck.length === 1 && awaitingAck[0]?.tool ? ` (${awaitingAck[0].tool})` : ""}.
+                                Re-run with <strong>Extended PoC</strong> to allow controlled proofs.
                               </p>
                             </div>
                           )}
@@ -837,7 +853,7 @@ export default function Vapt() {
                                   {typeof summary.results_written === "number" && <span className="text-slate-400"> · {summary.results_written} written</span>}
                                   {skipped > 0 && (
                                     <span className="text-slate-500">
-                                      {' '}· {skipped} skipped (already scanned / domain IP)
+                                      {' '}· {skipped} skipped (already scanned or domain IP)
                                       {skipReasons.length > 0 && (
                                         <span className="block text-[12px] text-slate-600">
                                           {skipReasons.slice(0, 3).map((r) => <span key={r} className="block">{r}</span>)}
@@ -880,11 +896,27 @@ export default function Vapt() {
                           <Play size={14} /> Start Campaign
                         </button>
                         <p className="w-full text-[12px] text-slate-500">
-                          Review the plan above, then start. Full VAPT requires authorizer approval before execution.
+                          {dualControl.policy_mode === "off"
+                            ? "Review the plan above, then start. You approve it yourself with a code from your email."
+                            : "Review the plan above, then start. Full VAPT requires authorizer approval before execution."}
                         </p>
                       </>
                     )}
-                    {activeSelected.status === "pending_approval" && (
+                    {activeSelected.status === "pending_approval" && activeSelected.self_approvable && (
+                      <div className="w-full rounded-lg border border-gold-400/30 bg-gold-400/5 p-3 text-xs space-y-2">
+                        <p className="flex items-center gap-1 font-semibold text-gold-300"><UserCheck size={14} /> Waiting for your approval</p>
+                        <p className="text-slate-300">You work in solo mode, so you approve your own campaigns. Starting asks for a code from your email.</p>
+                        <div className="flex flex-wrap gap-2">
+                          <button className="btn-primary !py-1.5 text-xs" onClick={() => handleCampaignAction(activeSelected.id, "start")}>
+                            <Play size={12} /> Approve and start
+                          </button>
+                          <button className="btn-danger !py-1.5 text-xs" onClick={() => handleCampaignAction(activeSelected.id, "cancel")}>
+                            <XCircle size={12} /> Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {activeSelected.status === "pending_approval" && !activeSelected.self_approvable && (
                       <div className="w-full rounded-lg bg-severity-medium/5 border border-severity-medium/30 p-3 text-xs space-y-1.5">
                         <p className="text-severity-medium font-semibold flex items-center gap-1"><UserCheck size={14} /> Awaiting Authorizer Approval</p>
                         <p className="text-slate-300">Campaign submitted for approval --- will start automatically once the authorizer approves.</p>
@@ -934,7 +966,7 @@ export default function Vapt() {
                       <button key={f.id} className="block w-full text-left" onClick={() => setFindingSelected(f)}>
                         <div className="rounded-lg border border-phantix-700/40 bg-phantix-950/50 p-3 transition-colors hover:border-gold-400/30 hover:bg-phantix-900/50">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="min-w-0 flex-1 text-sm text-slate-200 truncate">{f.title}</p>
+                            <p className="min-w-[12rem] flex-1 text-sm text-slate-200 truncate">{f.title}</p>
                             <SeverityBadge severity={f.severity} />
                             <VerificationBadge status={f.verification_status} />
                             {f.impact_level && <ImpactBadge level={f.impact_level} score={f.impact_score} />}
@@ -984,12 +1016,12 @@ export default function Vapt() {
               <button className="block w-full text-left" onClick={() => setFindingSelected(f)}>
                 <Card hover className="!p-4">
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-[12rem] flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-slate-100">{f.title}</p>
                         {isReportable(f) ? <span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">reportable</span> : <span className="chip text-[12px] border-slate-500/30 bg-slate-500/10 text-slate-500">held</span>}
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500">campaign #{f.campaign_id} · <span className="font-mono">{f.asset_value || "—"}</span>{f.cve && <> · <span className="font-mono text-gold-400">{f.cve}</span></>}{f.cvss != null && <> · CVSS {f.cvss.toFixed(1)}</>}{f.correlation_rule && <> · <span className="font-mono">{f.correlation_rule}</span></>}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">campaign #{f.campaign_id} · <span className="font-mono">{f.asset_value || "Not set"}</span>{f.cve && <> · <span className="font-mono text-gold-400">{f.cve}</span></>}{f.cvss != null && <> · CVSS {f.cvss.toFixed(1)}</>}{f.correlation_rule && <> · <span className="font-mono">{f.correlation_rule}</span></>}</p>
                     </div>
                     {f.impact_level ? <ImpactBadge level={f.impact_level} score={f.impact_score} /> : <SeverityBadge severity={f.severity} />}
                     <VerificationBadge status={f.verification_status} />
@@ -1212,21 +1244,21 @@ export default function Vapt() {
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-300">
                 <input type="checkbox" className="h-3.5 w-3.5 accent-gold-400" checked={createForm.runGraphql} onChange={(e) => setCreateForm((f) => ({ ...f, runGraphql: e.target.checked }))} />
-                Test GraphQL (introspection, batching, depth, CSRF, injection, role oracle)
+                Test GraphQL: introspection, batching, depth, CSRF, injection and role oracle
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-300">
                 <input type="checkbox" className="h-3.5 w-3.5 accent-gold-400" checked={createForm.runWebhook} onChange={(e) => setCreateForm((f) => ({ ...f, runWebhook: e.target.checked }))} />
-                Test webhook receivers (signature verification, replay, SSRF)
+                Test webhook receivers: signature verification, replay and SSRF
               </label>
               <details className="text-[13px]">
-                <summary className="cursor-pointer text-slate-400 hover:text-slate-200">Credentials panel (optional)</summary>
+                <summary className="cursor-pointer text-slate-400 hover:text-slate-200">Credentials panel, optional</summary>
                 <div className="mt-2 space-y-3">
                   <div>
-                    <p className="text-[12px] text-slate-500 mb-1">Primary session --- priv-esc + JWT + BOLA bearer</p>
+                    <p className="text-[12px] text-slate-500 mb-1">Primary session for privilege escalation, JWT and BOLA bearer</p>
                     <div className="grid grid-cols-3 gap-2">
                       <input className="input !py-1.5 text-xs" placeholder="username" value={creds.username} onChange={(e) => setCreds((c) => ({ ...c, username: e.target.value }))} />
                       <input className="input !py-1.5 text-xs" type="password" placeholder="password" value={creds.password} onChange={(e) => setCreds((c) => ({ ...c, password: e.target.value }))} />
-                      <input className="input !py-1.5 text-xs" placeholder="token / bearer / jwt" value={creds.token} onChange={(e) => setCreds((c) => ({ ...c, token: e.target.value }))} />
+                      <input className="input !py-1.5 text-xs" placeholder="token, bearer or JWT" value={creds.token} onChange={(e) => setCreds((c) => ({ ...c, token: e.target.value }))} />
                     </div>
                   </div>
                   <div>
@@ -1234,7 +1266,7 @@ export default function Vapt() {
                     <div className="grid grid-cols-3 gap-2">
                       <input className="input !py-1.5 text-xs" placeholder="username" value={altCreds.username} onChange={(e) => setAltCreds((c) => ({ ...c, username: e.target.value }))} />
                       <input className="input !py-1.5 text-xs" type="password" placeholder="password" value={altCreds.password} onChange={(e) => setAltCreds((c) => ({ ...c, password: e.target.value }))} />
-                      <input className="input !py-1.5 text-xs" placeholder="token / bearer / jwt" value={altCreds.token} onChange={(e) => setAltCreds((c) => ({ ...c, token: e.target.value }))} />
+                      <input className="input !py-1.5 text-xs" placeholder="token, bearer or JWT" value={altCreds.token} onChange={(e) => setAltCreds((c) => ({ ...c, token: e.target.value }))} />
                     </div>
                   </div>
                   <p className="text-[12px] text-slate-600">Secrets are never shown back --- findings only record that credentials were provided.</p>

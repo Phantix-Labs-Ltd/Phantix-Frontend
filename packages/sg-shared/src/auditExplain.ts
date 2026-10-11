@@ -27,15 +27,15 @@ const EXACT: Record<string, EndpointDesc> = {
   // ── GitHub App ──────────────────────────────────────────────────────
   "GET /github/installation": {
     label: "Check GitHub connection",
-    detail: "Checks whether the GitHub App is installed and connected for the organization, and returns its status (connected, awaiting approval, suspended, or not connected).",
+    detail: "Checks whether the GitHub App is installed and connected for the organization. It returns the status: connected, awaiting approval, suspended, or not connected.",
   },
   "GET /github/install-url": {
     label: "Get GitHub install link",
-    detail: "Builds a signed URL that installs the SecureGraph GitHub App on the organization's GitHub account.",
+    detail: "Builds a signed URL that installs the SecureGraph GitHub App on the GitHub account of the organization.",
   },
   "POST /github/callback": {
     label: "Record GitHub install result",
-    detail: "Records the result of a GitHub App installation (or install request) completed by the user on GitHub.",
+    detail: "Records the result of a GitHub App installation or install request that the user completed on GitHub.",
   },
   "GET /github/repositories": {
     label: "List GitHub repositories",
@@ -47,7 +47,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /github/repositories/analyze": {
     label: "Analyze a GitHub repository",
-    detail: "Queues a security analysis of a repository, subject to the organization's plan (private repos require a paid plan).",
+    detail: "Queues a security analysis of a repository. The plan of the organization must permit it. A private repository needs a paid plan.",
   },
   "DELETE /github/installation": {
     label: "Disconnect GitHub",
@@ -55,7 +55,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /github/webhook": {
     label: "GitHub webhook event",
-    detail: "Receives real-time GitHub events (install, suspend, delete) that keep the connection status up to date.",
+    detail: "Receives real-time GitHub events that keep the connection status current: install, suspend and delete.",
   },
 
   // ── Org-user auth / dual control ────────────────────────────────────
@@ -65,11 +65,11 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /org-users/auth/login/mfa": {
     label: "Verify org-user code",
-    detail: "Verifies the emailed one-time code and issues the org-user identity token, or starts new-device confirmation.",
+    detail: "Verifies the emailed one-time code and issues the org-user identity token. If the device is new, it starts device confirmation.",
   },
   "POST /org-users/auth/login/device": {
     label: "Confirm new device",
-    detail: "Confirms sign-in from a new browser/device so the org-user session token can be issued.",
+    detail: "Confirms sign-in from a new browser or device, so the platform can issue the org-user session token.",
   },
   "POST /org-users/auth/device-confirm": {
     label: "Confirm new device via link",
@@ -77,15 +77,15 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /org-users/auth/device-status": {
     label: "Poll device confirmation",
-    detail: "Checks whether the new-device confirmation link was opened and completes sign-in when it was.",
+    detail: "Checks whether the user opened the new-device confirmation link. If yes, it completes sign-in.",
   },
   "POST /org-users/auth/logout": {
     label: "End operate session",
-    detail: "Ends the organization user's dual-control operate session.",
+    detail: "Ends the dual-control operate session of the organization user.",
   },
   "GET /org-users/auth/me": {
     label: "Read current org user",
-    detail: "Returns the signed-in organization user's identity, role, and permissions.",
+    detail: "Returns the identity, role and permissions of the signed-in organization user.",
   },
 
   // ── App (Command Centre) auth ───────────────────────────────────────
@@ -99,7 +99,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /app/auth/challenge": {
     label: "Validate sign-in link",
-    detail: "Validates an app invite/sign-in link and returns what the user must do next (set password or sign in).",
+    detail: "Validates an app invite link or sign-in link. It returns the next step for the user: set a password, or sign in.",
   },
   "POST /app/auth/password": {
     label: "Verify invite password",
@@ -107,7 +107,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /app/auth/set-password": {
     label: "Set first password",
-    detail: "Sets the first password from an app invite link before completing sign-in.",
+    detail: "Sets the first password from an app invite link before the user signs in.",
   },
   "POST /app/auth/otp": {
     label: "Resend app code",
@@ -119,7 +119,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /app/auth/device-status": {
     label: "Poll app device confirmation",
-    detail: "Checks whether the app's device-confirmation link was opened and issues tokens when it was.",
+    detail: "Checks whether the user opened the device-confirmation link for the app. If yes, it issues the tokens.",
   },
   "GET /app/auth/me": {
     label: "Read app session",
@@ -129,19 +129,19 @@ const EXACT: Record<string, EndpointDesc> = {
   // ── Organization profile / setup ────────────────────────────────────
   "GET /organizations/me": {
     label: "Read organization",
-    detail: "Reads the organization's profile and details.",
+    detail: "Reads the profile and details of the organization.",
   },
   "PUT /organizations/me": {
     label: "Update organization",
-    detail: "Updates the organization's profile and contact details.",
+    detail: "Updates the profile and contact details of the organization.",
   },
   "POST /organizations/me/setup/otp/send": {
     label: "Send setup code",
-    detail: "Emails a verification code to confirm the organization's primary email during setup.",
+    detail: "Emails a verification code to confirm the primary email of the organization during setup.",
   },
   "POST /organizations/me/setup/otp/verify": {
     label: "Verify setup code",
-    detail: "Verifies the emailed code to confirm the organization's email.",
+    detail: "Verifies the emailed code to confirm the email of the organization.",
   },
   "POST /organizations/login": {
     label: "Start platform sign-in",
@@ -159,7 +159,7 @@ const EXACT: Record<string, EndpointDesc> = {
   // ── Org users / people / dual control ───────────────────────────────
   "GET /org-users": {
     label: "List org users",
-    detail: "Lists the organization's users and their roles.",
+    detail: "Lists the users of the organization and their roles.",
   },
   "POST /org-users": {
     label: "Create org user",
@@ -167,7 +167,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "PUT /org-users/{id}": {
     label: "Update org user",
-    detail: "Updates an organization user's details or role.",
+    detail: "Updates the details or the role of an organization user.",
   },
   "DELETE /org-users/{id}": {
     label: "Remove org user",
@@ -175,7 +175,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "GET /org-users/dual-control": {
     label: "Read dual control",
-    detail: "Reads the organization's dual-control assignment (initiator and authorizer).",
+    detail: "Reads the dual-control assignment of the organization: the initiator and the authorizer.",
   },
   "PUT /org-users/dual-control": {
     label: "Assign dual control",
@@ -187,13 +187,13 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "DELETE /org-users/{id}/device": {
     label: "Clear device bind",
-    detail: "Clears a user's bound primary device so they can sign in from a new browser.",
+    detail: "Clears the bound primary device of a user. The user can then sign in from a new browser.",
   },
 
   // ── VAPT ────────────────────────────────────────────────────────────
   "GET /vapt/campaigns": {
     label: "List VAPT campaigns",
-    detail: "Lists the organization's VAPT campaigns and their progress.",
+    detail: "Lists the VAPT campaigns of the organization and their progress.",
   },
   "POST /vapt/campaigns": {
     label: "Create VAPT campaign",
@@ -201,7 +201,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /vapt/campaigns/{id}/start": {
     label: "Start VAPT campaign",
-    detail: "Starts a VAPT campaign so its assessment pipeline begins running.",
+    detail: "Starts a VAPT campaign. The assessment pipeline then starts.",
   },
   "POST /vapt/campaigns/{id}/pause": {
     label: "Pause VAPT campaign",
@@ -229,17 +229,17 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /vapt/approvals/{id}/decide": {
     label: "Decide VAPT approval",
-    detail: "Approves or rejects a VAPT approval request (e.g. authorizer sign-off on a campaign).",
+    detail: "Approves or rejects a VAPT approval request, for example the sign-off of an authorizer on a campaign.",
   },
 
   // ── Scans ───────────────────────────────────────────────────────────
   "GET /scans/jobs": {
     label: "List scan jobs",
-    detail: "Lists on-demand Nmap/Nuclei scan jobs and their progress.",
+    detail: "Lists the on-demand scan jobs for Nmap and Nuclei, and their progress.",
   },
   "POST /scans/jobs": {
     label: "Create scan job",
-    detail: "Starts a new on-demand scan job (one active job per organization).",
+    detail: "Starts a new on-demand scan job. Each organization can have one active job.",
   },
   "POST /scans/jobs/{id}/cancel": {
     label: "Cancel scan job",
@@ -253,11 +253,11 @@ const EXACT: Record<string, EndpointDesc> = {
   // ── Assets / intelligence ───────────────────────────────────────────
   "GET /assets": {
     label: "List assets",
-    detail: "Lists the organization's discovered assets (domains, IPs, APIs, mobile).",
+    detail: "Lists the discovered assets of the organization: domains, IPs, APIs and mobile applications.",
   },
   "POST /assets": {
     label: "Add asset",
-    detail: "Adds a new asset to the organization's inventory.",
+    detail: "Adds a new asset to the inventory of the organization.",
   },
   "GET /assets/intelligence/dashboard": {
     label: "Read asset intelligence",
@@ -265,7 +265,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /assets/intelligence/refresh": {
     label: "Refresh asset intelligence",
-    detail: "Recomputes intelligence (risk scores) for the organization's assets.",
+    detail: "Recomputes the intelligence and the risk scores for the assets of the organization.",
   },
   "GET /assets/discovery/jobs": {
     label: "List discovery jobs",
@@ -273,13 +273,13 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /assets/verify/{id}": {
     label: "Verify asset",
-    detail: "Marks an asset's verification status after ownership confirmation.",
+    detail: "Marks the verification status of an asset after confirmation of ownership.",
   },
 
   // ── AGI / Pentest Agent / SecureGraph Agent ─────────────────────────────
   "GET /agi/access": {
     label: "Read AGI access",
-    detail: "Reads the organization's Autonomous Pentest Agent access and entitlements.",
+    detail: "Reads the Autonomous Pentest Agent access and entitlements of the organization.",
   },
   "POST /agi/agreement/accept": {
     label: "Accept AGI agreement",
@@ -287,11 +287,11 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /agi/engagements": {
     label: "Create AGI engagement",
-    detail: "Creates an Autonomous Pentest Agent engagement scoped to the organization's targets.",
+    detail: "Creates an Autonomous Pentest Agent engagement. The scope is the targets of the organization.",
   },
   "GET /agi/engagements": {
     label: "List AGI engagements",
-    detail: "Lists the organization's Autonomous Pentest Agent engagements.",
+    detail: "Lists the Autonomous Pentest Agent engagements of the organization.",
   },
   "POST /agi/engagements/{id}/sessions": {
     label: "Start AGI session",
@@ -303,7 +303,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /agi/sessions/{id}/stop": {
     label: "Stop AGI session",
-    detail: "Stops an Autonomous Pentest Agent session and tears down its container.",
+    detail: "Stops an Autonomous Pentest Agent session and removes its container.",
   },
   "GET /agi/sessions/{id}/transcript": {
     label: "Read AGI transcript",
@@ -311,7 +311,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "GET /agi/sessions/{id}/actions/pending": {
     label: "List pending AGI actions",
-    detail: "Lists state-changing steps the agent is waiting for approval on.",
+    detail: "Lists the state-changing steps that are waiting for approval.",
   },
   "POST /agi/actions/{id}/decide": {
     label: "Decide AGI action",
@@ -319,7 +319,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /ai/agent/chat/stream": {
     label: "Chat with SecureGraph Agent",
-    detail: "Streams a reply from the SecureGraph Agent security assistant against the organization's data.",
+    detail: "Streams a reply from the SecureGraph Agent security assistant. The reply uses the data of the organization.",
   },
   "POST /ai/agent/runs/stream": {
     label: "Run agent investigation",
@@ -331,7 +331,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "PUT /ai/settings": {
     label: "Update AI settings",
-    detail: "Updates SecureGraph Agent settings such as enabled state and mode.",
+    detail: "Updates SecureGraph Agent settings, for example the enabled state and the mode.",
   },
   "GET /agi/org/settings/bootstrap": {
     label: "Load AGI settings",
@@ -339,11 +339,11 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "PATCH /agi/org/settings": {
     label: "Update AGI settings",
-    detail: "Updates Autonomous Pentest Agent settings (limits, environments, credentials).",
+    detail: "Updates the Autonomous Pentest Agent settings: limits, environments and credentials.",
   },
   "POST /agi/org/test-accounts": {
     label: "Add AGI test account",
-    detail: "Adds a reusable test login/registration credential for the agent.",
+    detail: "Adds a reusable test credential that the agent uses to log in or register.",
   },
   "DELETE /agi/org/test-accounts/{id}": {
     label: "Delete AGI test account",
@@ -353,11 +353,11 @@ const EXACT: Record<string, EndpointDesc> = {
   // ── Alerts / audit / compliance ─────────────────────────────────────
   "GET /alerts/events": {
     label: "List alert events",
-    detail: "Lists alert events delivered to the organization's channels.",
+    detail: "Lists the alert events delivered to the channels of the organization.",
   },
   "GET /alerts/settings": {
     label: "Read alert settings",
-    detail: "Reads the organization's alert channel and SMTP settings.",
+    detail: "Reads the alert channel and SMTP settings of the organization.",
   },
   "PUT /alerts/settings": {
     label: "Update alert settings",
@@ -369,7 +369,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "GET /audit/events": {
     label: "Read audit trail",
-    detail: "Reads the organization's immutable audit trail of user activities.",
+    detail: "Reads the immutable audit trail of user activity for the organization.",
   },
   "GET /audit/pending": {
     label: "List pending approvals",
@@ -389,29 +389,29 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /compliance/assessments": {
     label: "Run compliance assessment",
-    detail: "Runs a compliance assessment against the organization's controls.",
+    detail: "Runs a compliance assessment against the controls of the organization.",
   },
 
   // ── DB connections / billing / tools / support ──────────────────────
   "GET /db-connections": {
-    label: "List DB connections",
-    detail: "Lists the organization's security database connections.",
+    label: "List database connections",
+    detail: "Lists the security database connections of the organization.",
   },
   "POST /db-connections": {
-    label: "Add DB connection",
-    detail: "Adds a security database connection (config inspection or data storage).",
+    label: "Add database connection",
+    detail: "Adds a security database connection for config inspection or data storage.",
   },
   "DELETE /db-connections/{id}": {
-    label: "Remove DB connection",
+    label: "Remove database connection",
     detail: "Removes a security database connection.",
   },
   "GET /billing/payments": {
     label: "List payments",
-    detail: "Lists the organization's payments and subscription invoices.",
+    detail: "Lists the payments and subscription invoices of the organization.",
   },
   "POST /billing/payments/{id}/pay": {
     label: "Start payment",
-    detail: "Initializes checkout for a pending payment invoice.",
+    detail: "Starts checkout for a pending payment invoice.",
   },
   "POST /billing/payments/{id}/verify": {
     label: "Verify payment",
@@ -419,7 +419,7 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "GET /billing/entitlements": {
     label: "Read entitlements",
-    detail: "Reads the organization's plan entitlements and limits.",
+    detail: "Reads the plan entitlements and limits of the organization.",
   },
   "GET /tools/catalog": {
     label: "List tools",
@@ -437,11 +437,11 @@ const EXACT: Record<string, EndpointDesc> = {
   // ── Identity / service keys / security db ───────────────────────────
   "GET /organizations/me/identity": {
     label: "Read identity settings",
-    detail: "Reads the organization's identity and key settings.",
+    detail: "Reads the identity and key settings of the organization.",
   },
   "POST /organizations/me/service-key": {
     label: "Create service key",
-    detail: "Creates the organization's application service key (pk_live_*).",
+    detail: "Creates the application service key of the organization. The key starts with pk_live_.",
   },
   "DELETE /organizations/me/service-key/{id}": {
     label: "Revoke service key",
@@ -449,11 +449,11 @@ const EXACT: Record<string, EndpointDesc> = {
   },
   "POST /organizations/me/logo": {
     label: "Upload logo",
-    detail: "Uploads the organization's brand logo.",
+    detail: "Uploads the brand logo of the organization.",
   },
   "DELETE /organizations/me/logo": {
     label: "Remove logo",
-    detail: "Removes the organization's brand logo.",
+    detail: "Removes the brand logo of the organization.",
   },
 };
 
@@ -461,7 +461,7 @@ const EXACT: Record<string, EndpointDesc> = {
 const MODULE_FALLBACK: Record<string, EndpointDesc> = {
   github: {
     label: "GitHub integration action",
-    detail: "An action performed on the organization's GitHub App integration.",
+    detail: "An action on the GitHub App integration of the organization.",
   },
   "org-users": {
     label: "Organization user action",
@@ -469,7 +469,7 @@ const MODULE_FALLBACK: Record<string, EndpointDesc> = {
   },
   organizations: {
     label: "Organization action",
-    detail: "An action on the organization's profile or settings.",
+    detail: "An action on the profile or the settings of the organization.",
   },
   vapt: {
     label: "VAPT action",
@@ -481,7 +481,7 @@ const MODULE_FALLBACK: Record<string, EndpointDesc> = {
   },
   assets: {
     label: "Asset action",
-    detail: "An action on the organization's asset inventory or intelligence.",
+    detail: "An action on the asset inventory or the intelligence of the organization.",
   },
   agi: {
     label: "Autonomous Pentest Agent action",
@@ -497,7 +497,7 @@ const MODULE_FALLBACK: Record<string, EndpointDesc> = {
   },
   audit: {
     label: "Audit action",
-    detail: "An action reading or exporting the audit trail or pending approvals.",
+    detail: "An action that reads or exports the audit trail or the pending approvals.",
   },
   compliance: {
     label: "Compliance action",
@@ -513,7 +513,7 @@ const MODULE_FALLBACK: Record<string, EndpointDesc> = {
   },
   tools: {
     label: "Tooling action",
-    detail: "An action on the organization's tool subscriptions.",
+    detail: "An action on the tool subscriptions of the organization.",
   },
   support: {
     label: "Support action",

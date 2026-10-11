@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { Card, EmptyState, ErrorState, PageHeader, PageSkeleton, Modal } from "@sg/ui";
 import MarkdownView from "@sg/components/MarkdownView";
+import DocLink from "@sg/components/DocLink";
 import { Pagination, usePaged } from "@sg/components/Pagination";
 import { useResource } from "@sg/useResource";
 import { useStore } from "@sg/store";
@@ -73,10 +74,10 @@ function ReportRow({ report, onPreview }: { report: AgiPriorReport; onPreview: (
       </td>
       <td className="td whitespace-nowrap text-[13px] uppercase text-slate-400">{ft}</td>
       <td className="td hidden max-w-[14rem] lg:table-cell">
-        {typeof report.meta?.source_file === "string" ? <span className="block truncate text-[13px] text-slate-400" title={report.meta.source_file}>{report.meta.source_file}</span> : <span className="text-slate-600">—</span>}
+        {typeof report.meta?.source_file === "string" ? <span className="block truncate text-[13px] text-slate-400" title={report.meta.source_file}>{report.meta.source_file}</span> : <span className="text-slate-600">Not set</span>}
       </td>
       <td className="td hidden whitespace-nowrap text-right font-mono text-[13px] text-slate-400 md:table-cell">
-        {typeof report.meta?.byte_size === "number" ? bytes(report.meta.byte_size as number) : "—"}
+        {typeof report.meta?.byte_size === "number" ? bytes(report.meta.byte_size as number) : "Not set"}
       </td>
       <td className="td hidden whitespace-nowrap xl:table-cell">
         {cats.length ? (
@@ -86,9 +87,9 @@ function ReportRow({ report, onPreview }: { report: AgiPriorReport; onPreview: (
             ))}
             {cats.length > 2 && <span className="text-[12px] text-slate-500">+{cats.length - 2}</span>}
           </span>
-        ) : <span className="text-slate-600">—</span>}
+        ) : <span className="text-slate-600">Not set</span>}
       </td>
-      <td className="td whitespace-nowrap text-[13px] text-slate-400">{report.created_at ? timeAgo(report.created_at) : "—"}</td>
+      <td className="td whitespace-nowrap text-[13px] text-slate-400">{report.created_at ? timeAgo(report.created_at) : "Not set"}</td>
       <td className="td w-8 text-right">
         <ChevronRight size={14} className="inline text-slate-600 transition-transform group-hover:translate-x-0.5 group-hover:text-gold-300" />
       </td>
@@ -119,11 +120,14 @@ export default function PriorReports() {
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
       <PageHeader
         title="Prior reports"
-        description="Share an earlier pentest or VAPT report once. It is converted to markdown and becomes org-wide knowledge the agent reads on every engagement — so it retests prior findings and does not repeat work."
+        description="Share an earlier pentest or VAPT report once. SecureGraph converts it to markdown. It becomes organization-wide knowledge that the agent reads on every engagement, so the agent retests the prior findings and does not repeat work."
         actions={
-          <button onClick={() => setUploadOpen(true)} className="btn-primary !px-4 !py-2 !text-sm">
-            <UploadCloud size={15} className="mr-1.5 inline" /> Upload report
-          </button>
+          <div className="flex items-center gap-2">
+            <DocLink docId="howto-app-34" label="Prior reports how-to" />
+            <button onClick={() => setUploadOpen(true)} className="btn-primary !px-4 !py-2 !text-sm">
+              <UploadCloud size={15} className="mr-1.5 inline" /> Upload report
+            </button>
+          </div>
         }
       />
 
@@ -133,7 +137,7 @@ export default function PriorReports() {
           <p className="font-semibold text-gold-200">How the agent uses this</p>
           <p className="mt-0.5 text-slate-400">
             The agent pulls prior reports from the engine before testing (<span className="font-mono text-gold-300/90">ai_engine.reports.prior</span>),
-            retests each finding on the live scope, and treats a previously accepted risk as context — not a new finding.
+            retests each finding on the live scope, and treats a previously accepted risk as context, not as a new finding.
             Accepted formats: DOCX, PDF, MD, HTML, TXT (max 8 MB).
           </p>
         </div>
@@ -314,7 +318,7 @@ function UploadReportModal({
       setError(
         e instanceof AgiReportError
           ? e.message
-          : (e as { message?: string })?.message || "Upload failed — please try again.",
+          : (e as { message?: string })?.message || "Upload failed. Try again.",
       );
     } finally {
       setUploading(false);
@@ -359,7 +363,7 @@ function UploadReportModal({
             <>
               <FileUp size={24} className="text-slate-500" />
               <span className="text-sm font-medium text-slate-200">Drop the report here, or click to choose</span>
-              <span className="text-[12px] text-slate-500">DOCX · PDF · MD · HTML · TXT — up to {bytes(AGI_REPORT_MAX_BYTES)}</span>
+              <span className="text-[12px] text-slate-500">DOCX · PDF · MD · HTML · TXT. Up to {bytes(AGI_REPORT_MAX_BYTES)}</span>
             </>
           )}
           <input
@@ -401,7 +405,7 @@ function UploadReportModal({
           <button onClick={onClose} disabled={uploading} className="btn-ghost !px-4 !py-2 !text-sm disabled:opacity-50">Cancel</button>
           <button onClick={() => void submit()} disabled={!file || uploading} className="btn-primary !px-4 !py-2 !text-sm disabled:opacity-50">
             {uploading ? <Loader2 size={14} className="mr-1.5 inline animate-spin" /> : <CheckCircle2 size={14} className="mr-1.5 inline" />}
-            {uploading ? "Converting…" : "Upload & convert"}
+            {uploading ? "Converting…" : "Upload and convert"}
           </button>
         </div>
       </div>

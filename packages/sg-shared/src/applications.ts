@@ -83,10 +83,10 @@ export interface AppIdentity {
 // One in-flight promise + a short-lived value cache collapses them into one
 // network call.
 //
-// The identity is also cached in ``sessionStorage`` so tenant + account naming
-// survives a reload and a cross-app handoff: the redeem response carries the
-// same fields, so the target origin can show the org and user name immediately
-// while `/app/auth/me` is still in flight.
+// The identity is also cached persistently so tenant + account naming survives
+// a reload, a return visit, and a cross-app handoff: the redeem response carries
+// the same fields, so the target origin can show the org and user name
+// immediately while `/app/auth/me` is still in flight.
 let _identityPromise: Promise<AppIdentity | null> | null = null;
 let _identityValue: { value: AppIdentity; ts: number } | null = null;
 const IDENTITY_TTL_MS = 5_000;
@@ -95,9 +95,12 @@ const IDENTITY_STORAGE_KEY = "phantix_app_identity";
 function _storeStorage(): Storage | null {
   try {
     if (typeof window === "undefined") return null;
-    return window.sessionStorage;
+    const probe = "__sg_identity_probe__";
+    window.localStorage.setItem(probe, "1");
+    window.localStorage.removeItem(probe);
+    return window.localStorage;
   } catch {
-    return null;
+    try { return window.sessionStorage; } catch { return null; }
   }
 }
 
@@ -200,7 +203,7 @@ function demoSnapshot(): ApplicationsSnapshot {
         label: "Core",
         tagline: "Connect the security picture",
         description:
-          "Core is the security graph every other application writes into — assets, findings, risk, reports and alerts in one place.",
+          "Core is the security graph every other application reports into. Assets, findings, risk, reports and alerts in one place.",
         capabilities: ["Overview", "Findings", "Risk", "Reports", "Alerts", "AI"],
         order: 0,
         base: true,
@@ -241,7 +244,7 @@ function demoSnapshot(): ApplicationsSnapshot {
         label: "Code",
         tagline: "Design and build it securely",
         description:
-          "Code catches security problems before they ship: repository review with the fix offered back as a pull request, plus the threat models and product context that define what secure means for your system.",
+          "Code catches security problems before they ship. It reviews the repository and offers the fix back as a pull request. It also builds the threat models and product context that define what secure means for your system.",
         capabilities: ["Code review", "Code graph", "Threat models", "Product context"],
         order: 3,
         base: false,
@@ -316,6 +319,23 @@ export interface AppTarget {
 }
 
 /** Where an application's "Open" action should go. */
+/** A same-site path from a URL parameter (`/vapt?x=1`), or undefined. Never
+ *  `//host` or a full URL, so a crafted link cannot send anyone off-site. */
+export function safeAppPath(raw: string | null | undefined): string | undefined {
+  return raw && /^\/(?![/\\])/.test(raw) ? raw : undefined;
+}
+
+/** Core's sign-in, remembering the application and page to return to. */
+export function coreLoginHref(next?: ApplicationKey, path?: string): string {
+  const core = (APPLICATION_HOSTS.core || "").replace(/\/+$/, "");
+  const q = new URLSearchParams();
+  if (next && next !== "core") q.set("next", next);
+  const p = safeAppPath(path);
+  if (next && next !== "core" && p && p !== "/") q.set("path", p);
+  const qs = q.toString();
+  return `${core}/login${qs ? `?${qs}` : ""}`;
+}
+
 export function applicationTarget(key: ApplicationKey, path = "/dashboard"): AppTarget {
   // "Local" means this bundle's own application, whichever one it is. Assuming
   // Core was always local was true while there was one bundle; each application
@@ -341,10 +361,14 @@ interface HandoffMinted {
  *
  * On any failure this degrades to the plain host: the target then sends the
  * operator to the Core login, which is the correct outcome, not a lockout.
+ * With `strict`, a failure throws instead. The picker's automatic forward uses
+ * it: degrading there sends the operator to the Core login, which resumes the
+ * live Core session straight back to the picker, which forwards again, a loop.
  */
 export async function applicationHandoffHref(
   key: ApplicationKey,
   path = "/",
+  opts: { strict?: boolean } = {},
 ): Promise<string> {
   const target = applicationTarget(key, path);
   const fallback = target.href;
@@ -364,7 +388,10 @@ export async function applicationHandoffHref(
       ? APPLICATION_HOSTS[key] || minted?.open_url
       : minted?.open_url || APPLICATION_HOSTS[key];
     const base = (preferred || "").replace(/\/+$/, "");
-    if (!minted?.code || !base) return fallback;
+    if (!minted?.code || !base) {
+      if (opts.strict) throw new Error("The sign-in handoff did not return a code.");
+      return fallback;
+    }
     // "/" is the authenticated home for Attack/Defend/Code, so a caller
     // asking for the generic "/dashboard" (or passing nothing) collapses to
     // "/" there. Core is the one app where that's wrong: its "/" is the
@@ -382,13 +409,12 @@ export async function applicationHandoffHref(
           : "/";
     return `${base}${suffix}#sg=${encodeURIComponent(minted.code)}`;
   } catch (err) {
+    if (opts.strict) throw err;
     // Expired/invalid session: go to Core sign-in (remembering the intended
     // application) instead of the target's login screen, which reads as a
     // silent logout on app switch.
     if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-      const core = (APPLICATION_HOSTS.core || "").replace(/\/+$/, "");
-      const next = key === "core" ? "" : `?next=${encodeURIComponent(key)}`;
-      return core ? `${core}/login${next}` : "/login";
+      return APPLICATION_HOSTS.core ? coreLoginHref(key, path) : "/login";
     }
     return fallback;
   }

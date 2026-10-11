@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Search, ShieldCheck, Boxes, Globe, Smartphone, Github, FileJson, Radar, Tag, Sparkles, RefreshCw, KeyRound, Trash2, ListTree, List, ChevronRight, FileSearch, EyeOff, Eye } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, SeverityBadge, Modal, EmptyState, Tabs, ProgressBar, Spinner, PageSkeleton, ErrorState, TableSkeleton } from "@sg/ui";
 import { Pagination, DEFAULT_PAGE_SIZE } from "@sg/components/Pagination";
@@ -7,6 +8,8 @@ import SecurityDbBanner from "@sg/components/SecurityDbBanner";
 import DocLink from "@sg/components/DocLink";
 import MobileHandoffCard from "@sg/components/MobileHandoffCard";
 import AssetTreeView from "@sg/components/AssetTreeView";
+import AssetOwnership from "@sg/components/AssetOwnership";
+import { PlatformSetupLink, hostOf, isIpLike, isWebAssetType, suggestDomain } from "@sg/platformSetup";
 import AssetListView from "@sg/components/AssetListView";
 import AssetCandidatesView from "@sg/components/AssetCandidatesView";
 import { chainLabel, discoverAssetPaths, loadAssetChain, setChainScopeExcluded } from "@sg/assetChain";
@@ -15,10 +18,13 @@ import { useResource } from "@sg/useResource";
 import { timeAgo, titleCase, cx, severityMeta } from "@sg/utils";
 import { useStore } from "@sg/store";
 import { useSseStream } from "@sg/useSse";
-import { api, tokens, API_BASE, ApiError } from "@sg/api";
+import { api, tokens, API_BASE, ApiError, isDemoMode, publicDetailCopy } from "@sg/api";
+import { loadGithubInstallation } from "@sg/codeOps";
 import { classifyAsset, createAssetTag, deleteAssetTag, TAG_COLORS, type AssetClassification } from "@sg/assetTags";
 import { sanitizeSingleLine, validateUploadFile } from "@sg/uploadValidation";
 import type { Asset, AssetIntelligence, DiscoveryJob } from "@sg/types";
+import { SetupRequired } from "@sg/platformSetup";
+import { safeAppPath } from "@sg/applications";
 
 const typeIcon: Record<string, React.ReactNode> = {
   domain: <Globe size={15} />,
@@ -156,6 +162,25 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
   const [selectedIntel, setSelectedIntel] = useState<AssetIntelligence | null>(null);
   const [verifyStep, setVerifyStep] = useState<{ message: string; hint: string } | null>(null);
   const [addConfirmOwnership, setAddConfirmOwnership] = useState(false);
+  const openAdd = async () => {
+    if (await requireDualControl("Adding assets requires a dual-control operate session.")) {
+      setVerifyStep(null);
+      setAddConfirmOwnership(false);
+      setAddOpen(true);
+    }
+  };
+  // `?add=1` opens the add dialog straight away (the first-VAPT journey sends
+  // people here), and `?return=/vapt` goes back there once the asset is saved.
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const returnTo = safeAppPath(searchParams.get("return"));
+  const autoAdd = useRef(false);
+  useEffect(() => {
+    if (autoAdd.current || searchParams.get("add") !== "1") return;
+    autoAdd.current = true;
+    void openAdd();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [addForm, setAddForm] = useState({ type: "domain", value: "", name: "", environment: "production", criticality: "medium" });
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubMethod, setGithubMethod] = useState<"pat" | "app">("pat");
@@ -287,7 +312,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
         fail += 1;
       }
     }
-    if (ok > 0) toast("success", "Discovery started", `${ok} job${ok > 1 ? "s" : ""} queued — watch the Discovery jobs tab.`);
+    if (ok > 0) toast("success", "Discovery started", `${ok} job${ok > 1 ? "s" : ""} queued. Watch the Discovery jobs tab.`);
     if (fail > 0) toast("error", "Some jobs failed", `${fail} asset(s) could not start discovery.`);
     setChecked(new Set());
     setTab("discovery");
@@ -416,14 +441,18 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
       setVerifyStep(null);
       setAddForm({ type: "domain", value: "", name: "", environment: "production", criticality: "medium" });
       reload();
+      if (returnTo) navigate(returnTo);
     } catch (e: any) {
       if (e.status === 422 && e.detail?.verification) {
+        // Normalized before display: the backend detail can name internals.
         setVerifyStep({
-          message: e.detail.message || "Domain verification required",
-          hint: e.detail.verification?.hint || "Check the domain and confirm ownership",
+          message: publicDetailCopy(e.detail?.message) || "Domain verification required",
+          hint: publicDetailCopy(e.detail?.verification?.hint) || "Check the domain and confirm ownership",
         });
       } else {
-        toast("error", "Failed", e.message || "Could not add asset");
+        // e.message is already normalized (api.ts publicErrorCopy): the backend's
+        // own explanation when it is safe and actionable, else the status copy.
+        toast("error", "Could not add asset", e.message || "Check the value and ownership details and try again.");
       }
     } finally {
       setAdding(false);
@@ -432,6 +461,13 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
 
 
   const loadGithubStatus = async () => {
+    // The demo tenant has its own (fixture) GitHub App and no PAT; asking the
+    // real backend from the demo only logs 401s.
+    if (isDemoMode()) {
+      setGithubStatus(null);
+      setGithubAppStatus(await loadGithubInstallation());
+      return;
+    }
     // PAT integration(s) — backend returns a list.
     try {
       const list = await api.get<{ github_login?: string; token_configured?: boolean }[] | { items: { github_login?: string; token_configured?: boolean }[] }>("/assets/integrations/github");
@@ -491,7 +527,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
       if (job && job.skipped_start) {
         toast("info", "Repos imported; analysis already running", "Another GitHub analysis is active. Assets were saved; a new scan was not started.");
       } else if (job && job.id) {
-        toast("success", "Import started", `Imported ${importedCount} repo(s) & queued GitHub analysis scan job #${job.id}. Track it under Scans.`);
+        toast("success", "Import started", `Imported ${importedCount} repo(s) and queued GitHub analysis scan job #${job.id}. Track it under Scans.`);
       } else {
         toast("success", "Import started", "Repos imported as assets (no analysis job queued).");
       }
@@ -557,7 +593,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load your asset inventory. Check your connection and retry — your session stays signed in."
+        body="We could not load your asset inventory. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -582,21 +618,14 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
             </button>
             <button
               className="btn-primary"
-              onClick={() =>
-                void (async () => {
-                  if (await requireDualControl("Adding assets requires a dual-control operate session.")) {
-                    setVerifyStep(null);
-                    setAddConfirmOwnership(false);
-                    setAddOpen(true);
-                  }
-                })()
-              }
+              onClick={() => void openAdd()}
             >
               <Plus size={15} /> Add asset
             </button>
           </div>
         }
       />
+      <SetupRequired action="add and scan assets" needs={["database"]} />
 
       <Tabs
         tabs={[
@@ -653,7 +682,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                     </td>
                     <td className="td font-mono text-sm">
                       <span className={cx(score >= 75 ? "text-severity-critical" : score >= 50 ? "text-severity-high" : score >= 25 ? "text-severity-medium" : "text-severity-low")}>
-                        {score || "--"}
+                        {score || "Not set"}
                       </span>
                     </td>
                     <td className="td">
@@ -755,6 +784,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                 onCheckedChange={setChecked}
                 onRunDiscovery={(list) => void runDiscovery(list)}
                 breadcrumb={breadcrumb}
+                onAdd={() => void openAdd()}
                 notice={
                   view === "tree" ? (
                     <p className="border-b border-phantix-700/40 bg-phantix-900/40 px-4 py-2 text-xs text-slate-400">
@@ -806,14 +836,14 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                 <span className={cx("flex h-9 w-9 items-center justify-center rounded-xl", j.status === "running" ? "bg-severity-low/20 text-severity-low" : j.status === "completed" ? "bg-emerald-400/20 text-emerald-400" : j.status === "failed" ? "bg-severity-critical/20 text-severity-critical" : "bg-phantix-800/70 text-gold-400")}>
                   <Radar size={16} className={j.status === "running" ? "animate-pulse-soft" : ""} />
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[12rem] flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-display text-sm font-semibold text-slate-100">{titleCase(j.job_type)}</p>
                     <span className="text-xs font-mono text-slate-500">#{j.id}</span>
                     <StatusBadge status={j.status} />
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Domain: <span className="text-slate-300 font-mono">{cfg.domain || "--"}</span>
+                    Domain: <span className="text-slate-300 font-mono">{cfg.domain || "Not set"}</span>
                     {j.assets_discovered != null && <span className="ml-3">{j.assets_discovered} assets discovered</span>}
                     {rs.assets_upserted != null && <span className="ml-2">{rs.assets_upserted} upserted</span>}
                   </p>
@@ -972,7 +1002,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
 
           <Card hover className="flex flex-col">
             <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-phantix-800/70 text-gold-400"><FileJson size={18} /></span>
-            <h3 className="font-display text-[15px] font-semibold text-slate-100">OpenAPI / Postman</h3>
+            <h3 className="font-display text-[15px] font-semibold text-slate-100">OpenAPI or Postman</h3>
             <p className="mt-1.5 flex-1 text-[13px] leading-6 text-slate-400">Import an OpenAPI/Postman spec by paste, file upload, or URL. Each entry becomes an API asset with its details.</p>
             <button className="btn-secondary mt-4 w-full" onClick={() => { void (async () => { if (await requireDualControl("API import requires a dual-control operate session.")) setShowApiModal(true); })(); }}>
               Import Spec
@@ -1000,7 +1030,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                   reload();
                 } catch (e: any) {
                   const st = Number(e?.status ?? 0);
-                  toast("error", st === 502 || st === 503 ? "Storage unavailable" : "Upload failed", st === 502 || st === 503 ? "Storage unavailable — retry." : (e?.message ?? ""));
+                  toast("error", st === 502 || st === 503 ? "Storage unavailable" : "Upload failed", st === 502 || st === 503 ? "Storage unavailable. Try again." : (e?.message ?? ""));
                 }
                 finally { setImporting(false); }
               };
@@ -1068,13 +1098,13 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                   ))}
                 </nav>
               ) : (
-                <p className="text-sm text-slate-500">Top of its chain — subdomains and paths found under it appear beneath it in the tree.</p>
+                <p className="text-sm text-slate-500">. Subdomains and paths found under it appear beneath it in the tree.</p>
               )}
               {selected.verification_method === "inherited" && selectedChain.length > 1 && (() => {
                 const host = [...selectedChain.slice(0, -1)].reverse().find((c) => c.asset_type === "domain" || c.asset_type === "subdomain" || c.asset_type === "ip_address");
                 return host ? (
                   <p className="mt-1.5 text-xs text-slate-400">
-                    Verified through <span className="font-mono text-slate-300">{host.value}</span> — ownership is inherited from the verified host above it.
+                    Verified through <span className="font-mono text-slate-300">{host.value}</span> . Ownership is inherited from the verified host above it.
                   </p>
                 ) : null;
               })()}
@@ -1135,7 +1165,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                       })()
                     }
                   >
-                    {chainBusy === "paths" ? <Spinner className="h-3.5 w-3.5" /> : <FileSearch size={13} />} Discover paths (robots.txt &amp; sitemap)
+                    {chainBusy === "paths" ? <Spinner className="h-3.5 w-3.5" /> : <FileSearch size={13} />} Discover paths (robots.txt and sitemap)
                   </button>
                 )}
               </div>
@@ -1219,18 +1249,8 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                 )}
               </>
             )}
+            <AssetOwnership asset={selected} />
             <div className="flex gap-2.5">
-              <button
-                className="btn-primary flex-1"
-                onClick={() =>
-                  void (async () => {
-                    if (!(await requireDualControl("Asset verification requires a dual-control operate session."))) return;
-                    toast("success", "Verification queued", "This asset is queued for ownership verification.");
-                  })()
-                }
-              >
-                Re-verify ownership
-              </button>
               <button
                 className="btn-secondary"
                 onClick={() => void runDiscovery([selected])}
@@ -1256,6 +1276,15 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
               <p className="text-severity-medium font-semibold">Verification Required</p>
               <p className="text-slate-300">{verifyStep.message}</p>
               <p className="text-slate-500">{verifyStep.hint}</p>
+              {isWebAssetType(addForm.type) && !isIpLike(addForm.value) && hostOf(addForm.value) && (
+                <p className="text-slate-300">
+                  Fastest fix:{" "}
+                  <PlatformSetupLink task={{ kind: "verify_domain", domain: suggestDomain(addForm.value) }}>
+                    verify {suggestDomain(addForm.value)}
+                  </PlatformSetupLink>{" "}
+                  in a new tab, then come back and retry. It covers every subdomain too.
+                </p>
+              )}
               <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1343,7 +1372,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
             </>
           ) : (
             <>
-              <p className="text-xs text-slate-400">Install the <strong>SecureGraph GitHub App</strong> on your account or organization. The App is the recommended integration — no tokens to rotate, and repositories are imported automatically.</p>
+              <p className="text-xs text-slate-400">Install the <strong>SecureGraph GitHub App</strong> on your account or organization. The App is the recommended integration. It needs no tokens, and repositories are imported automatically.</p>
               {githubAppStatus?.connected ? (
                 <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3">
                   <p className="text-sm font-semibold text-emerald-300">GitHub App connected</p>
@@ -1351,7 +1380,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                 </div>
               ) : (
                 <div className="rounded-xl border border-phantix-700/40 bg-phantix-950/50 p-3">
-                  <p className="text-xs text-slate-300">You'll be redirected to GitHub to install the SecureGraph App. After approving, repositories are available for import.</p>
+                  <p className="text-xs text-slate-300">You will be redirected to GitHub to install the SecureGraph App. After you approve, the repositories are available for import.</p>
                 </div>
               )}
               <button onClick={handleGithubConnect} disabled={importingGithub} className="btn-primary w-full">{importingGithub ? <Spinner className="h-4 w-4" /> : <Github size={14} className="mr-1 inline" />}{githubAppStatus?.connected ? "Reconnect GitHub App" : "Install GitHub App"}</button>
@@ -1360,7 +1389,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
         </div>
       </Modal>
 
-      <Modal open={showApiModal} onClose={() => setShowApiModal(false)} title="Import OpenAPI / Postman">
+      <Modal open={showApiModal} onClose={() => setShowApiModal(false)} title="Import OpenAPI or Postman">
         <div className="space-y-3">
           <div><label className="label">Format</label><select className="input" value={apiFormat} onChange={(e) => setApiFormat(e.target.value)}><option value="openapi">OpenAPI (JSON/YAML)</option><option value="postman">Postman Collection</option></select></div>
 
@@ -1389,7 +1418,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
 
           {apiInputMode === "file" && (
             <div>
-              <label className="label">Spec file (.json / .yaml / .yml)</label>
+              <label className="label">Spec file (.json, .yaml or .yml)</label>
               <input
                 type="file"
                 accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml,text/plain"
@@ -1450,7 +1479,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
                 <button
                   key={c}
                   onClick={() => setTagForm((f) => ({ ...f, color: c }))}
-                  aria-label={`Use colour ${c}`}
+                  aria-label={`Use color ${c}`}
                   className={cx(
                     "h-7 w-7 rounded-lg border-2 transition-transform",
                     tagForm.color === c ? "border-white scale-110" : "border-transparent",

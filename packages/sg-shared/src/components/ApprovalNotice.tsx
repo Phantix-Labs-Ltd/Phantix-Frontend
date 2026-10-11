@@ -23,7 +23,7 @@ export function ApprovalNotice({
         <ShieldCheck className="mt-0.5 h-5 w-5 text-amber-400" />
         <div>
           <p className="font-semibold text-amber-200">
-            Paused — awaiting authorization{count > 1 ? ` (${count} steps)` : ''}
+            Paused. Waiting for authorization.{count > 1 ? ` (${count} steps)` : ''}
           </p>
           <p className="text-xs text-slate-400">
             {stateChanging

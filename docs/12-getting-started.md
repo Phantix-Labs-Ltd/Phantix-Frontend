@@ -2,19 +2,19 @@
 
 ---
 
-## Path A — Self-serve (most teams)
+## Path A. Self-serve (most teams)
 
-1. **Get started free** on the Platform
-2. Complete organization setup and verification steps
-3. Connect a **dedicated security database**
-4. Add your first assets (domain, public GitHub via **Connect GitHub**)
-5. Run a light assessment within Free entitlements
-6. Review findings; export JSON/Markdown
+1. **Get started free**: company name, work email and password, or **Continue with GitHub**. No card. During the beta, tick **Join the beta sandbox**. When the beta is full, join the **waitlist** instead: add a Quick Scan of your domain to reach the prioritized launch list
+2. Enter the 6-digit code we email you (skipped when you sign up with GitHub)
+3. Enter a domain or a GitHub repo and run a **Quick Scan**: passive checks, a few minutes, no setup
+4. Review the findings, then connect a **security database** to keep them (a free Neon or Supabase project takes about two minutes)
+5. Invite a teammate. Turn on **dual control** if you want a second person to approve sensitive actions; until then you work in solo mode and confirm sensitive actions with a code
+6. Verify you own a target, then run active testing (VAPT) within your plan
 7. When ready, upgrade to **Premium** for VAPT, PDF reports, private repos, richer AI
 
 ---
 
-## Path B — Design partner / pilot
+## Path B. Design partner and pilot
 
 1. Contact Phantix for a pilot coupon or guided onboarding
 2. Staff may provision Premium-class tools for a limited window
@@ -23,7 +23,7 @@
 
 ---
 
-## Path C — Full engagement
+## Path C. Full engagement
 
 1. Scope discussion (external web, API, mobile, cloud)
 2. Authorization letters and dual-control owners
@@ -49,8 +49,8 @@
 | Button | Goes to |
 |--------|---------|
 | **Get started free** | Platform registration |
-| **Sign in** | Platform (operators / org users) |
-| **Talk to us** | Sales / founders contact |
+| **Sign in** | Platform (operators and org users) |
+| **Talk to us** | Sales and founders contact |
 | **Developer overview** | [10-for-developers.md](./10-for-developers.md) |
 
 ---

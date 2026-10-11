@@ -115,7 +115,7 @@ export default function ComplianceConnectors() {
                   const isReady = Boolean(c.ready ?? c.configured);
                   return (
                     <div key={key} className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-phantix-700 bg-phantix-900/60 p-3">
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-[12rem] flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-slate-200">{connectorLabel(c)}</span>
                           <span className={cx("chip", isReady ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400" : "border-phantix-700 text-slate-500")}>
@@ -201,7 +201,7 @@ function ConnectorConfigModal({
     <Modal open onClose={onClose} title={`Configure ${connectorLabel(connector)}`} wide>
       <div className="space-y-4">
         <p className="text-sm leading-6 text-slate-400">
-          Connector settings are stored per organization. Secrets are stored encrypted — do not paste
+          Connector settings are stored per organization. Secrets are stored encrypted. Do not paste
           credentials you cannot rotate.
         </p>
         <div>

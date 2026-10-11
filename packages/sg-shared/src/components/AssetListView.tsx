@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  ArrowDown, ArrowUp, ArrowUpDown, Boxes, EyeOff, Radar, ShieldAlert, ShieldCheck, X,
+  ArrowDown, ArrowUp, ArrowUpDown, Boxes, EyeOff, Plus, Radar, ShieldAlert, ShieldCheck, X,
 } from "lucide-react";
 import { EmptyState, SeverityBadge, StatusBadge } from "../ui";
+import { PlatformSetupLink, isIpLike, isWebAssetType, suggestDomain, useAupStatus, useVerifiedDomains } from "../platformSetup";
 import { Pagination, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS as LIST_PAGE_SIZES } from "./Pagination";
 import { cx, timeAgo, titleCase } from "../utils";
+import { assetPort, assetValueWithoutPort } from "../assetChain";
 import type { Asset } from "../types";
 
 export type ListAsset = Asset & { discoveryStatus?: string; discoveryJobId?: number };
 
-type SortKey = "asset" | "type" | "risk" | "criticality" | "verified" | "last_seen";
+type SortKey = "asset" | "type" | "port" | "risk" | "criticality" | "verified" | "last_seen";
 type SortDir = "asc" | "desc";
 
 const CRIT_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
@@ -28,6 +30,7 @@ function riskRank(a: Asset): number {
 const SORTERS: Record<SortKey, (a: Asset, b: Asset) => number> = {
   asset: (a, b) => a.value.localeCompare(b.value, undefined, { numeric: true, sensitivity: "base" }),
   type: (a, b) => a.asset_type.localeCompare(b.asset_type) || a.value.localeCompare(b.value),
+  port: (a, b) => Number(assetPort(a)?.port ?? -1) - Number(assetPort(b)?.port ?? -1) || a.value.localeCompare(b.value, undefined, { numeric: true }),
   risk: (a, b) => riskRank(a) - riskRank(b),
   criticality: (a, b) => (CRIT_RANK[a.criticality] ?? 0) - (CRIT_RANK[b.criticality] ?? 0),
   verified: (a, b) => ["unverified", "inherited", "verified"].indexOf(verificationOf(a)) - ["unverified", "inherited", "verified"].indexOf(verificationOf(b)),
@@ -38,6 +41,7 @@ type Column = { key: SortKey | "parent" | "tags" | "source"; label: string; clas
 const COLUMNS: Column[] = [
   { key: "asset", label: "Asset", sortable: true },
   { key: "type", label: "Type", sortable: true },
+  { key: "port", label: "Port", sortable: true },
   { key: "parent", label: "Parent", className: "hidden 2xl:table-cell" },
   { key: "risk", label: "Risk", sortable: true },
   { key: "criticality", label: "Criticality", className: "hidden lg:table-cell", sortable: true },
@@ -74,7 +78,7 @@ function AssetValue({ value, term }: { value: string; term: string }) {
   );
 }
 
-const Dash = () => <span className="text-slate-600" aria-label="none">—</span>;
+const Dash = () => <span className="text-slate-600" aria-label="none">Not set</span>;
 
 /** Wraps each case-insensitive occurrence of ``term`` in a <mark>. */
 function Highlight({ text, term }: { text: string; term: string }) {
@@ -99,6 +103,18 @@ function Highlight({ text, term }: { text: string; term: string }) {
   return <>{parts}</>;
 }
 
+/** The port an asset listens on, lifted out of the asset name ("Not set" when none). */
+function PortCell({ a }: { a: Asset }) {
+  const p = assetPort(a);
+  if (!p) return <Dash />;
+  return (
+    <span className="whitespace-nowrap font-mono text-[13px] text-slate-300">
+      {p.port}
+      {p.protocol && <span className="text-slate-500">/{p.protocol}</span>}
+    </span>
+  );
+}
+
 function RiskCell({ a }: { a: Asset }) {
   const level = String(a.risk_level ?? "").toLowerCase();
   const open = Number(a.open_findings ?? 0);
@@ -113,13 +129,28 @@ function RiskCell({ a }: { a: Asset }) {
   );
 }
 
-function OwnershipCell({ a }: { a: Asset }) {
+function OwnershipCell({ a, coveredBy, ipCovered }: { a: Asset; coveredBy: (value: string) => string | null; ipCovered: boolean }) {
   const v = verificationOf(a);
+  // A verified domain on the Platform covers this host and its subdomains; an
+  // IP is covered by the organization's AUP confirmation.
+  const web = isWebAssetType(a.asset_type) && !isIpLike(a.value);
+  const via = v === "unverified"
+    ? web ? coveredBy(a.value) : isIpLike(a.value) && ipCovered ? "your AUP confirmation" : null
+    : null;
   return (
     <span className="flex flex-wrap items-center gap-1.5">
-      {v === "unverified" ? (
-        <span className="inline-flex items-center gap-1 text-[13px] text-severity-medium">
+      {via ? (
+        <span className="inline-flex items-center gap-1 text-[13px] text-emerald-400" title={via === "your AUP confirmation" ? "Covered by your AUP confirmation" : `Covered by the verified domain ${via}`}>
+          <ShieldCheck size={13} /> Verified
+        </span>
+      ) : v === "unverified" ? (
+        <span className="inline-flex items-center gap-1.5 text-[13px] text-severity-medium">
           <ShieldAlert size={13} /> Unverified
+          {web && (
+            <PlatformSetupLink task={{ kind: "verify_domain", domain: suggestDomain(a.value) }} className="text-[13px]">
+              Verify
+            </PlatformSetupLink>
+          )}
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 text-[13px] text-emerald-400">
@@ -154,6 +185,8 @@ export interface AssetListViewProps {
   breadcrumb: (a: Asset) => string;
   /** Rendered above the table (e.g. the "matches in the chain" note). */
   notice?: React.ReactNode;
+  /** Opens "Add asset"; offered from the empty inventory. */
+  onAdd?: () => void;
 }
 
 /**
@@ -174,8 +207,11 @@ export default function AssetListView({
   onRunDiscovery,
   breadcrumb,
   notice,
+  onAdd,
 }: AssetListViewProps) {
   const [params, setParams] = useSearchParams();
+  const { coveredBy } = useVerifiedDomains();
+  const aup = useAupStatus();
   const top = useRef<HTMLDivElement>(null);
 
   const sortParam = params.get("sort") ?? "last_seen:desc";
@@ -413,8 +449,10 @@ export default function AssetListView({
           <EmptyState
             icon={<Boxes size={22} />}
             title={activeChips.length ? "No assets match these filters" : "No assets yet"}
-            body={activeChips.length ? "Try removing a filter to widen the list." : "Add your first in-scope host to start the inventory."}
-            action={activeChips.length ? <button className="btn-secondary" onClick={clearAll}>Clear filters</button> : undefined}
+            body={activeChips.length ? "Try removing a filter to widen the list." : "Add a domain and SecureGraph finds its subdomains and services for you."}
+            action={activeChips.length
+              ? <button className="btn-secondary" onClick={clearAll}>Clear filters</button>
+              : onAdd ? <button className="btn-primary" onClick={onAdd}><Plus size={15} /> Add your first asset</button> : undefined}
           />
         </div>
       ) : (
@@ -433,15 +471,16 @@ export default function AssetListView({
                 <button type="button" onClick={() => onSelect(a)} className="min-w-0 flex-1 text-left">
                   <span className="flex items-center gap-2">
                     <span className="text-phantix-300">{typeIcon[a.asset_type] ?? <Boxes size={15} />}</span>
-                    <span className="truncate"><AssetValue value={a.value} term={q} /></span>
+                    <span className="truncate"><AssetValue value={assetValueWithoutPort(a)} term={q} /></span>
                   </span>
                   {a.parent_asset_id != null && breadcrumb(a) && (
                     <span className="mt-0.5 block truncate text-[12px] text-slate-500">in {breadcrumb(a)}</span>
                   )}
                   <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="text-xs text-slate-400">{titleCase(a.asset_type)}</span>
+                    <PortCell a={a} />
                     <RiskCell a={a} />
-                    <OwnershipCell a={a} />
+                    <OwnershipCell a={a} coveredBy={coveredBy} ipCovered={Boolean(aup.status?.covers_ip_targets)} />
                     <span className="text-xs text-slate-500">{timeAgo(a.last_seen_at)}</span>
                   </span>
                 </button>
@@ -518,13 +557,14 @@ export default function AssetListView({
                         <span className="shrink-0 text-phantix-300 [&>svg]:h-[15px] [&>svg]:w-[15px]" aria-hidden="true">
                           {typeIcon[a.asset_type] ?? <Boxes size={15} />}
                         </span>
-                        <span className="truncate" title={a.name && a.name !== a.value ? `${a.value} — ${a.name}` : a.value}>
-                          <AssetValue value={a.value} term={q} />
+                        <span className="truncate" title={a.name && a.name !== a.value ? `${a.value}: ${a.name}` : a.value}>
+                          <AssetValue value={assetValueWithoutPort(a)} term={q} />
                         </span>
                         <DiscoveryDot status={a.discoveryStatus} />
                       </div>
                     </td>
                     <td className="td whitespace-nowrap text-slate-400">{titleCase(a.asset_type)}</td>
+                    <td className="td"><PortCell a={a} /></td>
                     <td className="td hidden max-w-[14rem] 2xl:table-cell">
                       {a.parent_asset_id != null && breadcrumb(a) ? (
                         <span className="block truncate text-[13px] text-slate-400" title={breadcrumb(a)}>{breadcrumb(a)}</span>
@@ -536,7 +576,7 @@ export default function AssetListView({
                         {a.criticality}
                       </span>
                     </td>
-                    <td className="td whitespace-nowrap"><OwnershipCell a={a} /></td>
+                    <td className="td whitespace-nowrap"><OwnershipCell a={a} coveredBy={coveredBy} ipCovered={Boolean(aup.status?.covers_ip_targets)} /></td>
                     <td className="td hidden whitespace-nowrap 2xl:table-cell">
                       {(a.tags?.length ?? 0) > 0 ? (
                         <span className="inline-flex items-center gap-1">

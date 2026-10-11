@@ -105,7 +105,7 @@ export default function AgentScopeGate({
   const actionLabel = card.intent?.label ?? card.purpose ?? "this request";
 
   return createPortal(
-    <Modal open onClose={onCancel} title={`${agentName} — confirm data scope`} wide>
+    <Modal open onClose={onCancel} title={`${agentName}: confirm data scope`} wide>
       <div className="space-y-4">
         <div className="flex items-start gap-3 rounded-xl border border-gold-400/25 bg-gold-400/[0.06] p-3.5">
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold-400/15 text-gold-300">

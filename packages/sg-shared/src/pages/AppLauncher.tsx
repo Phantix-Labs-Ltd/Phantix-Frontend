@@ -4,11 +4,13 @@ import { motion, type Variants } from "framer-motion";
 import { ArrowUpRight, Boxes, Code2, Crosshair, ShieldCheck } from "lucide-react";
 import { cx } from "@sg/utils";
 import { apiGet } from "@sg/shell/api";
-import { isDemoFlagSet } from "@sg/api";
+import { isDemoMode } from "@sg/api";
 import { useStore } from "@sg/store";
 import { APPLICATION_LABEL, type ApplicationKey, type NavSection } from "@sg/shell/types";
 import LatestAssessmentPanel from "../components/LatestAssessment";
 import AppMiniDashboard from "../components/AppMiniDashboard";
+import DocLink from "../components/DocLink";
+import OnboardingChecklist from "../components/OnboardingChecklist";
 
 /**
  * An application's landing page: what this application is, and every page it
@@ -74,7 +76,7 @@ export default function AppLauncher({
   const [card, setCard] = useState<LauncherCard | null>(null);
 
   useEffect(() => {
-    if (isDemoFlagSet()) return;
+    if (isDemoMode()) return;
     let alive = true;
     apiGet<Snapshot>("/app/auth/applications")
       .then((s) => alive && setCard(s.applications.find((a) => a.key === application) ?? null))
@@ -101,32 +103,33 @@ export default function AppLauncher({
 
   return (
     <div>
-      {/* Header: what this application is for, from the backend catalog. */}
+      <OnboardingChecklist application={application} />
+      {/* Header: name and tagline only. The catalog's long description belongs
+          on the app picker, not above the work on every overview. */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-5 flex flex-wrap items-start gap-4"
+        className="mb-4 flex flex-wrap items-center gap-3"
       >
         <span
           className={cx(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border bg-phantix-900/70",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-phantix-900/70 [&_svg]:h-[18px] [&_svg]:w-[18px]",
             ACCENT[application],
           )}
         >
           {ICONS[application]}
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-[26px] font-bold leading-tight tracking-tight text-white">
+          <h1 className="font-display text-[24px] font-bold leading-tight tracking-tight text-white">
             {card?.label || APPLICATION_LABEL[application]}
             {card?.tagline ? (
               <span className="ml-3 align-middle text-sm font-semibold text-gold-300">{card.tagline}</span>
             ) : null}
           </h1>
-          {card?.description ? (
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">{card.description}</p>
-          ) : null}
         </div>
+        {/* Beside the title, not on a line of its own. */}
+        <DocLink docId="howto-app-38" label="Overview and navigation how-to" className="shrink-0" />
       </motion.div>
 
       <AppMiniDashboard application={application} />

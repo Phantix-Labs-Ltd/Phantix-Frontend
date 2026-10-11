@@ -1,4 +1,4 @@
-// Entitlements & upgrade — what this organization can use, and how to pay.
+// Entitlements and upgrade — what this organization can use, and how to pay.
 //
 // Mirrors GET /billing/entitlements (plan, premium status, enforcement window and
 // a per-pack entitled flag) and POST /billing/subscribe + /payments/{id}/initialize
@@ -129,13 +129,13 @@ export const UPSELL_FEATURES: Record<string, UpsellFeature> = {
   // behaviour is what Growth buys.
   continuous_pr: {
     key: "continuous_pr",
-    label: "Continuous PR / MR review",
+    label: "Continuous pull request review",
     plan: "growth",
     blurb: "Every push reviewed, not just an on-demand check. Continuous PR is a Growth capability.",
   },
   continuous_pentest: {
     key: "continuous_pentest",
-    label: "Continuous / recurring pentest",
+    label: "Continuous and recurring pentest",
     plan: "growth",
     blurb: "Re-tested on a schedule so a fix is confirmed, not assumed. Recurring pentest is Growth.",
   },
@@ -148,15 +148,15 @@ export const UPSELL_FEATURES: Record<string, UpsellFeature> = {
   },
   container_security_scan: {
     key: "container_security_scan",
-    label: "Container & Kubernetes posture",
+    label: "Container and Kubernetes posture",
     plan: "starter",
     blurb: "Image and cluster posture with a container runtime is included with Starter and Growth.",
   },
   secrets_and_sca: {
     key: "secrets_and_sca",
-    label: "Secrets, SCA & SAST",
+    label: "Secrets, SCA and SAST",
     plan: "starter",
-    blurb: "Six-layer code security — secrets, dependencies, IaC and SAST — is included with Starter and Growth.",
+    blurb: "Six-layer code security (secrets, dependencies, IaC and SAST) is included with Starter and Growth.",
   },
   compliance_workbench: {
     key: "compliance_workbench",
@@ -178,9 +178,9 @@ export const UPSELL_FEATURES: Record<string, UpsellFeature> = {
   },
   dynamic_mobile: {
     key: "dynamic_mobile",
-    label: "Dynamic mobile / AVD testing",
+    label: "Dynamic mobile and AVD testing",
     plan: "engagement",
-    blurb: "Runtime mobile analysis is a project engagement — request a quote.",
+    blurb: "Runtime mobile analysis is a project engagement. Request a quote.",
   },
 };
 

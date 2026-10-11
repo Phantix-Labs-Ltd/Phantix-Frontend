@@ -1,10 +1,10 @@
-# For investors, partners & first-contact organizations
+# For investors, partners and first-contact organizations
 
 ---
 
 ## Thesis
 
-Cybersecurity for SMEs and mid-market organizations is broken: tools are noisy, reports are untrusted, and data residency is an afterthought. Phantix packages **inventory → assessment → verified reporting** as a multi-tenant platform with a structural privacy model and NGN-native commercial packaging for the African market — expandable to partners and MSSPs.
+Cybersecurity for SMEs and mid-market organizations is broken: tools are noisy, reports are untrusted, and data residency is an afterthought. Phantix packages **inventory → assessment → verified reporting** as a multi-tenant platform with a structural privacy model and NGN-native commercial packaging for the African market. Expandable to partners and MSSPs.
 
 ---
 
@@ -12,12 +12,12 @@ Cybersecurity for SMEs and mid-market organizations is broken: tools are noisy, 
 
 | Moat | Why it matters |
 |------|----------------|
-| **Privacy architecture** | Customer security record in customer-controlled DB — not a central vuln lake |
+| **Privacy architecture** | Customer security record in customer-controlled DB, not a central vuln lake |
 | **Verification + impact** | Report quality is a product feature, not a consulting afterthought |
-| **Modular engines** | Asset, scan, VAPT, risk, compliance, reporting, AI — scale independently |
-| **AI as orchestrator** | Domain agents + skills that improve over time — engines still own facts |
+| **Modular engines** | Asset, scan, VAPT, risk, compliance, reporting, AI. Scale independently |
+| **AI as orchestrator** | Domain agents + skills that improve over time. Engines still own facts |
 | **Governance** | Dual-control, audit, NDPA-aware AI data paths |
-| **Commercial design** | Free adoption → Premium subscription → add-ons & engagements; **public API monetized only via AI Agent plan** |
+| **Commercial design** | Free adoption → Premium subscription → add-ons and engagements; **public API monetized only via AI Agent plan** |
 
 ---
 
@@ -33,12 +33,12 @@ Cybersecurity for SMEs and mid-market organizations is broken: tools are noisy, 
 
 | Layer | Motion |
 |-------|--------|
-| **Self-serve Free** | Land with inventory & light hygiene; no card |
+| **Self-serve Free** | Land with inventory and light hygiene; no card |
 | **Premium subscription** | Expand to VAPT, risk, PDF reports, AI assist, channels |
-| **Public API — AI Agent plan** | Only public API SKU: programmatic domain agents for integrators |
+| **Public API. AI Agent plan** | Only public API SKU: programmatic domain agents for integrators |
 | **Add-ons** | Heavier packs (compliance workbench, cloud, secrets, etc.) |
-| **Engagements** | Full VAPT, specialist mobile/AI pentest — human + platform |
-| **Partners (later)** | Wholesale / multi-tenant delivery |
+| **Engagements** | Full VAPT, specialist mobile/AI pentest. Human + platform |
+| **Partners (later)** | Wholesale and multi-tenant delivery |
 
 ---
 
@@ -50,7 +50,7 @@ Cybersecurity for SMEs and mid-market organizations is broken: tools are noisy, 
 - GitHub App for modern repo access; ephemeral analysis with teardown
 - Billing via Paystack (NGN), entitlements engine, coupons for design partners
 
-Detailed architecture is available under NDA / engineering packs — public site should stay outcome-focused.
+Detailed architecture is available under NDA and engineering packs. Public site should stay outcome-focused.
 
 ---
 

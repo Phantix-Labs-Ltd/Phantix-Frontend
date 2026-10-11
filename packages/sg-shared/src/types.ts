@@ -39,6 +39,12 @@ export interface OrgUser {
 export interface DualControlState {
   configured: boolean;
   require_dual_control: boolean;
+  /**
+   * Org policy. "off" is solo mode: actions run without an approver, and
+   * sensitive ones ask for a step-up code. null means the backend predates the
+   * policy, which behaves like "on".
+   */
+  policy_mode: "off" | "on" | "enforced" | null;
   initiator: Pick<OrgUser, "id" | "full_name" | "email" | "title"> | null;
   authorizer: Pick<OrgUser, "id" | "full_name" | "email" | "title"> | null;
 }
@@ -438,6 +444,8 @@ export interface VaptCampaign {
   asset_count: number;
   findings_count: number;
   requires_approval: boolean;
+  /** Solo mode: the requester can approve this campaign themselves (C9). */
+  self_approvable?: boolean;
   created_by: string;
   created_at: string;
   started_at: string | null;
@@ -750,6 +758,28 @@ export interface TrackerFinding {
    * dimensions must not be collapsed into one.
    */
   verification_status?: TrackerVerification;
+  /** Raw-store row the finding came from — keys the remediation artifact. */
+  source_finding_id?: number | null;
+  source_store?: string | null;
+  /**
+   * AI fix artifact, carried on the row because the tracker *is* the
+   * remediation board. `status` is `generated` (guidance ready) or `pending`.
+   */
+  remediation?: TrackerRemediation | null;
+}
+
+/** The AI remediation artifact the remediation agent persists beside a finding. */
+export interface TrackerRemediation {
+  status?: string;
+  summary?: string;
+  steps?: string[];
+  references?: string[];
+  validation?: string;
+  effort?: string | null;
+  priority?: string | null;
+  generated_by?: string;
+  model?: string;
+  generated_at?: string;
 }
 
 /** The three evidence levels the tracker board carries. */
@@ -904,9 +934,12 @@ export interface AlertEvent {
   event_type: string;
   severity: Severity;
   title: string;
-  status: "pending" | "delivered" | "failed";
+  /** External delivery state; every event is an in-app notification regardless. */
+  status: "pending" | "delivered" | "sent" | "partial" | "skipped" | "failed";
   channels: string[];
   created_at: string;
+  body?: string;
+  payload?: Record<string, unknown> | null;
 }
 
 export interface AlertSettings {
@@ -1640,6 +1673,66 @@ export interface PentestScopeList {
   total: number;
 }
 
+// ── Human / external-pentest findings intake ─────────────────────────────────
+// A human-led engagement is scoped above; its results are imported here so the
+// agent verifier adjudicates them and they sit beside engine findings.
+export type ExternalFindingSeverity = "critical" | "high" | "medium" | "low" | "info";
+
+export interface ExternalPentestFindingInput {
+  title: string;
+  severity?: ExternalFindingSeverity;
+  description?: string | null;
+  target?: string | null;
+  category?: string | null;
+  cve?: string | null;
+  cvss_score?: number | null;
+  asset_id?: number | null;
+  tool?: string | null;
+  source_ref?: string | null;
+  evidence?: Record<string, unknown> | null;
+}
+
+export interface ExternalPentestIntakeRequest {
+  title: string;
+  reference?: string | null;
+  tester?: string | null;
+  environment?: string;
+  summary?: string | null;
+  source_scope_id?: number | null;
+  verify?: boolean;
+  findings: ExternalPentestFindingInput[];
+}
+
+export interface ExternalPentestIntakeResult {
+  ok: boolean;
+  source: string;
+  imported: number;
+  assessment_id?: number | null;
+  verified: number;
+  finding_ids: number[];
+  error?: string | null;
+}
+
+export interface ExternalPentestFindingRow {
+  id: number;
+  title: string;
+  severity: string;
+  category?: string | null;
+  target?: string | null;
+  cve?: string | null;
+  status: string;
+  verification_status: string;
+  report_reference?: string | null;
+  tester?: string | null;
+  assessment_id?: number | null;
+  created_at?: string | null;
+}
+
+export interface ExternalPentestFindingList {
+  items: ExternalPentestFindingRow[];
+  total: number;
+}
+
 // ── SOC War Room ──────────────────────────────────────────────────────────────
 export interface SocWarRoomCase {
   id: number;
@@ -1714,13 +1807,15 @@ export interface SocWarRoomResponse {
 
 // ── SOC Playbooks & MITRE ─────────────────────────────────────────────────────
 export interface SocPlaybook {
-  id: number;
+  id: string | number;
   title: string;
   description?: string;
   category: string;
   mitre_id?: string;
   severity?: string;
-  phases: SocPlaybookPhase[];
+  phases?: SocPlaybookPhase[];
+  /** Phase count from list endpoints (they return a summary, not full phases). */
+  phase_count?: number;
   enabled: boolean;
   org_only: boolean;
   version: number;

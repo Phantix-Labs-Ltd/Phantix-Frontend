@@ -6,7 +6,7 @@ import { Pagination, DEFAULT_PAGE_SIZE } from "@sg/components/Pagination";
 import DocLink from "@sg/components/DocLink";
 import SecurityDbBanner from "@sg/components/SecurityDbBanner";
 import { loadRisksBundle } from "@sg/data";
-import { api } from "@sg/api";
+import { api, showApprovalSent } from "@sg/api";
 import { useResource } from "@sg/useResource";
 import { priorityBandMeta, riskLevelHex, timeAgo, titleCase, cx, clickableRowProps } from "@sg/utils";
 import { useStore } from "@sg/store";
@@ -79,7 +79,9 @@ export default function Risks() {
 
       if (treatmentId) {
         await api.post(`/risks/treatments/${treatmentId}/submit`, {});
-        toast("success", "Submitted for approval", "Awaiting the authorizer's decision.");
+        // Submit files its own approval (200, not a 202 park), so open the
+        // overlay here; it names the assigned authorizer.
+        showApprovalSent({ actionLabel: "Risk treatment" });
       }
     } catch (err: any) {
       toast("error", "Failed", err.message ?? "Treatment proposal failed");
@@ -143,7 +145,7 @@ export default function Risks() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load the risk register. Check your connection and retry — your session stays signed in."
+        body="We could not load the risk register. Check your connection and try again. Your session stays signed in."
       />
     );
   }

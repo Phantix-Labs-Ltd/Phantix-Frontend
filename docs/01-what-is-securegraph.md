@@ -2,13 +2,13 @@
 
 **PROTECT. PREVENT. PERFORM.**
 
-SecureGraph is a **cybersecurity command centre** for organizations that need real visibility, honest findings, and board-ready proof — without surrendering their security data to another black-box SaaS.
+SecureGraph is a **cybersecurity command center** for organizations that need real visibility, honest findings, and board-ready proof. Your security data stays in your own database, not in another black-box SaaS.
 
 ---
 
 ## In one sentence
 
-> Discover what you own, test what matters, and deliver **verified** findings as reports leadership can trust — while your security inventory stays in **your** database.
+> Discover what you own, test what matters, and deliver **verified** findings as reports leadership can trust, while your security inventory stays in **your** database.
 
 ---
 
@@ -25,11 +25,11 @@ SecureGraph is a **cybersecurity command centre** for organizations that need re
 
 ## What you get
 
-1. **Know** — Attack surface and asset intelligence
-2. **Test** — Scoped scans and VAPT campaigns
-3. **Prioritize** — Risk scoring and remediation order
-4. **Prove** — Verified findings, impact analysis, compliance-aware reporting
-5. **Respond** — Alerts and dual-control for sensitive actions
+1. **Know**: Attack surface and asset intelligence
+2. **Test**: Scoped scans and VAPT campaigns
+3. **Prioritize**: Risk scoring and remediation order
+4. **Prove**: Verified findings, impact analysis, compliance-aware reporting
+5. **Respond**: Alerts and dual-control for sensitive actions
 
 ---
 
@@ -37,10 +37,10 @@ SecureGraph is a **cybersecurity command centre** for organizations that need re
 
 | Audience | Why SecureGraph |
 |----------|-------------|
-| **SMEs & scale-ups** | Enterprise-grade posture without an in-house SOC budget |
-| **Security / IT leads** | Engineer-grade evidence, approvals, audit trail |
-| **Boards & founders** | Clear impact language and PDF packages |
-| **Security providers** | Multi-tenant platform path for delivering assessments |
+| **SMEs and scale-ups** | Enterprise-grade posture without an in-house SOC budget |
+| **Security and IT leads** | Engineer-grade evidence, approvals, audit trail |
+| **Boards and founders** | Clear impact language and PDF packages |
+| **Security providers** | Multi-tenant platform path to deliver assessments |
 | **Nigerian organizations** | Privacy-first design aligned with data protection expectations (NDPA) |
 
 ---
@@ -50,8 +50,8 @@ SecureGraph is a **cybersecurity command centre** for organizations that need re
 - Not a tool dump of random scanners with no ownership model
 - Not “AI that invents vulnerabilities”
 - Not a place where your production business database is opened for free-form queries
-- Not a promise that every optional tool is production-ready on day one — we label free, premium, and engagement surfaces honestly
-- Not an open “full platform API” SKU — **public API access is sold only for the AI Agent plan**; the full product is used in the Platform app (Free / Premium)
+- Not a promise that every optional tool is production-ready on day one. We label free, premium, and engagement surfaces honestly
+- Not an open “full platform API” SKU. **Public API access is sold only for the AI Agent plan**. The full product is used in the Platform app (Free or Premium).
 
 ---
 

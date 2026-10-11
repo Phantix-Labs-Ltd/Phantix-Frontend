@@ -21,9 +21,9 @@ import { UpsellBanner } from "@sg/components/UpgradeGate";
 // appends them one at a time, so the UI adds rather than replaces.
 
 function when(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "Not set";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? "Not set" : d.toLocaleString();
 }
 
 export default function VaptSchedules() {
@@ -94,7 +94,7 @@ export default function VaptSchedules() {
             <StatCard label="Failures" value={String(failures)} hint="cumulative" />
             <StatCard
               label="Next run"
-              value={rows.map((r) => r.next_run_at).filter(Boolean).sort()[0]?.slice(0, 10) ?? "—"}
+              value={rows.map((r) => r.next_run_at).filter(Boolean).sort()[0]?.slice(0, 10) ?? "Not set"}
               hint="soonest scheduled"
             />
           </div>
@@ -106,7 +106,7 @@ export default function VaptSchedules() {
               <EmptyState
                 icon={<CalendarClock size={22} />}
                 title="No schedules yet"
-                body="Create one to run an authorized procedure on a recurring cadence instead of launching campaigns by hand."
+                body="Create a schedule to run an authorized procedure on a recurring cadence. Do not start campaigns by hand."
                 action={<button onClick={() => setCreating(true)} className="btn-primary text-xs !py-2"><Plus size={13} className="mr-1.5 inline" /> New schedule</button>}
               />
             </Card>
@@ -166,7 +166,7 @@ export default function VaptSchedules() {
                                 ? `${s.blackout_windows[0].start ?? "?"}–${s.blackout_windows[0].end ?? "?"}`
                                 : `${s.blackout_windows.length} windows`}
                             </span>
-                          ) : <span className="text-slate-600">—</span>}
+                          ) : <span className="text-slate-600">Not set</span>}
                         </td>
                         <td className="td whitespace-nowrap text-[13px] text-slate-400">{when(s.last_run_at)}</td>
                         <td className="td whitespace-nowrap text-[13px] text-slate-300">{when(s.next_run_at)}</td>
@@ -292,7 +292,7 @@ function CreateScheduleModal({
           <span className="min-w-0">
             <span className="block text-sm font-medium text-slate-200">Adaptive procedure</span>
             <span className="mt-0.5 block text-[13px] leading-5 text-slate-500">
-              On each run the scope is classified (web app / API / GraphQL / infra / cloud) and the
+              On each run the scope is classified (web application, API, GraphQL, infrastructure or cloud) and the
               procedure whose process flow matches is selected. Turn this off to pin the schedule
               to the procedure above.
             </span>
@@ -361,7 +361,7 @@ function BlackoutModal({
   };
 
   return (
-    <Modal open onClose={onClose} title={`Blackout window — ${schedule.schedule_name}`}>
+    <Modal open onClose={onClose} title={`Blackout window: ${schedule.schedule_name}`}>
       <div className="space-y-4">
         <p className="text-sm leading-6 text-slate-400">
           Automated runs are suppressed inside this window. Windows are appended, so existing ones stay in place.

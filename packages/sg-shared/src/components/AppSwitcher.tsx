@@ -114,7 +114,7 @@ export default function AppSwitcher({ current = "core" }: { current?: Applicatio
             );
           })}
           <div className="mt-1 border-t border-phantix-700/40 px-3 py-2 text-[13px] text-slate-500">
-            {last ? `Last used: ${last}` : "Switch without signing in again"}
+            {last ? `Last used: ${last}` : "Switch without a second sign-in"}
           </div>
         </div>
       )}

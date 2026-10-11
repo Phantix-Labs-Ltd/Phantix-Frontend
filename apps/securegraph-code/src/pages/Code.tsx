@@ -6,7 +6,7 @@ import {
   Gitlab, Plug, PlugZap, Key, Trash2, TestTube, Webhook, CheckCircle2,
 } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, EmptyState, Tabs, Modal, CardListSkeleton } from "@sg/ui";
-import { api, isPendingApproval, publicErrorMessage } from "@sg/api";
+import { api, isPendingApproval, publicErrorMessage, publicDetailCopy } from "@sg/api";
 import CodeReview from "@sg/components/CodeReview";
 import {
   loadGithubInstallation,
@@ -28,6 +28,7 @@ import type { IntegrationConnector, IntegrationInstallation } from "@sg/types";
 import { useStore } from "@sg/store";
 import { cx, timeAgo, humanize } from "@sg/utils";
 import DocLink from "@sg/components/DocLink";
+import { PlatformSetupLink } from "@sg/platformSetup";
 import { UpsellBanner } from "@sg/components/UpgradeGate";
 import {
   SCM_HUB_PROVIDERS,
@@ -183,7 +184,8 @@ export default function Code() {
     try {
       const r = await startHubOAuth(installationId);
       if (r?.authorize_url) window.location.href = r.authorize_url;
-      else toast("info", "Awaiting approval", "The OAuth start may be parked for an authorizer.");
+      // A parked start opens the approval overlay; anything else is a failure.
+      else if (!isPendingApproval(r)) toast("error", "Could not start OAuth", "No authorization address came back. Try again.");
     } catch {
       toast("error", "Could not start OAuth");
     }
@@ -193,8 +195,8 @@ export default function Code() {
     if (!(await requireDualControl("Disconnecting a source-control provider requires dual-control."))) return;
     const res = await uninstallHubIntegration(install.installation_id);
     await load();
-    if (isPendingApproval(res)) toast("info", "Sent for approval", `${install.label} disconnect is parked for an authorizer.`);
-    else toast("success", "Disconnected", `${install.label} disconnected.`);
+    // A parked call opens the approval overlay (it names the authorizer).
+    if (!isPendingApproval(res)) toast("success", "Disconnected", `${install.label} disconnected.`);
   }, [requireDualControl, toast, load]);
 
   return (
@@ -212,43 +214,21 @@ export default function Code() {
 
       <UpsellBanner feature="continuous_pr" />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className={cx("chip text-xs", connected ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-phantix-600/40 text-slate-400")}>
-          <Github size={12} className="mr-1 inline" /> {connected ? "GitHub connected" : "GitHub not connected"}
-        </span>
-        {wallet?.balance_ngn != null && (
-          <span className="chip text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300">
-            Branch-review wallet · ₦{Number(wallet.balance_ngn).toLocaleString()}
-          </span>
-        )}
-        {autofix?.continuous_pr && (
-          <span className="chip text-xs border-gold-400/30 bg-gold-400/10 text-gold-200">
-            Continuous PR {autofix.continuous_pr.opens_pr ? "enabled" : "off"}
-          </span>
-        )}
-        {scmInstalls.filter((i) => i.connector_id !== "github").map((i) => (
-          <span key={i.installation_id} className={cx("chip text-xs", providerTone(i.status))}>
-            {scmIcon(i.connector_id)}
-            <span className="ml-1">{i.connector_id}</span>
-            <span className="ml-1 opacity-70">{i.status === "active" ? "connected" : i.status}</span>
-          </span>
-        ))}
-      </div>
-
-      {/* Source control, compact: one icon per provider with its state. The
-          full cards live on the Providers page — this strip exists so the
-          section you actually came for is not pushed below the fold. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-phantix-700/40 bg-phantix-900/40 px-3 py-2">
+      {/* Source control and account state in one strip: one icon per provider
+          with its state, then the wallet and Continuous PR. The full cards
+          live on the Providers page — this strip exists so the section you
+          actually came for is not pushed below the fold. */}
+      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-phantix-700/40 bg-phantix-900/40 px-3 py-1.5">
         <span className="mr-1 font-mono text-[12px] uppercase tracking-[0.18em] text-slate-500">
           Source control
         </span>
         <button
           type="button"
           onClick={() => navigate("/code-review/providers/github")}
-          title={connected ? "GitHub — connected" : "GitHub — not connected"}
+          title={connected ? "GitHub: connected" : "GitHub: not connected"}
           aria-label={connected ? "GitHub connected" : "GitHub not connected"}
           className={cx(
-            "relative flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
+            "relative flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
             connected
               ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
               : "border-phantix-600/40 bg-phantix-800/50 text-slate-400 hover:text-slate-200",
@@ -271,10 +251,10 @@ export default function Code() {
                 else if (scmInstallable(c)) setConnectId(c.connector_id);
                 else toast("info", "Coming soon", `${c.name || c.connector_id} is in the catalogue and not installable yet.`);
               }}
-              title={`${c.name || c.connector_id} — ${active ? "connected" : install ? install.status : "not connected"}`}
+              title={`${c.name || c.connector_id}: ${active ? "connected" : install ? install.status : "not connected"}`}
               aria-label={c.name || c.connector_id}
               className={cx(
-                "relative flex h-8 w-8 items-center justify-center rounded-md border transition-colors",
+                "relative flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
                 active
                   ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
                   : "border-phantix-600/40 bg-phantix-800/50 text-slate-400 hover:text-slate-200",
@@ -287,6 +267,16 @@ export default function Code() {
             </button>
           );
         })}
+        {wallet?.balance_ngn != null && (
+          <span className="chip ml-1 text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300">
+            Branch-review wallet · ₦{Number(wallet.balance_ngn).toLocaleString()}
+          </span>
+        )}
+        {autofix?.continuous_pr && (
+          <span className="chip text-xs border-gold-400/30 bg-gold-400/10 text-gold-200">
+            Continuous PR {autofix.continuous_pr.opens_pr ? "enabled" : "off"}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setTab("providers")}
@@ -328,7 +318,12 @@ export default function Code() {
           ) : reposError ? (
             <EmptyState icon={<AlertTriangle size={22} />} title="Repositories unavailable" body={reposError} action={<button className="btn-secondary" onClick={() => void load()}>Retry</button>} />
           ) : repos.length === 0 ? (
-            <EmptyState icon={<Github size={22} />} title="No repositories" body="Install the GitHub App or sync repositories from the platform portal." />
+            <EmptyState
+              icon={<Github size={22} />}
+              title="No repositories yet"
+              body="Install the GitHub App and choose which repos SecureGraph can see."
+              action={<PlatformSetupLink task={{ kind: "install_github" }} variant="primary"><Github size={15} /> Install the GitHub App</PlatformSetupLink>}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -352,7 +347,7 @@ export default function Code() {
                             <span className="text-sm text-slate-200">{r.full_name || r.name}</span>
                           </div>
                         </td>
-                        <td className="td text-xs font-mono text-slate-400">{r.default_branch || s?.watched_branch || "—"}</td>
+                        <td className="td text-xs font-mono text-slate-400">{r.default_branch || s?.watched_branch || "Not set"}</td>
                         <td className="td">
                           {s?.enabled ? (
                             <span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
@@ -384,7 +379,7 @@ export default function Code() {
       {tab === "pull-requests" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
-          <CardHeader title="Recent branch-review runs" subtitle="Every push the reviewer processed — PR safety before merge" action={<GitPullRequest size={16} className="text-gold-300" />} />
+          <CardHeader title="Recent branch-review runs" subtitle="Every push the reviewer processed, with pull request safety before merge" action={<GitPullRequest size={16} className="text-gold-300" />} />
           {loading ? (
             <CardListSkeleton rows={4} className="p-4" />
           ) : events.length === 0 ? (
@@ -405,12 +400,12 @@ export default function Code() {
                 <tbody>
                   {events.map((e) => (
                     <tr key={e.id} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
-                      <td className="td text-sm text-slate-200">{e.repo || "—"}</td>
+                      <td className="td text-sm text-slate-200">{e.repo || "Not set"}</td>
                       <td className="td text-xs font-mono text-slate-400">{e.ref}</td>
                       <td className="td text-xs font-mono text-slate-500">{e.sha?.slice(0, 10)}</td>
                       <td className="td text-xs text-slate-300">{e.size_tier}</td>
                       <td className="td"><span className={cx("chip text-[12px]", statusTone(e.status))}>{humanize(e.status)}</span></td>
-                      <td className="td text-xs text-slate-500">{e.created_at ? timeAgo(e.created_at) : "—"}</td>
+                      <td className="td text-xs text-slate-500">{e.created_at ? timeAgo(e.created_at) : "Not set"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -424,7 +419,7 @@ export default function Code() {
       {tab === "autofix" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
-          <CardHeader title="AutoFix" subtitle="Block-scoped, verified fixes — proposed for human review" action={<Wrench size={16} className="text-gold-300" />} />
+          <CardHeader title="AutoFix" subtitle="Block-scoped verified fixes, proposed for human review" action={<Wrench size={16} className="text-gold-300" />} />
           <div className="space-y-3 text-sm leading-6 text-slate-300">
             <p>
               AutoFix runs only on <strong className="text-slate-100">verified</strong> findings. It generates the
@@ -433,8 +428,8 @@ export default function Code() {
             </p>
             <p className="text-slate-400">
               Generate a fix from a finding's detail, then open it as a <strong className="text-slate-200">Continuous PR</strong>{" "}
-              — SecureGraph clones the repo into an ephemeral directory, commits the fix <strong>signed by the app</strong>,
-              and opens a draft PR that your developers merge.
+              . SecureGraph clones the repository into an ephemeral directory, commits the fix <strong>signed by the app</strong>,
+              and opens a draft pull request that your developers merge.
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               <span className="chip text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300">gates: scope · no-op · re-validation · credits</span>
@@ -456,7 +451,7 @@ export default function Code() {
           <Card>
             <CardHeader
               title="Source-control providers"
-              subtitle="GitHub App plus Integrations Hub SCM connectors — all feed the same verified-only review flow"
+              subtitle="GitHub App plus Integrations Hub SCM connectors. All feed the same verified-only review flow"
               action={<Webhook size={16} className="text-gold-300" />}
             />
             {loading ? (
@@ -510,7 +505,7 @@ export default function Code() {
                                   : install?.status || (scmInstallable(c) ? "not connected" : "coming soon")}
                               </span>
                             </td>
-                            <td className="td text-xs font-mono text-slate-500">{SCM_WEBHOOK_PATH[c.connector_id] || "—"}</td>
+                            <td className="td text-xs font-mono text-slate-500">{SCM_WEBHOOK_PATH[c.connector_id] || "Not set"}</td>
                             <td className="td text-right">
                               <div className="flex justify-end gap-1">
                                 {SCM_PROVIDER_SETUP[c.connector_id] && (
@@ -546,7 +541,7 @@ export default function Code() {
                 <p className="p-3 text-[13px] leading-4 text-slate-500">
                   Point the provider webhook at <code className="mx-1">&#123;API_BASE&#125;{SCM_WEBHOOK_PATH.gitlab}</code> for GitLab
                   or <code className="mx-1">&#123;API_BASE&#125;{SCM_WEBHOOK_PATH.gitea}</code> for Gitea. Signatures are verified with the
-                  connector secret (<code>X-Gitlab-Token</code> / <code>X-Gitea-Signature</code>); GitHub uses the App's <code>X-Hub-Signature-256</code>.
+                  connector secret: <code>X-Gitlab-Token</code> or <code>X-Gitea-Signature</code>. GitHub uses the App's <code>X-Hub-Signature-256</code>.
                 </p>
               </>
             )}
@@ -589,7 +584,7 @@ function ScmConnectModal({ connector, onClose, onDone }: { connector: Integratio
       if (needsToken) body.secrets = { api_key: token.trim() };
       const res = await installHubIntegration(body);
       if (isPendingApproval(res)) {
-        toast("info", "Sent for approval", "Install is parked for an authorizer — approve it from Authorizations.");
+        // A parked call opens the approval overlay (it names the authorizer).
         onDone();
         return;
       }
@@ -690,16 +685,18 @@ function ContinuousPrForm({ repos, onDone }: { repos: Repo[]; onDone: () => void
         repo,
         base_branch: baseBranch || selected?.default_branch || undefined,
       });
-      setResult({ kind: "queued", message: `Queued as task ${res?.task_id ?? "—"}. A draft PR will open; it is never merged automatically.` });
+      setResult({ kind: "queued", message: `Queued as task ${res?.task_id ?? "Not set"}. A draft pull request will open. The system never merges it automatically.` });
       onDone();
     } catch (e: any) {
       const detail = e?.detail ?? {};
       if (detail?.error === "free_model_agreement_required") {
-        setResult({ kind: "error", message: detail.message || "Agreement required.", requestUrl: detail.agreement_endpoint });
+        setResult({ kind: "error", message: publicDetailCopy(detail.message) || "Agreement required.", requestUrl: detail.agreement_endpoint });
       } else if (detail?.error === "permission_required") {
-        setResult({ kind: "permission", message: detail.message || "GitHub write permissions required.", requestUrl: detail.request_url });
+        setResult({ kind: "permission", message: publicDetailCopy(detail.message) || "GitHub write permissions required.", requestUrl: detail.request_url });
       } else {
-        setResult({ kind: "error", message: e?.message || detail?.message || "Could not open Continuous PR." });
+        // e.message is normalized already; the sanitized detail covers statuses
+        // (e.g. 403) whose detail is useful but not on the status-copy path.
+        setResult({ kind: "error", message: publicDetailCopy(detail) || e?.message || "Could not open Continuous PR." });
       }
     } finally {
       setBusy(false);
@@ -749,7 +746,7 @@ function ContinuousPrForm({ repos, onDone }: { repos: Repo[]; onDone: () => void
             <p>{result.message}</p>
             {result.requestUrl && (
               <a href={result.requestUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 underline">
-                <ExternalLink size={11} /> Grant access / open link
+                <ExternalLink size={11} /> Grant access or open link
               </a>
             )}
           </div>
@@ -763,7 +760,7 @@ function ContinuousPrForm({ repos, onDone }: { repos: Repo[]; onDone: () => void
         </div>
         <p className="text-[13px] leading-4 text-slate-500">
           Dual-controlled: the request is parked for an authorizer before it runs. It never forks and never
-          merges — the pull request opens as a draft.
+          merges. The pull request opens as a draft.
         </p>
       </div>
     </Card>

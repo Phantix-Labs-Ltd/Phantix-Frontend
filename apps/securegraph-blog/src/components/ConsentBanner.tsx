@@ -24,8 +24,9 @@ export function ConsentBanner() {
   return (
     <div className="consent-banner" role="region" aria-label="Analytics consent">
       <p className="consent-copy">
-        We count anonymous, cookieless page reads so we know which essays are worth
-        writing more of. No tracking across sites and no personal data. Your choice covers every SecureGraph site.
+        We count anonymous page reads without cookies, so we know which essays to write
+        next. We do not track you across sites, and we do not collect personal data. Your
+        choice covers every SecureGraph site.
       </p>
       <div className="consent-actions">
         <button type="button" className="consent-accept" onClick={accept}>

@@ -28,6 +28,7 @@ import {
   Spinner,
 } from "@sg/ui";
 import SecurityDbBanner from "@sg/components/SecurityDbBanner";
+import DocLink from "@sg/components/DocLink";
 import { useResource } from "@sg/useResource";
 import { useStore } from "@sg/store";
 import { isSecurityDbBlocked } from "@sg/api";
@@ -180,7 +181,7 @@ function PostureChips({ posture }: { posture: Record<string, unknown> }) {
   else if (posture.auth_enforced === true) chips.push("auth ✓");
   if (posture.drift) chips.push("drift");
   if (posture.latency_over_threshold) chips.push("slow");
-  if (!chips.length) return <span className="text-slate-600">—</span>;
+  if (!chips.length) return <span className="text-slate-600">Not set</span>;
   return (
     <div className="flex flex-wrap gap-1.5">
       {chips.map((c) => (
@@ -307,7 +308,7 @@ export default function EndpointMonitoring() {
   if (loading) return <PageSkeleton variant="list" rows={6} actions />;
 
   if (error && monitors.length === 0 && !data.securityDbBlocked) {
-    return <ErrorState onRetry={reload} body="We could not load endpoint monitors. Check your connection and retry — your session stays signed in." />;
+    return <ErrorState onRetry={reload} body="We could not load endpoint monitors. Check your connection and try again. Your session stays signed in." />;
   }
 
   const mstats = summary?.monitors ?? {};
@@ -318,14 +319,17 @@ export default function EndpointMonitoring() {
         title="Endpoint monitoring"
         description="Configure, and monitor your endpoints."
         actions={
-          <button
-            className="btn-primary"
-            onClick={openCreate}
-            disabled={atLimit}
-            title={atLimit ? `Plan limit reached (${capLabel})` : undefined}
-          >
-            <Plus size={15} /> New monitor
-          </button>
+          <div className="flex items-center gap-2">
+            <DocLink docId="howto-app-08" label="Availability and agent how-to" />
+            <button
+              className="btn-primary"
+              onClick={openCreate}
+              disabled={atLimit}
+              title={atLimit ? `Plan limit reached (${capLabel})` : undefined}
+            >
+              <Plus size={15} /> New monitor
+            </button>
+          </div>
         }
       />
 
@@ -346,7 +350,7 @@ export default function EndpointMonitoring() {
         <StatCard label="Down" value={mstats.down ?? 0} />
         <StatCard
           label="Posture score"
-          value={summary?.postureScore != null ? summary.postureScore : "—"}
+          value={summary?.postureScore != null ? summary.postureScore : "Not set"}
           hint={`${summary?.openIncidents ?? incidents.length} open incident(s)`}
         />
       </div>
@@ -402,7 +406,7 @@ export default function EndpointMonitoring() {
                           </span>
                         </td>
                         <td className="td"><StatusBadge status={m.last_status === "up" ? "ready" : m.last_status} /></td>
-                        <td className="td text-xs text-slate-400">{m.last_latency_ms != null ? `${m.last_latency_ms} ms` : "—"}</td>
+                        <td className="td text-xs text-slate-400">{m.last_latency_ms != null ? `${m.last_latency_ms} ms` : "Not set"}</td>
                         <td className="td"><PostureChips posture={m.last_posture ?? {}} /></td>
                         <td className="td whitespace-nowrap text-xs text-slate-500">{m.last_checked_at ? timeAgo(m.last_checked_at) : "never"}</td>
                         <td className="td">
@@ -428,7 +432,7 @@ export default function EndpointMonitoring() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           {incidents.length === 0 ? (
             <Card>
-              <EmptyState icon={<CheckCircle2 size={22} />} title="No open incidents" body="Every monitored endpoint is healthy and passing its security checks." />
+              <EmptyState icon={<CheckCircle2 size={22} />} title="No open incidents" body="Every monitored endpoint is healthy and passes its security checks." />
             </Card>
           ) : (
             <Card className="!p-0 overflow-hidden">
@@ -458,9 +462,9 @@ export default function EndpointMonitoring() {
                         <td className="td text-sm text-slate-200">{inc.title}</td>
                         <td className="td"><SeverityBadge severity={inc.severity as Severity} /></td>
                         <td className="td whitespace-nowrap text-xs text-slate-500">
-                          <span className="inline-flex items-center gap-1"><Clock size={11} />{inc.elapsed_seconds != null ? fmtDuration(inc.elapsed_seconds) : (inc.down_at ? timeAgo(inc.down_at) : "—")}</span>
+                          <span className="inline-flex items-center gap-1"><Clock size={11} />{inc.elapsed_seconds != null ? fmtDuration(inc.elapsed_seconds) : (inc.down_at ? timeAgo(inc.down_at) : "Not set")}</span>
                         </td>
-                        <td className="td max-w-[280px] truncate text-xs text-slate-400" title={inc.last_error ?? ""}>{inc.last_error ?? "—"}</td>
+                        <td className="td max-w-[280px] truncate text-xs text-slate-400" title={inc.last_error ?? ""}>{inc.last_error ?? "Not set"}</td>
                         <td className="td">
                           <div className="flex items-center justify-end gap-1.5">
                             {!inc.acknowledged_at && <button className="btn-secondary !px-2.5 !py-1 text-xs" onClick={() => ackIncident(inc)}>Acknowledge</button>}
@@ -698,10 +702,10 @@ function MonitorDetail({ monitor, onClose }: { monitor: EndpointMonitor; onClose
                 <tbody>
                   {results.map((r) => (
                     <tr key={r.id} className="border-b border-phantix-800/40">
-                      <td className="td whitespace-nowrap text-xs text-slate-500">{r.checked_at ? timeAgo(r.checked_at) : "—"}</td>
+                      <td className="td whitespace-nowrap text-xs text-slate-500">{r.checked_at ? timeAgo(r.checked_at) : "Not set"}</td>
                       <td className="td"><StatusBadge status={r.status_label === "up" ? "ready" : r.status_label} /></td>
-                      <td className="td text-xs text-slate-400">{r.http_status ?? "—"}</td>
-                      <td className="td text-xs text-slate-400">{r.latency_ms != null ? `${r.latency_ms} ms` : "—"}</td>
+                      <td className="td text-xs text-slate-400">{r.http_status ?? "Not set"}</td>
+                      <td className="td text-xs text-slate-400">{r.latency_ms != null ? `${r.latency_ms} ms` : "Not set"}</td>
                       <td className="td text-xs text-slate-400">
                         {r.issues.length ? r.issues.map((i) => ISSUE_LABELS[i.type] ?? i.type).join(", ") : <span className="text-slate-600">none</span>}
                       </td>

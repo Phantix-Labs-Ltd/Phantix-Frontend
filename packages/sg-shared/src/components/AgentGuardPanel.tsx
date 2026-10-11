@@ -60,7 +60,7 @@ export default function AgentGuardPanel({
       const authz = (res as { authorization?: unknown })?.authorization;
       toast(
         approve ? "success" : "info",
-        approve ? "Authorized — once" : "Rejected",
+        approve ? "Authorized once" : "Rejected",
         approve
           ? "The agent may take this action one time on this run; the authorization is then spent."
           : "The agent will not take this action."
@@ -87,7 +87,7 @@ export default function AgentGuardPanel({
     <Card className={className}>
       <CardHeader
         title="Agent guard"
-        subtitle="The agent uses your permissions — and nothing more"
+        subtitle="The agent uses your permissions and nothing more"
         action={
           <button onClick={() => void load()} className="btn-ghost text-xs !py-1.5" title="Refresh">
             <RefreshCw size={12} className={cx("inline", loading && "animate-spin")} />
@@ -101,7 +101,7 @@ export default function AgentGuardPanel({
           Acting as <span className="font-semibold">{session?.userName || session?.userEmail || "you"}</span>
           {session?.isAuthorizer ? " (authorizer)" : session?.isInitiator ? " (initiator)" : ""}. The agent can
           see and do only what your role allows, and every action that changes something needs a fresh
-          authorization — good for one action on one run, then spent. Runs and actions are logged.
+          authorization, good for one action on one run, then spent. Runs and actions are logged.
         </p>
       </div>
 
@@ -129,7 +129,7 @@ export default function AgentGuardPanel({
                     onClick={() => void decide(row, true)}
                     disabled={busy === row.approval_id}
                     className="btn-secondary !px-2.5 !py-1 !text-[13px] disabled:opacity-50"
-                    title="Authorize once — the agent may take this action one time"
+                    title="Authorize once. The agent may then take this action one time."
                   >
                     {busy === row.approval_id ? <Loader2 size={11} className="mr-1 inline animate-spin" /> : <Check size={11} className="mr-1 inline" />}
                     Authorize once

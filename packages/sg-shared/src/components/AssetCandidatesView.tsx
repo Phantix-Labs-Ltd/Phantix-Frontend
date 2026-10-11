@@ -157,7 +157,7 @@ export default function AssetCandidatesView({
       <Card>
         <CardHeader
           title="Hidden asset candidates"
-          subtitle="Hostnames found by passive sources — crawl data, archived pages, CT and passive DNS. Nothing is scannable until you promote it."
+          subtitle="Hostnames found by passive sources: crawl data, archived pages, certificate transparency and passive DNS. Nothing is scannable until you promote it."
           action={
             <button className="btn-primary text-xs !py-2" onClick={() => setLaunchOpen(true)}>
               <Radar size={13} className="mr-1.5 inline" /> Find hidden assets
@@ -230,7 +230,7 @@ export default function AssetCandidatesView({
             title={status === "candidate" ? "No hidden assets staged yet" : "Nothing here"}
             body={
               status === "candidate"
-                ? "Run a passive search on a domain you own. Deep, unguessable names — the ones certificate transparency and wordlists miss — show up here for review."
+                ? "Run a passive search on a domain you own. Deep, unguessable names are the ones that certificate transparency and wordlists miss. They show up here for review."
                 : "Switch the status filter to see other candidates."
             }
             action={
@@ -285,7 +285,7 @@ export default function AssetCandidatesView({
                     </td>
                     <td className="td hidden max-w-[18rem] xl:table-cell">
                       <span className="block truncate font-mono text-[12px] text-slate-400" title={c.cname ?? undefined}>
-                        {c.cname ?? "—"}
+                        {c.cname ?? "Not set"}
                       </span>
                     </td>
                     <td className="td">
@@ -297,7 +297,7 @@ export default function AssetCandidatesView({
                       {Math.round((c.confidence ?? 0) * 100)}%
                     </td>
                     <td className="td hidden text-[12px] text-slate-500 lg:table-cell">
-                      {c.last_seen_at ? timeAgo(c.last_seen_at) : "—"}
+                      {c.last_seen_at ? timeAgo(c.last_seen_at) : "Not set"}
                     </td>
                     <td className="td text-right">
                       {c.status === "candidate" ? (
@@ -381,7 +381,7 @@ function LaunchModal({
       toast(
         "success",
         "Passive search queued",
-        "Sources are queried in the background — candidates appear here as they return.",
+        "Sources are queried in the background. Candidates appear here as they return.",
       );
       onLaunched();
     } catch (e) {
@@ -410,7 +410,7 @@ function LaunchModal({
             </datalist>
           )}
           <p className="mt-1.5 text-[13px] text-slate-500">
-            Only search domains your organisation owns. Results are staged for review — they never enter the inventory automatically.
+            Only search domains that your organization owns. Results are staged for review. They never enter the inventory automatically.
           </p>
         </div>
 

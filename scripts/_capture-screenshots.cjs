@@ -10,20 +10,23 @@ const ONLY = process.argv[5] ? process.argv[5].split(",") : null;
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  page.setDefaultTimeout(15000);
+  page.setDefaultTimeout(45000);
 
-  // Establish demo mode — the ?demo=1 handling lives on Home (/), which calls
-  // enterDemo() then client-navigates to /dashboard. sessionStorage persists
-  // across goto() in the same tab/context, so this only needs to run once...
-  // in principle. In practice, a handful of pages fire a real (non-demo-gated)
-  // API call that 401s, and api.ts reacts with a hard `window.location.assign
-  // ("/login")` — an async redirect that can land *after* we've already
-  // moved on to the next item, hijacking it. ensureDemo() re-bootstraps and
-  // is called defensively whenever we detect we've been bounced to /login.
+  // Force the guided demo tenant before any app script runs. Each Command
+  // Centre app is its own origin, so the flag must be set per context rather
+  // than carried from the core app.
+  await page.addInitScript(() => {
+    try {
+      sessionStorage.setItem("phantix_demo", "1");
+      localStorage.setItem("phantix_demo", "1");
+    } catch {}
+  });
+
+  // Establish demo mode. The flag now arrives with the init script; this
+  // first navigation only warms the app and clears any critical-alert banner.
   const ensureDemo = async () => {
-    await page.goto(`${BASE}/?demo=1`, { waitUntil: "domcontentloaded" });
-    await page.waitForURL(`${BASE}/dashboard`, { timeout: 10000 }).catch(() => {});
-    await page.waitForTimeout(800);
+    await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" }).catch(() => {});
+    await page.waitForTimeout(3000);
     await page
       .locator('[aria-label="Dismiss critical alert"]')
       .click({ timeout: 3000 })
@@ -58,7 +61,7 @@ const ONLY = process.argv[5] ? process.argv[5].split(",") : null;
         if (item.waitText) {
           await page.waitForSelector(`text=${item.waitText}`, { timeout: 12000 }).catch(() => {});
         }
-        await page.waitForTimeout(700);
+        await page.waitForTimeout(5000);
         await dismissBlocker();
         if (/\/login(\?|$)/.test(page.url()) && !/\/login/.test(item.path) && attempt < 3) {
           await ensureDemo();

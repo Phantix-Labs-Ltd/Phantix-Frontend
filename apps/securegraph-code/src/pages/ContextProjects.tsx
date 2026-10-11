@@ -3,6 +3,7 @@ import {
   Boxes, FileText, GitFork, Loader2, Plus, RefreshCw, Search, Upload,
 } from "lucide-react";
 import { Card, CardHeader, EmptyState, ErrorState, Modal, PageHeader, StatCard, PageBodySkeleton } from "@sg/ui";
+import DocLink from "@sg/components/DocLink";
 import { useStore } from "@sg/store";
 import { ApiError } from "@sg/api";
 import {
@@ -29,7 +30,7 @@ function stageLabel(stage: string): string {
 
 function securityDbMessage(e: unknown, fallback: string): string {
   return e instanceof ApiError && e.status === 409
-    ? "Your security storage is not activated yet. Product context is stored there — connect it on the Platform under Connections."
+    ? "Your security storage is not activated yet. Product context is stored there. Connect it on the Platform under Connections."
     : e instanceof Error ? e.message : fallback;
 }
 
@@ -74,6 +75,7 @@ export default function ContextProjects() {
         description="The system model behind your threat models."
         actions={
           <div className="flex items-center gap-2">
+            <DocLink docId="howto-app-37" label="Product context how-to" />
             <button onClick={() => setCreating(true)} className="btn-primary text-xs !py-2">
               <Plus size={13} className="mr-1.5 inline" /> New project
             </button>
@@ -131,7 +133,7 @@ export default function ContextProjects() {
                         <span className={cx("chip", STAGE_TONE[p.stage] ?? STAGE_TONE.planned)}>{stageLabel(p.stage)}</span>
                       </td>
                       <td className="td text-sm text-slate-300">
-                        {summary ? summary.components : <span className="text-slate-600">—</span>}
+                        {summary ? summary.components : <span className="text-slate-600">Not set</span>}
                       </td>
                       <td className="td text-sm text-slate-300">
                         {summary ? (
@@ -144,10 +146,10 @@ export default function ContextProjects() {
                             )}
                           </span>
                         ) : (
-                          <span className="text-slate-600">—</span>
+                          <span className="text-slate-600">Not set</span>
                         )}
                       </td>
-                      <td className="td text-xs text-slate-500">{p.updated_at ? timeAgo(p.updated_at) : "—"}</td>
+                      <td className="td text-xs text-slate-500">{p.updated_at ? timeAgo(p.updated_at) : "Not set"}</td>
                     </tr>
                   );
                 })}
@@ -345,7 +347,7 @@ function ProjectDrawer({ project, onClose }: { project: ProductProject; onClose:
               <div className="skeleton h-3 w-40 rounded" />
             </div>
           ) : !components.length ? (
-            <EmptyState icon={<Boxes size={20} />} title="Nothing parsed yet" body="Upload the project's .drawio diagram to build the component and flow model." />
+            <EmptyState icon={<Boxes size={20} />} title="Nothing parsed yet" body="Upload the .drawio diagram of the project to build the component and flow model." />
           ) : (
             <div className="space-y-3">
               <div className="flex flex-wrap gap-1.5">
@@ -376,7 +378,7 @@ function ProjectDrawer({ project, onClose }: { project: ProductProject; onClose:
         </Card>
 
         <Card>
-          <CardHeader title="Search requirements" subtitle="Full-text over this project's ingested documents" />
+          <CardHeader title="Search requirements" subtitle="Full-text search over the documents that this project ingested" />
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />

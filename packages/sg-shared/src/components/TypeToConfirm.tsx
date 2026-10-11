@@ -72,7 +72,7 @@ export default function TypeToConfirm({
             aria-label={`Type ${confirmWord} to confirm`}
           />
           {typed && !matches && (
-            <p className="mt-1 text-[13px] text-severity-critical">Does not match — deletion stays disabled.</p>
+            <p className="mt-1 text-[13px] text-severity-critical">Does not match. Deletion stays disabled.</p>
           )}
           {!typed && (
             <p className="mt-1 text-[13px] text-slate-500">Paste is disabled. Please type the word by hand.</p>

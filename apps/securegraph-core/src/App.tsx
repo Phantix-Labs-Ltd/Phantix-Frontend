@@ -4,29 +4,44 @@ import { ApplicationShell } from "@sg/shell/ApplicationShell";
 import type { ApplicationKey } from "@sg/shell/types";
 import { StoreProvider, ToastViewport, useStore } from "@sg/store";
 import DualControlOverlay from "@sg/components/DualControlOverlay";
+import AiBudgetOverlay from "@sg/components/AiBudgetOverlay";
+import ApprovalSentOverlay from "@sg/components/ApprovalSentOverlay";
 import BrandLoader from "@sg/components/BrandLoader";
 import { HOSTS } from "./hosts";
 import { coreNav } from "./nav";
 import Home from "./pages/Home";
 import Login from "@sg/pages/Login";
 import ChooseApp from "@sg/pages/ChooseApp";
-import DeviceConfirm from "@sg/pages/DeviceConfirm";
-import GithubCallback from "./pages/GithubCallback";
-import IntegrationOAuthCallback from "./pages/IntegrationOAuthCallback";
-import Cookies from "./pages/Cookies";
-import Privacy from "./pages/Privacy";
-import SandboxApplyPublic from "./pages/SandboxApplyPublic";
-import PasswordResetRequest from "@sg/pages/auth/PasswordResetRequest";
-import PasswordResetComplete from "@sg/pages/auth/PasswordResetComplete";
 import PublicChrome from "./components/PublicChrome";
-import Docs from "@sg/pages/Docs";
-import DocPage from "@sg/pages/DocPage";
+import { useSeo } from "./lib/useSeo";
+
+// Only the entry points (home, sign-in, the application picker) ship in the
+// first-paint bundle. The docs (which inline every how-to guide), legal pages,
+// password reset and the OAuth callbacks load when they are visited.
+const DeviceConfirm = React.lazy(() => import("@sg/pages/DeviceConfirm"));
+const GithubCallback = React.lazy(() => import("./pages/GithubCallback"));
+const IntegrationOAuthCallback = React.lazy(() => import("./pages/IntegrationOAuthCallback"));
+const Cookies = React.lazy(() => import("./pages/Cookies"));
+const AssuranceEngagements = React.lazy(() => import("./pages/assurance/Engagements"));
+const AssuranceWorkspace = React.lazy(() => import("./pages/assurance/Workspace"));
+const AssuranceRegimes = React.lazy(() => import("./pages/assurance/Regimes"));
+const AssuranceNew = React.lazy(() => import("./pages/assurance/New"));
+const AssuranceFindingRedirect = React.lazy(() => import("./pages/assurance/FindingRedirect"));
+const AssuranceReports = React.lazy(() => import("./pages/assurance/ReportsAndMonitoring").then((m) => ({ default: m.AssuranceReports })));
+const AssuranceMonitoring = React.lazy(() => import("./pages/assurance/ReportsAndMonitoring").then((m) => ({ default: m.AssuranceMonitoring })));
+const Privacy = React.lazy(() => import("./pages/Privacy"));
+const SandboxApplyPublic = React.lazy(() => import("./pages/SandboxApplyPublic"));
+const PasswordResetRequest = React.lazy(() => import("@sg/pages/auth/PasswordResetRequest"));
+const PasswordResetComplete = React.lazy(() => import("@sg/pages/auth/PasswordResetComplete"));
+const Docs = React.lazy(() => import("@sg/pages/Docs"));
+const DocPage = React.lazy(() => import("@sg/pages/DocPage"));
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Assets = React.lazy(() => import("./pages/Assets"));
 const Analytics = React.lazy(() => import("./pages/Analytics"));
 const Reports = React.lazy(() => import("./pages/Reports"));
-const Tracker = React.lazy(() => import("./pages/Tracker"));
+// Shared with the attack app so one live board serves both (SSE-backed).
+const Tracker = React.lazy(() => import("@sg/pages/Tracker"));
 const FindingsIntake = React.lazy(() => import("./pages/FindingsIntake"));
 const ReportViewer = React.lazy(() => import("./pages/ReportViewer"));
 const IntegrationsHub = React.lazy(() => import("./pages/IntegrationsHub"));
@@ -61,6 +76,8 @@ function RequireAuthorizer({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // Per-route SEO: public pages stay indexable, every operator route is noindex.
+  useSeo();
   return (
     <StoreProvider>
       <Suspense fallback={<BrandLoader label="Core" message="Loading" />}>
@@ -99,6 +116,14 @@ export default function App() {
             <Route path="/reports/:id/view" element={<ReportViewer />} />
             <Route path="/integrations" element={<IntegrationsHub />} />
             <Route path="/audit" element={<Audit />} />
+            <Route path="/assurance" element={<AssuranceEngagements />} />
+            <Route path="/assurance/new" element={<AssuranceNew />} />
+            <Route path="/assurance/findings/:key" element={<AssuranceFindingRedirect />} />
+            <Route path="/assurance/regimes" element={<AssuranceRegimes />} />
+            <Route path="/assurance/profile" element={<Navigate to="/assurance/regimes" replace />} />
+            <Route path="/assurance/reports" element={<AssuranceReports />} />
+            <Route path="/assurance/monitoring" element={<AssuranceMonitoring />} />
+            <Route path="/assurance/:id" element={<AssuranceWorkspace />} />
             <Route path="/agent" element={<Navigate to="/assistant" replace />} />
             <Route path="/agent-activity" element={<AgentActivity />} />
             <Route path="/authorizations" element={<RequireAuthorizer><AuthorizerInbox /></RequireAuthorizer>} />
@@ -112,6 +137,8 @@ export default function App() {
       </Suspense>
       <ToastViewport />
       <DualControlOverlay />
+      <AiBudgetOverlay />
+      <ApprovalSentOverlay />
     </StoreProvider>
   );
 }

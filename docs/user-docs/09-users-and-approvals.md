@@ -1,4 +1,4 @@
-# Users, roles & dual-control
+# Users, roles and dual-control
 
 ---
 
@@ -12,7 +12,7 @@ High-impact security actions should not depend on a single password. Phantix sup
 
 | Role | Day-to-day |
 |------|------------|
-| Admin / owner | Billing, connections, invites |
+| Admin and owner | Billing, connections, invites |
 | Operator | Run scans, manage assets, draft campaigns |
 | Authorizer | Approve dual-control requests |
 | Viewer | Read reports and risks |
@@ -25,7 +25,7 @@ Exact role names depend on your org RBAC configuration in the app.
 
 1. **Users** → Invite
 2. Assign role
-3. They complete login / MFA as required
+3. They complete login and MFA as required
 4. For dual-control, ensure at least one **authorizer** exists
 
 ---
@@ -42,11 +42,11 @@ AI Agent sensitive actions can also raise approval tickets.
 
 ---
 
-## Sessions & security
+## Sessions and security
 
 - Prefer MFA where offered
 - Don’t share logins
-- Sessions expire after idle / absolute limits
+- Sessions expire after idle and absolute limits
 - Rotate integration secrets if someone leaves
 
 **Next:** [AI Agent API →](./10-ai-agent-api.md)

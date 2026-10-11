@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, Square, Sparkles, X, Trash2, ArrowRight, ArrowDown, BrainCircuit, BookOpen, Mail } from "lucide-react";
+import { Send, Square, Sparkles, X, Trash2, ArrowRight, ArrowDown, BrainCircuit, BookOpen, Mail, Wrench, Check, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { applicationHandoffHref, applicationTarget } from "../applications";
-import { streamAgentChat } from "../data";
+import { decideAgentApproval, streamAgentChat } from "../data";
 import { useStore } from "../store";
 import { cx } from "../utils";
 import LottiePlayer from "./LottiePlayer";
@@ -13,17 +13,38 @@ import flowData from "../animations/ai-flow.json";
 import { tryNavigationAnswer, helpOverview } from "../navigationGuide";
 import { useChatSend } from "../useChatSend";
 import { useStickToBottom } from "../useStickToBottom";
+import {
+  ASSISTANT_OPEN_EVENT,
+  ASSISTANT_TOGGLE_EVENT,
+  claimPendingAssistantRequest,
+  releaseAssistantPanel,
+} from "./assistantEvents";
 
-type Msg = { role: "user" | "agent"; text: string; thinking?: string; nav?: { route: string; label: string; also?: { route: string; label: string }[] } };
+type ToolStep = { tool: string; status: "running" | "done" | "error"; error?: string };
+type ApprovalReq = { approval_id: string; tool: string; params: Record<string, unknown>; analysis_id: string; prompt: string };
+type Msg = {
+  role: "user" | "agent";
+  text: string;
+  thinking?: string;
+  steps?: ToolStep[];
+  approval?: ApprovalReq;
+  nav?: { route: string; label: string; also?: { route: string; label: string }[] };
+};
+
+function stepLabel(tool: string): string {
+  return tool
+    .replace(/\./g, " › ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 const DEFAULT_GREETING =
-  "Hi, I'm SecureGraph Agent — your security operations assistant. I can summarize your posture, surface highest-risk assets, list open critical risks, preview report findings, and explain risks or findings. I can also point you to any page in the app — just ask \u201cwhere do I find\u2026\u201d. What would you like to look into?";
+  "Hi, I am SecureGraph Agent. I work alongside you: I can look up your assets, findings, risks and campaigns, and I can take the same actions the app can \u2014 add an asset, update one, re-verify ownership, update a risk. Anything that changes your data asks for your approval first, and you can stop me at any point. Ask me a question or tell me what to do. What would you like to look into?";
 
 const SUGGESTIONS = [
-  "Summarize my current security posture",
   "Which of my assets are highest risk?",
-  "How many critical risks are open right now?",
-  "Where do I find my risk register?",
+  "Show me the prioritized remediation queue",
+  "Add api.example.com to my inventory",
+  "Summarize my current security posture",
 ];
 
 const WIDTH = 400;
@@ -40,19 +61,7 @@ function loadChat(email: string): Msg[] {
   return [{ role: "agent", text: DEFAULT_GREETING }];
 }
 
-/** Event any surface can fire to open the assistant panel. */
-export const ASSISTANT_OPEN_EVENT = "sg:assistant:open";
-
-export const ASSISTANT_TOGGLE_EVENT = "sg:assistant:toggle";
-
-/** Open the assistant panel, optionally straight into support. */
-export function openAssistant(mode?: "agent" | "support"): void {
-  window.dispatchEvent(new CustomEvent(ASSISTANT_OPEN_EVENT, { detail: { mode } }));
-}
-
-export function toggleAssistant(): void {
-  window.dispatchEvent(new CustomEvent(ASSISTANT_TOGGLE_EVENT));
-}
+export { ASSISTANT_OPEN_EVENT, ASSISTANT_TOGGLE_EVENT, openAssistant, toggleAssistant } from "./assistantEvents";
 
 export default function AgentAssistant() {
   const { toast, requireDualControl, session } = useStore();
@@ -82,6 +91,9 @@ export default function AgentAssistant() {
   const [phase, setPhase] = useState<"idle" | "connecting" | "streaming">("idle");
   const [liveAnswer, setLiveAnswer] = useState("");
   const [liveThinking, setLiveThinking] = useState("");
+  const [liveSteps, setLiveSteps] = useState<ToolStep[]>([]);
+  const [liveApproval, setLiveApproval] = useState<ApprovalReq | null>(null);
+  const [approving, setApproving] = useState(false);
   const [connError, setConnError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const chatSend = useChatSend();
@@ -112,7 +124,16 @@ export default function AgentAssistant() {
     const toggleFn = () => setOpen((v) => !v);
     window.addEventListener(ASSISTANT_OPEN_EVENT, openFn);
     window.addEventListener(ASSISTANT_TOGGLE_EVENT, toggleFn);
+    // The panel is lazy-loaded; replay a request made before it mounted.
+    const early = claimPendingAssistantRequest();
+    if (early?.kind === "open") {
+      if (early.mode) setMode(early.mode);
+      setOpen(true);
+    } else if (early?.kind === "toggle") {
+      setOpen((v) => !v);
+    }
     return () => {
+      releaseAssistantPanel();
       window.removeEventListener(ASSISTANT_OPEN_EVENT, openFn);
       window.removeEventListener(ASSISTANT_TOGGLE_EVENT, toggleFn);
     };
@@ -124,7 +145,12 @@ export default function AgentAssistant() {
     return () => window.removeEventListener("keydown", fn);
   }, []);
 
-  const resetLive = () => { setLiveAnswer(""); setLiveThinking(""); };
+  const resetLive = () => {
+    setLiveAnswer("");
+    setLiveThinking("");
+    setLiveSteps([]);
+    setLiveApproval(null);
+  };
 
   const resetChat = () => {
     setMessages([{ role: "agent", text: DEFAULT_GREETING }]);
@@ -137,6 +163,150 @@ export default function AgentAssistant() {
     if (!msg) return;
     setInput("");
     chatSend.requestSend(msg, (m) => dispatchSend(m));
+  };
+
+  // Conversation sent to the model: the stored history, minus the greeting and
+  // minus action cards (which are not assistant prose). Bounded so a long chat
+  // does not grow the prompt without limit.
+  const buildHistory = (extraUser?: string) => {
+    const hist = messages
+      .filter((m, i) => i > 0 && m.text.trim() && !m.approval)
+      .slice(-10)
+      .map((m) => ({ role: m.role === "agent" ? "assistant" : "user", content: m.text }));
+    if (extraUser) hist.push({ role: "user", content: extraUser });
+    return hist;
+  };
+
+  // One streamed turn. The backend may call read tools inline and pause on a
+  // write for approval; we surface both and let the operator decide.
+  const runStream = async (opts: { text: string; analysisId?: string; includeText: boolean }) => {
+    if (busy) abortRef.current?.abort();
+    setConnError(null);
+    setBusy(true);
+    setPhase("connecting");
+    resetLive();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let answer = "";
+    let thinking = "";
+    let analysisId = opts.analysisId ?? "";
+    const steps: ToolStep[] = [];
+    let approval: ApprovalReq | null = null;
+    try {
+      await streamAgentChat(
+        {
+          messages: buildHistory(opts.includeText ? opts.text : undefined),
+          thinking: true,
+          reasoning_effort: "high",
+          domain: "cross",
+          analysis_id: analysisId || undefined,
+        },
+        (event, data) => {
+          if (event === "connected") {
+            setPhase("streaming");
+            if (data?.analysisId) analysisId = String(data.analysisId);
+          } else if (event === "meta") {
+            if (data?.analysis_id) analysisId = String(data.analysis_id);
+          } else if (event === "reasoning") {
+            thinking += data?.content ?? "";
+            setLiveThinking(thinking);
+          } else if (event === "delta") {
+            answer += data?.content ?? "";
+            setLiveAnswer(answer);
+          } else if (event === "tool_call") {
+            steps.push({ tool: String(data?.tool ?? "tool"), status: "running" });
+            setLiveSteps([...steps]);
+          } else if (event === "tool_result") {
+            const tool = String(data?.tool ?? "");
+            const step = [...steps].reverse().find((s) => s.tool === tool && s.status === "running");
+            if (step) {
+              step.status = data?.ok === false ? "error" : "done";
+              step.error = data?.error ?? undefined;
+            }
+            setLiveSteps([...steps]);
+          } else if (event === "approval_required") {
+            approval = {
+              approval_id: String(data?.approval_id ?? ""),
+              tool: String(data?.tool ?? ""),
+              params: (data?.params ?? {}) as Record<string, unknown>,
+              analysis_id: String(data?.analysis_id ?? analysisId),
+              prompt: opts.text,
+            };
+            setLiveApproval(approval);
+          } else if (event === "done") {
+            const text = answer || (approval ? "I can do that once you approve it." : "No response from agent.");
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "agent",
+                text,
+                thinking: thinking || undefined,
+                steps: steps.length ? [...steps] : undefined,
+                approval: approval || undefined,
+              },
+            ]);
+            resetLive();
+          } else if (event === "error") {
+            throw new Error(data?.error ?? "Agent stream error");
+          }
+        },
+        controller.signal,
+      );
+    } catch (e) {
+      if ((e as Error)?.name !== "AbortError") {
+        const planRequired = (e as any)?.status === 402 || (e as any)?.detail?.code === "ai_agent_plan_required";
+        if (planRequired) {
+          setMessages((m) => [...m, { role: "agent", text: "This reply requires the SecureGraph Agent, which is part of a paid plan. Upgrade on the Platform to keep chatting with your security data." }]);
+        } else {
+          const name = String((e as any)?.name ?? "");
+          const message = String((e as any)?.message ?? "");
+          if (name === "TimeoutError" || name === "AbortError" || /timeout|timed out/i.test(message)) {
+            setConnError("Timed out. The agent server is unavailable. Check your connection and try again.");
+          } else if (/failed to fetch|networkerror|network error|load failed|fetch/i.test(message)) {
+            setConnError("Failed to fetch. Could not reach the agent server. Check your connection and try again.");
+          } else {
+            setConnError(message || "Failed to reach the agent server.");
+          }
+          toast("error", "Agent unavailable", e instanceof Error ? e.message : "");
+          setMessages((m) => [...m, { role: "agent", text: "I could not process that request. Please try again." }]);
+        }
+      }
+    } finally {
+      setBusy(false);
+      setPhase("idle");
+      abortRef.current = null;
+    }
+  };
+
+  const handleApproval = async (approval: ApprovalReq, approve: boolean) => {
+    if (approving) return;
+    setApproving(true);
+    // The card has served its purpose; drop it from the transcript.
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.approval?.approval_id === approval.approval_id ? { ...m, approval: undefined } : m,
+      ),
+    );
+    try {
+      if (!approve) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "agent", text: `Cancelled \`${approval.tool}\`. Nothing was changed.` },
+        ]);
+        return;
+      }
+      await decideAgentApproval(approval.approval_id, true);
+      await runStream({
+        text: approval.prompt,
+        analysisId: approval.analysis_id,
+        includeText: false,
+      });
+    } catch (e) {
+      toast("error", "Approval failed", e instanceof Error ? e.message : "");
+      setConnError("Could not approve that action. Try again.");
+    } finally {
+      setApproving(false);
+    }
   };
 
   const dispatchSend = async (msg: string) => {
@@ -157,56 +327,9 @@ export default function AgentAssistant() {
     }
 
     if (!(await requireDualControl("Using SecureGraph Agent requires a dual-control operate session."))) return;
-    setConnError(null);
     setMessages((m) => [...m, { role: "user", text: msg }]);
     setInput("");
-    setBusy(true);
-    setPhase("connecting");
-    resetLive();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    let answer = "";
-    let thinking = "";
-    try {
-      await streamAgentChat(
-        { messages: [{ role: "user", content: msg }], thinking: true, reasoning_effort: "high", domain: "cross" },
-        (event, data) => {
-          if (event === "connected") setPhase("streaming");
-          else if (event === "reasoning") { thinking += data?.content ?? ""; setLiveThinking(thinking); }
-          else if (event === "delta") { answer += data?.content ?? ""; setLiveAnswer(answer); }
-          else if (event === "done") {
-            setMessages((prev) => [...prev, { role: "agent", text: answer || "No response from agent.", thinking: thinking || undefined }]);
-            resetLive();
-          } else if (event === "error") {
-            throw new Error(data?.error ?? "Agent stream error");
-          }
-        },
-        controller.signal,
-      );
-    } catch (e) {
-      if ((e as Error)?.name !== "AbortError") {
-        const planRequired = (e as any)?.status === 402 || (e as any)?.detail?.code === "ai_agent_plan_required";
-        if (planRequired) {
-          setMessages((m) => [...m, { role: "agent", text: "This reply requires the SecureGraph Agent, which is part of a paid plan. Upgrade on the Platform to keep chatting with your security data." }]);
-        } else {
-          const name = String((e as any)?.name ?? "");
-          const message = String((e as any)?.message ?? "");
-          if (name === "TimeoutError" || name === "AbortError" || /timeout|timed out/i.test(message)) {
-            setConnError("Timed out — the agent server is unavailable. Check your connection and try again.");
-          } else if (/failed to fetch|networkerror|network error|load failed|fetch/i.test(message)) {
-            setConnError("Failed to fetch — could not reach the agent server. Check your connection and try again.");
-          } else {
-            setConnError(message || "Failed to reach the agent server.");
-          }
-          toast("error", "Agent unavailable", e instanceof Error ? e.message : "");
-          setMessages((m) => [...m, { role: "agent", text: "I couldn't process that request. Please try again." }]);
-        }
-      }
-    } finally {
-      setBusy(false);
-      setPhase("idle");
-      abortRef.current = null;
-    }
+    await runStream({ text: msg, includeText: true });
   };
 
   const stop = () => {
@@ -266,7 +389,7 @@ export default function AgentAssistant() {
               {mode === "support" && (
                 <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
                   <p className="text-xs leading-5 text-slate-400">
-                    Stuck on something? Raise it with the support desk — it is submitted on behalf of your
+                    Stuck on something? . It is submitted on behalf of your
                     organization, and the thread is answered here and by email.
                   </p>
                   <button
@@ -276,7 +399,7 @@ export default function AgentAssistant() {
                     <Sparkles size={15} className="mt-0.5 shrink-0 text-gold-300" />
                     <span>
                       <span className="block text-xs font-semibold text-gold-200">Open a support ticket</span>
-                      <span className="block text-[13px] leading-5 text-gold-100/80">Describe the issue and pick a priority — critical is triaged first.</span>
+                      <span className="block text-[13px] leading-5 text-gold-100/80">. Critical is triaged first.</span>
                     </span>
                   </button>
                   <button
@@ -295,8 +418,8 @@ export default function AgentAssistant() {
                   >
                     <BookOpen size={15} className="mt-0.5 shrink-0 text-slate-400" />
                     <span>
-                      <span className="block text-xs font-semibold text-slate-200">Documentation &amp; Help Centre</span>
-                      <span className="block text-[13px] leading-5 text-slate-500">Setup guides, how-tos and FAQs — most answers are already written down.</span>
+                      <span className="block text-xs font-semibold text-slate-200">Documentation and Help Centre</span>
+                      <span className="block text-[13px] leading-5 text-slate-500">. Most answers are already written down.</span>
                     </span>
                   </button>
                   <a
@@ -338,6 +461,49 @@ export default function AgentAssistant() {
                             </details>
                           )}
                           {m.role === "agent" ? <MarkdownView source={m.text} /> : <p className="whitespace-pre-wrap">{m.text}</p>}
+                          {m.role === "agent" && m.steps && m.steps.length > 0 && (
+                            <div className="mt-2 space-y-1 border-t border-phantix-700/40 pt-2">
+                              {m.steps.map((s, si) => (
+                                <div key={`${s.tool}-${si}`} className="flex items-center gap-1.5 text-[12px] text-slate-400">
+                                  {s.status === "running" ? (
+                                    <Wrench size={11} className="shrink-0 animate-pulse text-gold-300" />
+                                  ) : s.status === "error" ? (
+                                    <X size={11} className="shrink-0 text-severity-critical" />
+                                  ) : (
+                                    <Check size={11} className="shrink-0 text-emerald-400" />
+                                  )}
+                                  <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool)}</span>
+                                  {s.error && <span className="truncate text-slate-500">· {s.error}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {m.role === "agent" && m.approval && (
+                            <div className="mt-2 rounded-xl border border-gold-400/30 bg-gold-400/[0.08] p-2.5">
+                              <p className="flex items-center gap-1.5 text-[12px] font-semibold text-gold-200">
+                                <ShieldCheck size={12} /> Approval needed
+                              </p>
+                              <p className="mt-1 text-[12px] leading-5 text-gold-100/80">
+                                Allow <strong>{stepLabel(m.approval.tool)}</strong>? It changes your data and runs once.
+                              </p>
+                              <div className="mt-2 flex gap-2">
+                                <button
+                                  disabled={approving}
+                                  onClick={() => void handleApproval(m.approval!, true)}
+                                  className="btn-primary !px-2.5 !py-1 !text-[12px] disabled:opacity-60"
+                                >
+                                  {approving ? "Approving…" : "Approve & run"}
+                                </button>
+                                <button
+                                  disabled={approving}
+                                  onClick={() => void handleApproval(m.approval!, false)}
+                                  className="btn-secondary !px-2.5 !py-1 !text-[12px] disabled:opacity-60"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
                           {m.nav && (
                             <div className="mt-2 space-y-1">
                               <button
@@ -387,6 +553,32 @@ export default function AgentAssistant() {
                           </motion.div>
                         )}
                         {liveAnswer && <p className="mt-1.5 whitespace-pre-wrap">{liveAnswer}<span className="ml-0.5 inline-block h-3.5 w-[7px] animate-pulse rounded-sm bg-gold-400/70 align-middle" /></p>}
+                        {liveSteps.length > 0 && (
+                          <div className="mt-1.5 space-y-1">
+                            {liveSteps.map((s, si) => (
+                              <div key={`${s.tool}-${si}`} className="flex items-center gap-1.5 text-[12px] text-slate-400">
+                                {s.status === "running" ? (
+                                  <Wrench size={11} className="shrink-0 animate-pulse text-gold-300" />
+                                ) : s.status === "error" ? (
+                                  <X size={11} className="shrink-0 text-severity-critical" />
+                                ) : (
+                                  <Check size={11} className="shrink-0 text-emerald-400" />
+                                )}
+                                <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {liveApproval && (
+                          <div className="mt-2 rounded-xl border border-gold-400/30 bg-gold-400/[0.08] p-2.5">
+                            <p className="flex items-center gap-1.5 text-[12px] font-semibold text-gold-200">
+                              <ShieldCheck size={12} /> Approval needed
+                            </p>
+                            <p className="mt-1 text-[12px] leading-5 text-gold-100/80">
+                              Allow <strong>{stepLabel(liveApproval.tool)}</strong>? It changes your data and runs once.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -442,8 +634,8 @@ export default function AgentAssistant() {
                 <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-slate-600">
                   <Sparkles size={10} />
                   {chatSend.hint === "queued"
-                    ? "Queued — press Enter again to send now, or wait for the current reply."
-                    : "PII redacted before provider calls · every interaction audited · agent never changes findings or risk scores"}
+                    ? "Queued. Press Enter again to send now, or wait for the current reply."
+                    : "PII redacted before provider calls · every interaction audited · actions that change your data need your approval"}
                 </p>
               </div>
             </motion.div>

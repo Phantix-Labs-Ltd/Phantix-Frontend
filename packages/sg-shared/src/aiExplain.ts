@@ -309,12 +309,12 @@ function composePostureSummary(brief: AssetBrief): string {
   const sevBits = SEV_ORDER.map((s) => `${brief.findingsBySeverity[s] ?? 0} ${s}`).filter((bit) => !bit.startsWith("0 "));
   if (findingsTotal(brief) > 0) {
     sentences.push(
-      `Scan engines recorded ${findingsTotal(brief)} finding(s) — ${sevBits.join(", ") || "none rated"} — across ${
+      `Scan engines recorded ${findingsTotal(brief)} finding(s), rated ${sevBits.join(", ") || "none"}, across ${
         new Set(brief.findings.map((f) => f.tool)).size || "?"
       } tool(s). ${brief.unverifiedFindings > 0 ? `${brief.unverifiedFindings} finding(s) remain unverified candidates.` : "All findings carry verified evidence."}`,
     );
   } else {
-    sentences.push("No scan findings exist for this asset yet — either never scanned or scanner coverage was silent.");
+    sentences.push("No scan findings exist for this asset yet. Either it was never scanned, or the scanner coverage was silent.");
   }
 
   if (brief.risks.length > 0) {
@@ -337,7 +337,7 @@ function composePostureSummary(brief: AssetBrief): string {
 
   sentences.push(brief.lastSeenAt
     ? `Last observed on the wire recently (${brief.lastSeenAt.slice(0, 10)}); treat current findings as actionable until rescanned.`
-    : "No recent heartbeat — confirm the asset is actually live before acting.");
+    : "No recent heartbeat. Confirm that the asset is live before you act.");
 
   return sentences.join(" ");
 }

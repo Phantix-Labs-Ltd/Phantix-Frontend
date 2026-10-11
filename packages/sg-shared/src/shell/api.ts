@@ -2,7 +2,7 @@
  * Minimal same-origin API client for the application shells.
  *
  * The four apps share one backend and one session: tokens live in the same
- * sessionStorage keys on every host (the cross-origin handoff copies them), and
+ * persistent keys on every host (the cross-origin handoff copies them), and
  * each app's dev server proxies `/api` upstream. This is deliberately small —
  * pages that need richer behaviour can import their own client later.
  *
@@ -12,7 +12,16 @@
  * because the operator's role happens to include Attack.
  */
 import type { ApplicationKey } from "./types";
-import { deviceId as sharedDeviceId } from "../api";
+import {
+  announcePendingApproval,
+  deviceId as sharedDeviceId,
+  isCookieSession,
+  readSessionStoredToken,
+  readStoredToken,
+  SESSION_TRANSPORT_HEADER,
+  writeSessionStoredToken,
+  writeStoredToken,
+} from "../api";
 
 export type { ApplicationKey };
 
@@ -37,21 +46,16 @@ export function activeApplication(): ApplicationKey | "" {
   return currentApplication;
 }
 
+// Read/write through the shared store so the shell and the page clients agree
+// on where the session lives (see `tokens` in ../api.ts). Everything persists
+// except the operate elevation, which is deliberately per-tab.
 function read(key: string): string {
-  try {
-    return sessionStorage.getItem(key) || "";
-  } catch {
-    return "";
-  }
+  return (key === STORAGE.dualControl ? readSessionStoredToken(key) : readStoredToken(key)) || "";
 }
 
 function write(key: string, value: string): void {
-  try {
-    if (value) sessionStorage.setItem(key, value);
-    else sessionStorage.removeItem(key);
-  } catch {
-    /* private mode / blocked storage — the session simply does not persist */
-  }
+  if (key === STORAGE.dualControl) writeSessionStoredToken(key, value || null);
+  else writeStoredToken(key, value || null);
 }
 
 export function appToken(): string {
@@ -152,12 +156,17 @@ async function isSessionSuperseded(res: Response): Promise<boolean> {
 }
 
 function buildHeaders(anonymous: boolean): Record<string, string> {
-  const headers: Record<string, string> = { Accept: "application/json" };
+  // Cookie transport on every call (see SESSION_TRANSPORT_HEADER in ../api):
+  // the session itself rides in HttpOnly cookies the browser attaches.
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    [SESSION_TRANSPORT_HEADER]: "cookie",
+  };
   if (!anonymous) {
     const token = appToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token && !isCookieSession(token)) headers["Authorization"] = `Bearer ${token}`;
     const device = deviceToken();
-    if (device) headers["X-Device-Token"] = device;
+    if (device && !isCookieSession(device)) headers["X-Device-Token"] = device;
     const dual = dualControlSession();
     if (dual) headers["X-Dual-Control-Session"] = dual;
     headers["X-Device-Id"] = deviceId();
@@ -218,7 +227,9 @@ export async function apiRequest<T>(path: string, opts: ApiOptions = {}): Promis
     throw new ApiError(res.status, detail, message);
   }
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  const body = await res.json();
+  announcePendingApproval(res.status, body);
+  return body as T;
 }
 
 export function apiGet<T>(path: string): Promise<T> {

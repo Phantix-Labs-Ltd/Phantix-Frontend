@@ -92,7 +92,7 @@ export async function candidateSummary(): Promise<CandidateSummary> {
 export async function promoteCandidate(id: number, confirm = false): Promise<{ asset_id: number; candidate: AssetCandidate }> {
   if (isDemoMode()) {
     await delay(500);
-    throw new Error("Promotion is available on a real organisation, not in the demo tenant.");
+    throw new Error("Promotion is available on a real organization, not in the demo tenant.");
   }
   return api.post<{ asset_id: number; candidate: AssetCandidate }>(
     `/assets/candidates/${id}/promote?confirm=${confirm ? "true" : "false"}`,
@@ -104,7 +104,7 @@ export async function promoteCandidate(id: number, confirm = false): Promise<{ a
 export async function rejectCandidate(id: number): Promise<AssetCandidate> {
   if (isDemoMode()) {
     await delay(300);
-    throw new Error("Rejection is available on a real organisation, not in the demo tenant.");
+    throw new Error("Rejection is available on a real organization, not in the demo tenant.");
   }
   return api.post<AssetCandidate>(`/assets/candidates/${id}/reject`, {});
 }

@@ -6,7 +6,6 @@ export const API_BASE = "/api/v1";
 /** Public sandbox cohort slug on the shared backend (POST /sandbox/programs/{slug}/members). */
 export const SANDBOX_PROGRAM_SLUG = "public-launch-20";
 export const LANDING_URL = "https://phantixlabs.com";
-export const PLATFORM_URL = "https://platform.phantixlabs.com";
 /**
  * Application hosts.
  *
@@ -30,6 +29,8 @@ function host(override: string | undefined, devPort: number, production: string)
   return DEV ? `http://localhost:${devPort}` : production;
 }
 
+/** The Platform (organization management). `VITE_PLATFORM_URL` overrides. */
+export const PLATFORM_URL = host(import.meta.env.VITE_PLATFORM_URL, 5174, "https://platform.phantixlabs.com");
 export const APP_URL = host(import.meta.env.VITE_CORE_URL, 5173, "https://app.phantixlabs.com");
 /** Sibling application hosts (Core lives on APP_URL). */
 export const ATTACK_URL = host(

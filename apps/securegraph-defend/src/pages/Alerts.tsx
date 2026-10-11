@@ -38,7 +38,7 @@ export default function Alerts() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load alert events. Check your connection and retry — your session stays signed in."
+        body="We could not load alert events. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -50,7 +50,7 @@ export default function Alerts() {
         description="Decide how you stay informed about security events."
         actions={
           <>
-          <DocLink docId="hc-alert-channels" label="Alerts how-to" />
+          <DocLink docId="howto-app-36" label="Alerts how-to" />
           <button
             className="btn-primary"
             onClick={() =>
@@ -69,7 +69,7 @@ export default function Alerts() {
       <Tabs
         tabs={[
           { id: "events", label: "Delivery log", count: alertEvents.length },
-          { id: "settings", label: "Channels & SMTP" },
+          { id: "settings", label: "Channels and SMTP" },
         ]}
         active={tab}
         onChange={setTab}
@@ -124,8 +124,8 @@ export default function Alerts() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {/* Integrations Hub link */}
           <div className="lg:col-span-2">
-            <Card>
-              <div className="flex items-center justify-between p-4">
+            <Card pad="sm">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Cable size={16} className="text-gold-400" />
                   <div>

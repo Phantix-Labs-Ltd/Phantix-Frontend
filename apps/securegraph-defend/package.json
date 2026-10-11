@@ -6,7 +6,7 @@
   "description": "SecureGraph Defend application",
   "scripts": {
     "dev": "vite --port 5176",
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "tsc -p tsconfig.json && vite build && vite build --ssr src/entry-server.tsx --outDir ../../node_modules/.prerender/defend && node prerender.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

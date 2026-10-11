@@ -1,16 +1,39 @@
 import React from "react";
-import * as LucideIcons from "lucide-react";
-import { Plug } from "lucide-react";
+import {
+  Bell, Clipboard, ClipboardCheck, Cloud, Database, FileCode, GitMerge, Globe, Key, Lock, Mail,
+  MessageCircle, MessageSquare, Plug, Send, Server, Shield, Slack, Webhook, Workflow, Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { BRAND_ICONS } from "../brandIcons";
 
-/** kebab-case ("clipboard-check") -> PascalCase ("ClipboardCheck") lucide export name. */
-function toPascalCase(kebab: string): string {
-  return kebab
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join("");
-}
+/**
+ * The icon hints the integrations catalog sends (kebab-case lucide names),
+ * plus a few generic ones for connectors added later. Named imports on
+ * purpose: `import * as` from lucide pulled every icon (~700 KB) into the
+ * integrations page. A hint missing here falls back to the plug glyph.
+ */
+const HINT_ICONS: Record<string, LucideIcon> = {
+  bell: Bell,
+  clipboard: Clipboard,
+  "clipboard-check": ClipboardCheck,
+  cloud: Cloud,
+  database: Database,
+  "file-code": FileCode,
+  "git-merge": GitMerge,
+  globe: Globe,
+  key: Key,
+  lock: Lock,
+  mail: Mail,
+  "message-circle": MessageCircle,
+  "message-square": MessageSquare,
+  send: Send,
+  server: Server,
+  shield: Shield,
+  slack: Slack,
+  webhook: Webhook,
+  workflow: Workflow,
+  zap: Zap,
+};
 
 export interface BrandIconProps {
   /** Connector catalog key, e.g. "slack", "crowdstrike" — looked up in BRAND_ICONS. */
@@ -47,12 +70,8 @@ export function BrandIcon({ connectorId, iconHint, size = 16, className }: Brand
     );
   }
 
-  if (iconHint) {
-    const Lucide = (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
-      toPascalCase(iconHint)
-    ];
-    if (Lucide) return <Lucide size={size} className={className} />;
-  }
+  const Hinted = iconHint ? HINT_ICONS[iconHint.trim().toLowerCase().replace(/[_\s]+/g, "-")] : undefined;
+  if (Hinted) return <Hinted size={size} className={className} />;
 
   return <Plug size={size} className={className} />;
 }

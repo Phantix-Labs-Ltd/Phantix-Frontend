@@ -27,7 +27,7 @@ export function ResizeHandle({
     <button
       type="button"
       aria-label={label}
-      title={onDoubleClick ? `${label} — drag to resize, double-click to reset` : `${label} — drag to resize`}
+      title={onDoubleClick ? `${label}. Drag to resize. Double-click to reset.` : `${label}. Drag to resize.`}
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
       data-dragging={dragging ? "true" : "false"}

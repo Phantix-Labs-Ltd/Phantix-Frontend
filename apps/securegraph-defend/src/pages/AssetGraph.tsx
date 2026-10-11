@@ -94,7 +94,7 @@ export default function AssetGraph() {
         title="Asset Relationship Graph"
         description="Your attack surface mapped."
         actions={<>
-            <DocLink docId="howto-app-04" label="Discovery how-to" />
+            <DocLink docId="howto-app-35" label="Asset intelligence how-to" />
           <Link to="/assets/intelligence" className="btn-secondary text-sm px-3 py-1.5">
             <ArrowLeft size={14} /> Intelligence
           </Link>
@@ -206,7 +206,7 @@ export default function AssetGraph() {
             <EmptyState
               icon={<Network size={24} />}
               title="Nothing to map yet"
-              body="Add assets in the inventory — discovered tags and asset types become groups here automatically."
+              body="Add assets in the inventory. Discovered tags and asset types become groups here automatically."
               action={
                 <Link to="/assets" className="btn-primary text-sm">
                   Open inventory
@@ -250,11 +250,11 @@ export default function AssetGraph() {
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {[
-                      ["Type", String(meta.assetType ?? "—")],
+                      ["Type", String(meta.assetType ?? "Not set")],
                       ["Open findings", String(meta.openFindings ?? 0)],
-                      ["Environment", String(meta.environment ?? "—")],
+                      ["Environment", String(meta.environment ?? "Not set")],
                       ["Verified", meta.isVerified ? "yes" : "no"],
-                      ["Risk score", meta.riskScore != null ? String(meta.riskScore) : "—"],
+                      ["Risk score", meta.riskScore != null ? String(meta.riskScore) : "Not set"],
                       ["Last seen", timeAgo(String(meta.lastSeenAt ?? ""))],
                     ].map(([k, v]) => (
                       <div key={k} className="rounded-lg border border-phantix-700/40 bg-phantix-950/50 px-2.5 py-2">
@@ -293,7 +293,7 @@ export default function AssetGraph() {
                     {neighborInfo?.edgesIn ?? 0} direct member connection{(neighborInfo?.edgesIn ?? 0) === 1 ? "" : "s"}
                   </div>
                   <p className="text-xs leading-5 text-slate-500">
-                    Group hubs collect every asset that shares this {isTag ? "tag" : "type"} — clearing or retagging assets reshapes the graph instantly.
+                    Group hubs collect every asset that shares this {isTag ? "tag" : "type"}. Clearing or retagging assets reshapes the graph immediately.
                   </p>
                   <button className="btn-ghost w-full text-sm" onClick={() => setSelected(null)}>
                     Clear selection

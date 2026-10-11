@@ -8,7 +8,7 @@ export function Header() {
 
   return (
     <header className="site-header">
-      <Link className="site-brand" to="/" aria-label="The SecureGraph Weekly — this week's issue">
+      <Link className="site-brand" to="/" aria-label="The SecureGraph Weekly: the issue for this week">
         {/* Shared brand lockup: the same /logo-white.svg the operator apps
             render on dark surfaces. */}
         <img className="site-brand-logo" src="/logo-white.svg" alt="SecureGraph" />
@@ -17,7 +17,7 @@ export function Header() {
       <nav className="site-nav" aria-label="The Weekly">
         {onPost && (
           <Link className="site-nav-link" to="/">
-            ← This week's issue
+            ← The issue for this week
           </Link>
         )}
         <a

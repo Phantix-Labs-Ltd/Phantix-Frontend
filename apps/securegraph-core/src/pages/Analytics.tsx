@@ -204,7 +204,7 @@ export default function Analytics() {
     <div>
       <PageHeader
         title="Analytics"
-        description="Visualize your organization's security data across every surface and engine."
+        description="Visualize the security data of your organization across every surface and engine."
         actions={
           <span className="flex items-center gap-2">
             <DocLink docId="howto-app-28" label="Analytics how-to" />
@@ -228,11 +228,11 @@ export default function Analytics() {
           {/* Headline numbers — a KPI row, not a chart. Four values do not earn
               an axis between them. */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard label="Overall posture" value={posture?.overall_score ?? "—"} hint="0–100 across all surfaces" />
+            <StatCard label="Overall posture" value={posture?.overall_score ?? "Not set"} hint="0–100 across all surfaces" />
             <StatCard label="Open findings" value={totals.open} hint="open + in progress" />
             <StatCard
               label="Fix rate"
-              value={totals.fixRate == null ? "—" : `${totals.fixRate}%`}
+              value={totals.fixRate == null ? "Not set" : `${totals.fixRate}%`}
               hint={`${totals.fixed} fixed of ${totals.tracked} tracked`}
             />
             <StatCard
@@ -297,11 +297,11 @@ export default function Analytics() {
               <MovementTimeline timeline={timeline} />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <ComparativeBars
-                  title="How long open work has been sitting"
+                  title="How long open work waits"
                   subtitle={
                     aging.undated
                       ? `${aging.undated} without a detection date are excluded`
-                      : "Open and in-progress findings only — closed work stops aging"
+                      : "Open and in-progress findings only. Closed work stops aging"
                   }
                   rows={aging.buckets.filter((b) => b.count > 0).map((b) => ({ name: b.name, count: b.count }))}
                   series={[{ key: "count", label: "Findings", color: LIFECYCLE_COLORS.open }]}
@@ -352,7 +352,7 @@ export default function Analytics() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <ComparativeBars
                 title="Exposure composition by surface"
-                subtitle="What each surface's open findings are made of"
+                subtitle="What the open findings of each surface contain"
                 rows={severityBySurface}
                 series={[
                   { key: "critical", label: "Critical", color: SEVERITY_COLORS.critical },
@@ -407,11 +407,11 @@ export default function Analytics() {
                   value={
                     typeof usage.credits_remaining === "number"
                       ? Number(usage.credits_remaining).toLocaleString()
-                      : "—"
+                      : "Not set"
                   }
                   hint={
                     usage.credits_exhausted
-                      ? "exhausted — top up to continue"
+                      ? "exhausted. Top up to continue"
                       : usage.free_models_only
                         ? "free models only"
                         : "remaining this cycle"
@@ -419,17 +419,17 @@ export default function Analytics() {
                 />
                 <StatCard
                   label="Budget window"
-                  value={usage.year_month ?? "—"}
+                  value={usage.year_month ?? "Not set"}
                   hint={
                     usage.allowed === false
                       ? usage.credits_exhausted
-                        ? "credits exhausted — AI work refused"
+                        ? "credits exhausted. AI work refused"
                         : usage.over_tokens
-                          ? "token ceiling reached — AI work refused"
+                          ? "token ceiling reached. AI work refused"
                           : usage.over_spend
-                            ? "spend limit reached — AI work refused"
-                            : "exhausted — AI work refused"
-                      : `mode ${usage.mode ?? "—"}`
+                            ? "spend limit reached. AI work refused"
+                            : "exhausted. AI work refused"
+                      : `mode ${usage.mode ?? "Not set"}`
                   }
                 />
               </div>

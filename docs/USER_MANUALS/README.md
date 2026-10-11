@@ -13,7 +13,7 @@ Customer-facing surface guides (with screenshots).
 - [Command Centre](../how-to/command-centre/) â€” scans, SOC, VAPT, tracker, reports, â€¦
 
 
-> Staging / lab only â€” not for production.
+> Staging and lab only â€” not for production.
 
 ## Screenshots
 

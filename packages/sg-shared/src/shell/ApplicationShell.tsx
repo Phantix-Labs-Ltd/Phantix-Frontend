@@ -1,5 +1,6 @@
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import PageErrorBoundary from "@sg/components/PageErrorBoundary";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
@@ -17,6 +18,7 @@ import {
   Lock,
   LogOut,
   Menu,
+  MessageSquareWarning,
   Search,
   ShieldCheck,
   Sparkles,
@@ -26,32 +28,44 @@ import {
 } from "lucide-react";
 import { useSidebarCollapsed } from "../useSidebarCollapsed";
 import { useApplicationNav } from "./useApplicationNav";
+import { MobileMoreSheet, MobileTabBar, SHEET_ROW, usePhoneTitle } from "./MobileShell";
+import { useTableCards } from "../useTableCards";
 import { ThemeToggle } from "../ThemeToggle";
 import { BrandMark, BrandWordmark } from "../components/BrandLogo";
 import { BrandLoader } from "../components/BrandLoader";
 import { PageSkeleton } from "../ui";
-import { NotificationBell, NotificationProvider } from "../components/AlertNotifications";
+import AlertNotifications, { ConnectionWatch, NotificationBell, NotificationProvider } from "../components/AlertNotifications";
 import AgiNotifications from "../components/AgiNotifications";
-import AgentAssistant, { toggleAssistant } from "../components/AgentAssistant";
+import { toggleAssistant } from "../components/assistantEvents";
 import OperationsWidget from "../components/OperationsWidget";
+import FeedbackReporter from "../components/FeedbackReporter";
+import SessionExpiredOverlay from "../components/SessionExpiredOverlay";
+import { openFeedbackReporter } from "../feedback";
 import { OperationsProvider } from "../operations";
 import SandboxBanner from "../components/SandboxBanner";
 import CookieConsent from "../components/CookieConsent";
 import { useStore } from "../store";
 import { shortName } from "../utils";
 import { loadSandboxMe } from "../sandbox";
-import { loadAppIdentity, type AppIdentity } from "../applications";
+import { loadAppIdentity, safeAppPath, type AppIdentity } from "../applications";
 import { PLATFORM_IDENTITY_URL } from "../links";
 import { apiGet, appToken, clearStoredSession, setApplication } from "./api";
-import { isDemoFlagSet, setActiveApplication } from "../api";
+import { isDemoMode, migrateToCookieSession, setActiveApplication, setSessionCardMounted } from "../api";
 import { consumeHandoff, handoffUrl, signOutEverywhere } from "./session";
 import { IS_DEV_HOSTS } from "../config";
+import { useNoIndex } from "../pageTitle";
 import {
   APPLICATION_LABEL,
   APPLICATION_ORDER,
   type ApplicationKey,
+  type NavLeaf,
   type NavSection,
 } from "./types";
+
+// The assistant panel (Markdown renderer, animations, chat) stays off the
+// first-paint bundle; the header button works before it loads (see
+// assistantEvents).
+const AgentAssistant = React.lazy(() => import("../components/AgentAssistant"));
 
 /** One launcher card as the backend reports it. */
 interface ApplicationCard {
@@ -70,6 +84,114 @@ export interface ApplicationShellProps {
   nav: NavSection[];
   /** Absolute base URL per application (for the app switcher). */
   hosts: Record<ApplicationKey, string>;
+}
+
+/** The group holding the page at `pathname`: the longest item route that is
+ *  the path itself or a parent of it, so `/code-review/repositories` resolves
+ *  to its own group rather than to `/code-review`'s. */
+function activeGroupLabel(nav: NavSection[], pathname: string): string | null {
+  let best: { label: string; length: number } | null = null;
+  for (const section of nav) {
+    for (const item of section.items) {
+      const hit =
+        item.to === "/"
+          ? pathname === "/"
+          : pathname === item.to || pathname.startsWith(`${item.to}/`);
+      if (hit && (!best || item.to.length > best.length)) {
+        best = { label: section.label, length: item.to.length };
+      }
+    }
+  }
+  return best?.label ?? null;
+}
+
+function NavLeafLink({ item, collapsible }: { item: NavLeaf; collapsible: boolean }) {
+  return (
+    <NavLink
+      to={item.to}
+      end={item.to === "/"}
+      title={
+        item.locked
+          ? `${item.label}: ${item.lockReason || "Included with a paid plan"}`
+          : item.label
+      }
+      className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+    >
+      {item.icon}
+      {collapsible ? <span className="sg-hide-collapsed">{item.label}</span> : item.label}
+      {item.locked ? (
+        <Lock
+          size={12}
+          className={`ml-auto shrink-0 text-gold-400/80 ${collapsible ? "sg-hide-collapsed" : ""}`}
+          aria-label={item.lockReason || "Included with a paid plan"}
+        />
+      ) : null}
+    </NavLink>
+  );
+}
+
+/**
+ * One sidebar group: the header shows only the group's icon and name, and
+ * drops down its pages when opened. A single-page group is just that page's
+ * link. In the collapsed rail the list stays hidden until the rail widens on
+ * hover, like every other label.
+ */
+function NavGroup({
+  section,
+  open,
+  active,
+  collapsible,
+  onToggle,
+}: {
+  section: NavSection;
+  open: boolean;
+  active: boolean;
+  collapsible: boolean;
+  onToggle: () => void;
+}) {
+  if (section.items.length === 1) {
+    return <NavLeafLink item={section.items[0]} collapsible={collapsible} />;
+  }
+  const listId = `nav-group-${section.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        title={section.label}
+        aria-expanded={open}
+        aria-controls={listId}
+        className={`nav-item w-full ${active ? "text-slate-100" : ""}`}
+      >
+        {section.icon ?? section.items[0]?.icon}
+        {collapsible ? <span className="sg-hide-collapsed">{section.label}</span> : section.label}
+        <ChevronDown
+          size={14}
+          className={`ml-auto shrink-0 text-slate-500 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          } ${collapsible ? "sg-hide-collapsed" : ""}`}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={listId}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className={`overflow-hidden ${collapsible ? "sg-hide-collapsed" : ""}`}
+          >
+            <div className="ml-[1.1rem] mb-1 mt-1 space-y-1 border-l border-phantix-700/50 pl-2.5">
+              {section.items.map((item) => (
+                <NavLeafLink key={item.to} item={item} collapsible={collapsible} />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 /** mm:ss countdown for an active operate session. */
@@ -198,6 +320,7 @@ export function ApplicationShell({
     switchToRealOrg,
     requireDualControl,
     securityDbReady,
+    expireSession,
   } = useStore();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [me, setMe] = useState<AppIdentity | null>(null);
@@ -217,6 +340,13 @@ export function ApplicationShell({
     [backendNav, sandboxEnrolled],
   );
   const location = useLocation();
+  // Phones: bottom tab bar + "More" sheet, page title in the app bar, and data
+  // tables rendered as lists (labels copied from the column headers).
+  const [moreOpen, setMoreOpen] = useState(false);
+  const closeMore = useCallback(() => setMoreOpen(false), []);
+  const phoneTitle = usePhoneTitle(nav, APPLICATION_LABEL[application]);
+  const [mainEl, setMainEl] = useState<HTMLElement | null>(null);
+  useTableCards(mainEl);
   const [cards, setCards] = useState<ApplicationCard[] | null>(null);
   const [opening, setOpening] = useState<ApplicationKey | "">("");
   // Nothing (not even the shell) renders until identity + this application's
@@ -227,12 +357,22 @@ export function ApplicationShell({
   // the shell's own client and the shared @sg/api client used by pages.
   setApplication(application);
   setActiveApplication(application);
+  // Everything inside the shell is behind sign-in; keep it out of search.
+  useNoIndex();
+
+  // The shell can hold the current page under its "session expired" card; tell
+  // the api client one is mounted so it does not hard-redirect a dropped
+  // session out from under the operator.
+  useEffect(() => {
+    setSessionCardMounted(true);
+    return () => setSessionCardMounted(false);
+  }, []);
 
   useEffect(() => {
     let alive = true;
     setAuthReady(false);
     (async () => {
-      let demo = isDemoFlagSet();
+      let demo = isDemoMode();
       // Redeem an arriving handoff/demo fragment BEFORE trusting any token that
       // already sits on this origin. Gating this on `!appToken()` signed
       // operators out on every app switch: the target origin still held a token
@@ -241,10 +381,10 @@ export function ApplicationShell({
       // screen. Consuming first is always safe — with no fragment it is a no-op,
       // and with one the arriving session is authoritative.
       const handed = await consumeHandoff(application);
-      demo = isDemoFlagSet();
+      demo = isDemoMode();
       if (!handed && !demo && !appToken()) {
         // Replace (not push) so Back cannot land on the gated page.
-        window.location.replace(coreLoginUrl(application));
+        window.location.replace(coreLoginUrl(application, window.location.pathname + window.location.search));
         return;
       }
       if (demo) {
@@ -252,6 +392,9 @@ export function ApplicationShell({
         if (alive) setAuthReady(true);
         return;
       }
+      // A session signed in before cookie transport still sits in localStorage:
+      // trade it for HttpOnly cookies once (no-op for a cookie session).
+      await migrateToCookieSession();
       // Verify identity AND this application's access before rendering anything.
       // A transient failure (API restarting, gateway error) must NOT be read as
       // a dead session — only a 401/403 is the backend rejecting the token.
@@ -266,8 +409,13 @@ export function ApplicationShell({
       const appsRes = await apiGet<{ applications: ApplicationCard[] }>("/app/auth/applications").catch(() => null);
       if (!alive) return;
       if (!meRes && authRejected) {
-        // Session invalid/expired — go to login without flashing the app.
-        window.location.replace(coreLoginUrl());
+        // The stored session is no longer accepted (expired or revoked while
+        // the operator was away). Hold this page under the "session expired"
+        // card so they choose to sign in again, instead of an abrupt redirect
+        // that gives no explanation.
+        expireSession();
+        setMe(null);
+        setAuthReady(true);
         return;
       }
       if (!meRes) {
@@ -294,13 +442,25 @@ export function ApplicationShell({
     return () => {
       alive = false;
     };
-  }, [application, hosts.core]);
+  }, [application, hosts.core, expireSession]);
 
   useEffect(() => {
     setMobileNav(false);
     setUserMenu(false);
     setSwitcherOpen(false);
   }, [location.pathname]);
+
+  // Any number of groups can be open; landing on a page also opens the group
+  // it lives in, without closing the others.
+  const activeGroup = useMemo(() => activeGroupLabel(nav, location.pathname), [nav, location.pathname]);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(
+    () => new Set(activeGroup ? [activeGroup] : []),
+  );
+  useEffect(() => {
+    if (activeGroup) {
+      setOpenGroups((open) => (open.has(activeGroup) ? open : new Set(open).add(activeGroup)));
+    }
+  }, [activeGroup]);
 
   // Tell components mounted outside this shell (e.g. the global AgiDrawer) that
   // the app session is established, so they can run their first authenticated
@@ -321,7 +481,7 @@ export function ApplicationShell({
   // stops when the document is not visible). App realm only — platform/company
   // JWTs have their own clocks.
   useEffect(() => {
-    if (!authReady || session?.realm !== "application" || isDemoFlagSet()) return;
+    if (!authReady || session?.realm !== "application" || isDemoMode()) return;
     let timer: number | undefined;
     const touch = () => {
       if (document.visibilityState !== "visible") return;
@@ -439,44 +599,32 @@ export function ApplicationShell({
 
   function renderNav(collapsible: boolean) {
     return nav.map((section) => (
-      <div key={section.label}>
-        <p className={collapsible ? "nav-section-label sg-hide-collapsed" : "nav-section-label"}>
-          {section.label}
-        </p>
-        <div className="space-y-0.5">
-          {section.items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              title={
-                item.locked
-                  ? `${item.label} — ${item.lockReason || "Included with a paid plan"}`
-                  : item.label
-              }
-              className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-            >
-              {item.icon}
-              {collapsible ? <span className="sg-hide-collapsed">{item.label}</span> : item.label}
-              {item.locked ? (
-                <Lock
-                  size={12}
-                  className={`ml-auto shrink-0 text-gold-400/80 ${collapsible ? "sg-hide-collapsed" : ""}`}
-                  aria-label={item.lockReason || "Included with a paid plan"}
-                />
-              ) : null}
-            </NavLink>
-          ))}
-        </div>
-      </div>
+      <NavGroup
+        key={section.label}
+        section={section}
+        open={openGroups.has(section.label)}
+        active={activeGroup === section.label}
+        collapsible={collapsible}
+        onToggle={() =>
+          setOpenGroups((open) => {
+            const next = new Set(open);
+            if (!next.delete(section.label)) next.add(section.label);
+            return next;
+          })
+        }
+      />
     ));
   }
 
   /** Core owns sign-in. Send an unauthenticated visitor there, remembering the
    *  application they wanted so Core hands the session back after login. */
-  function coreLoginUrl(next?: ApplicationKey): string {
+  function coreLoginUrl(next?: ApplicationKey, path?: string): string {
     const base = (hosts.core || "").replace(/\/+$/, "");
-    return `${base}/login${next ? `?next=${next}` : ""}`;
+    const q = new URLSearchParams();
+    if (next) q.set("next", next);
+    if (next && path && safeAppPath(path) && path !== "/") q.set("path", path);
+    const qs = q.toString();
+    return `${base}/login${qs ? `?${qs}` : ""}`;
   }
 
   function signOut() {
@@ -507,11 +655,19 @@ export function ApplicationShell({
             </div>
           </div>
 
-          <nav className="flex-1 space-y-1.5 overflow-y-auto px-2.5 pb-3">{renderNav(true)}</nav>
+          <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 pb-4 pt-1">{renderNav(true)}</nav>
 
           {/* Dual-control widget — present on every page of every application. */}
           <div className="sg-hide-collapsed border-t border-phantix-700/60 p-2">
             <div className="rounded-md border border-phantix-700 bg-phantix-900 p-2">
+              {dualControl.policy_mode === "off" ? (
+                <div>
+                  <p className="text-[13px] font-semibold text-slate-500">Solo mode</p>
+                  <p className="mt-0.5 text-[12px] leading-4 text-slate-600">
+                    You act on your own. Sensitive actions ask for a code.
+                  </p>
+                </div>
+              ) : (<>
               <div className="flex items-center justify-between">
                 <p className="text-[13px] font-semibold text-slate-500">Dual control</p>
                 {operate.unlocked ? (
@@ -575,13 +731,13 @@ export function ApplicationShell({
                     <>
                       <p className="text-[13px] leading-4 text-slate-500">Dual control not set up</p>
                       <p className="mt-0.5 text-[12px] leading-4 text-slate-600">
-                        Reports &amp; views work without it. Mutations require setup on the Platform.
+                        Reports and views work without it. Mutations require setup on the Platform.
                       </p>
                       <a
-                        href={PLATFORM_IDENTITY_URL}
+                        href={`${PLATFORM_IDENTITY_URL}#dual-control`}
                         className="btn-secondary mt-1 w-full !px-3 !py-1 !text-[13px]"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                       >
                         <Lock size={12} /> Configure on Platform
                       </a>
@@ -589,6 +745,7 @@ export function ApplicationShell({
                   )}
                 </div>
               )}
+              </>)}
             </div>
           </div>
 
@@ -646,14 +803,18 @@ export function ApplicationShell({
           }`}
         >
           {/* Topbar */}
-          <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-phantix-700/60 bg-phantix-950 px-4 py-3 sm:px-6">
+          <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-phantix-700/60 bg-phantix-950 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-3 sm:px-6">
+            {/* Phones navigate with the bottom tab bar; the dropdown stays for tablets. */}
             <button
               onClick={() => setMobileNav((v) => !v)}
               aria-label={mobileNav ? "Close navigation" : "Open navigation"}
-              className="rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white lg:hidden"
+              className="hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:inline-flex lg:hidden"
             >
               {mobileNav ? <X size={18} /> : <Menu size={18} />}
             </button>
+            {/* Phone app bar: brand mark + the current page. */}
+            <BrandMark className="h-7 w-7 shrink-0 md:hidden" />
+            <span className="min-w-0 flex-1 truncate font-display text-[17px] font-bold text-white md:hidden">{phoneTitle}</span>
 
             <button
               onClick={toggle}
@@ -687,7 +848,7 @@ export function ApplicationShell({
                 <CoreLink
                   path="/sandbox"
                   title="BETA sandbox"
-                  className="relative rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
+                  className="relative hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:block"
                 >
                   <FlaskConical size={16} />
                   <span className="absolute -right-1 -top-1 rounded-full bg-gold-400 px-1 font-mono text-[12px] font-bold leading-[1.2] text-phantix-950">
@@ -695,7 +856,18 @@ export function ApplicationShell({
                   </span>
                 </CoreLink>
               )}
-              <ThemeToggle />
+              {/* Phones: theme and issue reporting live in the More sheet. */}
+              <span className="hidden md:contents">
+                <ThemeToggle />
+              </span>
+              <button
+                onClick={() => openFeedbackReporter()}
+                title="Report an issue"
+                aria-label="Report an issue"
+                className="hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:inline-flex"
+              >
+                <MessageSquareWarning size={16} />
+              </button>
               <NotificationBell />
               <span
                 className={`chip hidden whitespace-nowrap xl:inline-flex ${
@@ -722,10 +894,15 @@ export function ApplicationShell({
 
               <div className="relative">
                 <button
-                  onClick={() => setUserMenu((v) => !v)}
+                  onClick={() => {
+                    // Phones: the account lives in the More sheet.
+                    if (window.matchMedia("(max-width: 767px)").matches) setMoreOpen(true);
+                    else setUserMenu((v) => !v);
+                  }}
                   aria-haspopup="menu"
                   aria-expanded={userMenu}
-                  className="flex items-center gap-2.5 rounded-md border border-phantix-700 bg-phantix-900 py-1.5 pl-1.5 pr-2.5 transition-colors hover:border-phantix-600"
+                  aria-label="Account"
+                  className="flex items-center gap-2.5 rounded-md border border-phantix-700 bg-phantix-900 p-1.5 transition-colors hover:border-phantix-600 md:pr-2.5"
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 font-display text-xs font-bold text-gold-300">
                     {(session?.userName ?? me?.full_name ?? "A").slice(0, 1).toUpperCase()}
@@ -738,7 +915,7 @@ export function ApplicationShell({
                       {org.name || me?.organization_name || APPLICATION_LABEL[application]}
                     </span>
                   </span>
-                  <ChevronDown size={14} className="text-slate-500" />
+                  <ChevronDown size={14} className="hidden text-slate-500 md:block" />
                 </button>
                 <AnimatePresence>
                   {userMenu && (
@@ -793,10 +970,10 @@ export function ApplicationShell({
                         </a>
                         <CoreLink
                           path="/settings/privacy"
-                          title="Privacy & data requests"
+                          title="Privacy and data requests"
                           className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-phantix-800"
                         >
-                          <ShieldCheck size={15} /> Privacy &amp; data requests
+                          <ShieldCheck size={15} /> Privacy and data requests
                         </CoreLink>
                         <CoreLink
                           path="/docs"
@@ -812,6 +989,15 @@ export function ApplicationShell({
                         >
                           <LifeBuoy size={15} /> Support
                         </CoreLink>
+                        <button
+                          onClick={() => {
+                            setUserMenu(false);
+                            openFeedbackReporter();
+                          }}
+                          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-phantix-800"
+                        >
+                          <MessageSquareWarning size={15} /> Report an issue
+                        </button>
                         <button
                           onClick={() => {
                             setUserMenu(false);
@@ -833,16 +1019,32 @@ export function ApplicationShell({
           <AnimatePresence>
             {mobileNav && (
               <motion.div
+                key="mobile-nav-scrim"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileNav(false)}
+                aria-hidden="true"
+                className="fixed inset-x-0 bottom-0 top-[57px] z-30 hidden bg-black/75 backdrop-blur-sm md:block lg:hidden"
+              />
+            )}
+            {mobileNav && (
+              // Tablets only (phones use the tab bar): an opaque, raised panel over
+              // a dimmed page, so it never reads as drawn onto the content.
+              <motion.div
+                key="mobile-nav-panel"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="fixed inset-x-0 top-[57px] z-40 max-h-[calc(100vh-57px)] overflow-y-auto border-b border-phantix-700/60 bg-phantix-950 shadow-card lg:hidden"
+                className="fixed inset-x-0 top-[57px] z-40 hidden max-h-[calc(100vh-57px)] overflow-y-auto border-b border-phantix-600/60 bg-[rgb(var(--surface-card))] shadow-2xl md:block lg:hidden"
               >
-                <nav className="space-y-1.5 px-2.5 py-3">{renderNav(false)}</nav>
+                <nav className="space-y-1.5 px-3 py-4">{renderNav(false)}</nav>
                 <div className="border-t border-phantix-700/40 px-2.5 pb-3">
                   <div className="rounded-md border border-phantix-700 bg-phantix-900 p-2">
-                    <p className="text-[13px] font-semibold text-slate-500">Dual control</p>
-                    {operate.unlocked ? (
+                    <p className="text-[13px] font-semibold text-slate-500">{dualControl.policy_mode === "off" ? "Solo mode" : "Dual control"}</p>
+                    {dualControl.policy_mode === "off" ? (
+                      <p className="mt-1 text-[13px] text-slate-500">Sensitive actions ask for a code.</p>
+                    ) : operate.unlocked ? (
                       <p className="mt-1 text-xs font-medium text-emerald-300">
                         Operating as {shortName(operate.actingUser ?? session?.userName)}
                       </p>
@@ -859,7 +1061,7 @@ export function ApplicationShell({
                       </button>
                     ) : (
                       <p className="mt-1 text-[13px] text-slate-500">
-                        Not set up — configure on the Platform
+                        Not set up. Configure it on the Platform
                       </p>
                     )}
                   </div>
@@ -876,7 +1078,7 @@ export function ApplicationShell({
               </span>
               <p className="text-xs text-slate-400">
                 You're exploring{" "}
-                <strong className="text-slate-200">Acme Financial Group</strong> --- simulated data,
+                <strong className="text-slate-200">Acme Financial Group</strong>. Simulated data,
                 full product.
               </p>
               {hasLiveApi && (
@@ -897,7 +1099,10 @@ export function ApplicationShell({
           {/* The window scrolls, so the footer sits after the content instead of
               being pinned to the viewport. A page that asks for h-full still
               fills the space left between the header and the footer. */}
-          <main className="flex min-w-0 flex-1 flex-col px-4 py-6 sm:px-6 lg:px-8">
+          <main
+            ref={setMainEl}
+            className="flex min-w-0 flex-1 flex-col px-4 pb-[calc(88px+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:py-6 lg:px-8"
+          >
             {/* The one content measure, defined here so page, skeleton and
                 shell cannot drift apart. 1600px is a backstop: an ultrawide
                 display should not stretch a table across a metre of glass. */}
@@ -910,16 +1115,22 @@ export function ApplicationShell({
                   The full-screen BrandLoader is reserved for application boot /
                   switching between apps (the authReady gate above), which is a
                   fresh shell mount, not a page transition. */}
-              <Suspense fallback={<PageSkeleton />}>
-                <Outlet />
-              </Suspense>
+              {/* A page that crashes shows a recovery card here; the shell
+                  stays usable and the next route clears it. */}
+              <PageErrorBoundary resetKey={location.pathname}>
+                <Suspense fallback={<PageSkeleton />}>
+                  <Outlet />
+                </Suspense>
+              </PageErrorBoundary>
             </div>
           </main>
 
-          <footer className="flex items-center justify-between border-t border-phantix-700/60 px-6 py-4 text-[13px] text-slate-600 lg:px-8">
+          <footer className="hidden items-center justify-between border-t border-phantix-700/60 px-6 py-4 text-[13px] text-slate-600 md:flex lg:px-8">
             <span>
-              Phantix Security Solutions · Privacy-first by architecture --- security data never
-              leaves your database
+              Phantix Labs Ltd
+              <span className="block">
+                RC - 9904435 · Privacy-first by architecture. Security data never leaves your database
+              </span>
             </span>
             <span className="flex items-center gap-1.5">
               <Sparkles size={11} className="text-gold-500" /> API v1 · {org.plan} plan
@@ -928,18 +1139,144 @@ export function ApplicationShell({
         </div>
       </div>
 
+      {/* Phone shell: bottom tabs from this app's nav, and the More sheet. */}
+      <MobileTabBar nav={nav} moreOpen={moreOpen} onMore={() => setMoreOpen((v) => !v)} />
+      <MobileMoreSheet
+        open={moreOpen}
+        onClose={closeMore}
+        nav={nav}
+        account={
+          <div className="flex items-center gap-3 rounded-2xl border border-phantix-700/50 bg-phantix-900/60 p-3.5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold-400/40 bg-phantix-850 font-display text-base font-bold text-gold-300">
+              {(session?.userName ?? me?.full_name ?? "A").slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-100">{session?.userName ?? me?.full_name ?? "Guest"}</p>
+              <p className="truncate text-xs text-slate-500">{org.name || me?.organization_name || APPLICATION_LABEL[application]}</p>
+              {me?.effective_role && (
+                <p className="mt-0.5 truncate font-mono text-[11px] uppercase tracking-wider text-slate-600">
+                  {me.effective_role === "no_session" ? "view only · no operate session" : me.effective_role}
+                </p>
+              )}
+            </div>
+            <span className="chip shrink-0 border-gold-400/30 bg-gold-400/10 text-[12px] text-gold-300">{APPLICATION_LABEL[application]}</span>
+          </div>
+        }
+        status={
+          <div className="rounded-2xl border border-phantix-700/50 bg-phantix-900/60 p-3.5">
+            <p className="text-[13px] font-semibold text-slate-400">{dualControl.policy_mode === "off" ? "Solo mode" : "Dual control"}</p>
+            {dualControl.policy_mode === "off" ? (
+              <p className="mt-1 text-[13px] text-slate-500">Sensitive actions ask for a code.</p>
+            ) : operate.unlocked ? (
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-emerald-300">Operating as {shortName(operate.actingUser ?? session?.userName)}</p>
+                <button onClick={() => lockOperate()} className="btn-ghost !px-2.5 !py-1 !text-xs"><Lock size={12} /> Lock</button>
+              </div>
+            ) : dualControl.configured ? (
+              <button
+                onClick={() => void requireDualControl("Unlock operate mode to perform protected mutations.")}
+                className="btn-primary mt-2 w-full justify-center !py-2.5 !text-sm"
+              >
+                <Unlock size={14} /> Unlock operate
+              </button>
+            ) : (
+              <p className="mt-1 text-[13px] text-slate-500">Not set up. Configure it on the Platform</p>
+            )}
+          </div>
+        }
+        apps={
+          <div className="grid grid-cols-2 gap-2">
+            {switcherItems.map((card) => (
+              <button
+                key={card.key}
+                type="button"
+                onClick={() => { closeMore(); openApp(card); }}
+                disabled={!card.accessible || opening === card.key || card.key === application}
+                className={`tap flex min-h-[52px] items-center justify-between gap-2 rounded-2xl border px-3.5 text-left text-sm ${
+                  card.key === application
+                    ? "border-gold-400/50 bg-gold-400/10 text-gold-300"
+                    : card.accessible
+                      ? "border-phantix-700/50 bg-phantix-900/60 text-slate-200"
+                      : "border-phantix-700/40 bg-phantix-900/40 text-slate-600"
+                }`}
+              >
+                <span className="flex items-center gap-2"><LayoutGrid size={15} /> {card.label}</span>
+                {card.key === application ? (
+                  <span className="text-[11px] uppercase">open</span>
+                ) : opening === card.key ? (
+                  <span className="text-[11px] uppercase text-slate-500">opening</span>
+                ) : !card.accessible ? (
+                  <Lock size={12} className="shrink-0" />
+                ) : null}
+              </button>
+            ))}
+          </div>
+        }
+        actions={
+          <>
+            {demoActive && (
+              <button
+                onClick={() => { closeMore(); switchToRealOrg(); window.location.assign(coreLoginUrl()); }}
+                className={`${SHEET_ROW} font-medium text-gold-300`}
+              >
+                <Building2 size={17} /> Switch to real organization
+              </button>
+            )}
+            <button onClick={() => { closeMore(); setPaletteOpen(true); }} className={`${SHEET_ROW} text-slate-200`}>
+              <Search size={17} /> Search
+            </button>
+            <a href={PLATFORM_IDENTITY_URL} className={`${SHEET_ROW} text-slate-200`}>
+              <ExternalLink size={17} /> Platform settings
+            </a>
+            <CoreLink path="/settings/privacy" title="Privacy and data requests" className={`${SHEET_ROW} text-slate-200`}>
+              <ShieldCheck size={17} /> Privacy and data requests
+            </CoreLink>
+            <CoreLink path="/docs" title="Documentation" className={`${SHEET_ROW} text-slate-200`}>
+              <BookOpen size={17} /> Documentation
+            </CoreLink>
+            <CoreLink path="/support" title="Support" className={`${SHEET_ROW} text-slate-200`}>
+              <LifeBuoy size={17} /> Support
+            </CoreLink>
+            <button onClick={() => { closeMore(); openFeedbackReporter(); }} className={`${SHEET_ROW} text-slate-200`}>
+              <MessageSquareWarning size={17} /> Report an issue
+            </button>
+            <button onClick={() => { closeMore(); signOut(); }} className={`${SHEET_ROW} text-severity-critical`}>
+              <LogOut size={17} /> Sign out
+            </button>
+          </>
+        }
+      />
+
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} index={searchIndex} />
 
       {/* SecureGraph Agent panel — opened from the header's AI Assistant button. */}
-      <AgentAssistant />
+      <Suspense fallback={null}>
+        <AgentAssistant />
+      </Suspense>
 
       {/* Running operations tray — pages start long jobs through useOperations,
           so the provider has to wrap the shell or they throw on mount. */}
       <OperationsWidget />
 
+      {/* Service feedback — one dialog, openable from any page or error state
+          (see openFeedbackReporter). Filed against the route's service. */}
+      <FeedbackReporter application={application} />
+
       {/* Long-running Pentest Agent: durable inbox into the bell + the global
           approval popup, wherever the operator is in the app. */}
       <AgiNotifications application={application} />
+
+      {/* Org-wide alert feed (finished scans, campaigns, audits, reports and
+          criticals) and the offline / server-down notice. Both were lost when
+          the Command Centre monolith was retired: only the bell was mounted,
+          so nothing ever reached it. */}
+      <AlertNotifications />
+      <ConnectionWatch />
+
+      {/* A stored session the backend no longer accepts (expired/revoked while
+          the operator was away): hold the page and offer sign-in, rather than
+          bouncing them out to Core's login. */}
+      <SessionExpiredOverlay onSignIn={() => window.location.assign(coreLoginUrl(application))} />
 
       {/* Analytics consent banner — lost when the Command Centre monolith was
           retired in favor of this shared shell; nothing was tracked because

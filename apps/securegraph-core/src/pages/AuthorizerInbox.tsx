@@ -93,7 +93,7 @@ export default function AuthorizerInbox() {
       if (entered === null) return;
       reason = entered.trim();
       if (reason.length < 2) {
-        toast("error", "A reason is required", "Say why this was rejected — it is recorded on the audit trail.");
+        toast("error", "A reason is required", "Say why you rejected it. The reason is recorded on the audit trail.");
         return;
       }
     }
@@ -144,7 +144,7 @@ export default function AuthorizerInbox() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load the authorizer inbox. Check your connection and retry — your session stays signed in."
+        body="We could not load the authorizer inbox. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -177,13 +177,13 @@ export default function AuthorizerInbox() {
             <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3">
               <p className="text-[12px] uppercase tracking-wider text-slate-500">Initiator</p>
               <p className="mt-1 text-sm text-slate-200">
-                {controlRoles.initiator_name || controlRoles.initiator_title || "—"}
+                {controlRoles.initiator_name || controlRoles.initiator_title || "Not set"}
               </p>
             </div>
             <div className="rounded-md border border-phantix-700/40 bg-phantix-950/50 p-3">
               <p className="text-[12px] uppercase tracking-wider text-slate-500">Authorizer</p>
               <p className="mt-1 text-sm text-slate-200">
-                {controlRoles.authorizer_name || controlRoles.authorizer_title || "—"}
+                {controlRoles.authorizer_name || controlRoles.authorizer_title || "Not set"}
               </p>
             </div>
           </div>
@@ -357,10 +357,10 @@ function AuthorizerCatalog() {
                           {String(r.label ?? r.title ?? r.action_key ?? r.key ?? `Action ${i + 1}`)}
                         </td>
                         <td className="td font-mono text-[12px] text-slate-500">
-                          {(r.action_key ?? r.key) != null ? String(r.action_key ?? r.key) : "—"}
+                          {(r.action_key ?? r.key) != null ? String(r.action_key ?? r.key) : "Not set"}
                         </td>
                         <td className="td text-[13px] leading-4 text-slate-400">
-                          {r.description != null ? String(r.description) : "—"}
+                          {r.description != null ? String(r.description) : "Not set"}
                         </td>
                       </tr>
                     ))}

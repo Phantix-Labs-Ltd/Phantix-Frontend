@@ -81,7 +81,7 @@ export default function Audit() {
     return (
       <ErrorState
         onRetry={reload}
-        body="We could not load the audit trail. Check your connection and retry — your session stays signed in."
+        body="We could not load the audit trail. Check your connection and try again. Your session stays signed in."
       />
     );
   }
@@ -183,7 +183,7 @@ export default function Audit() {
                             {(e.initiator_name ?? "?").slice(0, 1)}
                           </span>
                           <span className="whitespace-nowrap text-[13px] text-slate-300">
-                            {e.initiator_name ?? "—"}
+                            {e.initiator_name ?? "Not set"}
                             {e.initiator_title && <span className="ml-1.5 text-slate-500">{e.initiator_title}</span>}
                           </span>
                         </div>
@@ -200,10 +200,10 @@ export default function Audit() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[13px] text-slate-600">—</span>
+                          <span className="text-[13px] text-slate-600">Not set</span>
                         )}
                       </td>
-                      <td className="td font-mono text-[12px] text-slate-500">{e.ip_address ?? "—"}</td>
+                      <td className="td font-mono text-[12px] text-slate-500">{e.ip_address ?? "Not set"}</td>
                       <td className="td text-[13px] text-slate-500 whitespace-nowrap">{timeAgo(e.created_at)}</td>
                     </motion.tr>
                   );

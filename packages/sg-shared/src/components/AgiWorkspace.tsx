@@ -18,6 +18,7 @@ import { groupStreamRows, openClarificationFrom } from "../agiStreamGroup";
 import { activityFor } from "../agiGraph";
 import { AgentActivityLine, QueuedPromptStrip, type QueuedPrompt } from "./AgiStream";
 import { loadAssetsBundle, loadAiUsage } from "../data";
+import { PlatformSetupLink, isIpLike, suggestDomain, useAupStatus, useVerifiedDomains } from "../platformSetup";
 import { tokens, isDemoMode } from "../api";
 import type { Asset } from "../types";
 import {
@@ -45,6 +46,8 @@ import {
   pauseAgiSession,
   resumeAgiSession,
   normalizeAgiLoop,
+  loadEngagementCapabilities,
+  type AgiCapabilityAttestation,
 } from "../agi";
 import type { AgiAccess, AgiAction, AgiEngagement, AgiSession, AgiTranscriptChunk, AiUsage } from "../types";
 import { cx, humanize } from "../utils";
@@ -209,6 +212,16 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
   const [assetSearch, setAssetSearch] = useState("");
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<number>>(new Set());
   const [selectAllAssets, setSelectAllAssets] = useState(false);
+  // Only assets under a verified domain (or IPs covered by the AUP attestation)
+  // may enter an allowlist; the backend refuses anything else with
+  // `allowlist_unverified`, so the picker locks them up front.
+  const { coveredBy } = useVerifiedDomains();
+  const aupStatus = useAupStatus();
+  const assetAllowed = useCallback(
+    (a: Asset) => (isIpLike(a.value) ? Boolean(aupStatus.status?.covers_ip_targets) : Boolean(coveredBy(a.value))),
+    [coveredBy, aupStatus.status?.covers_ip_targets],
+  );
+  const allowedAssets = useMemo(() => orgAssets.filter(assetAllowed), [orgAssets, assetAllowed]);
 
   // Group the inventory by its first asset tag so the picker reads like the
   // asset inventory does — tagged groups first, untagged assets at the end.
@@ -266,6 +279,13 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
   const [actionBusy, setActionBusy] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [policyBanner, setPolicyBanner] = useState<string | null>(null);
+  // Latest mission-control verdict from the runner's oversight layer (drift,
+  // steering, blocked capability) — advisory except when `blocked`.
+  const [missionControl, setMissionControl] = useState<{ verdict: string; policy_code: string; capability?: string; blocked?: boolean; steering?: string } | null>(null);
+  // Capability confirmation gate: one click at session start confirms the
+  // agent's capability set (see agi/capabilities.py).
+  const [capGate, setCapGate] = useState<{ instruction: string; attestation: AgiCapabilityAttestation } | null>(null);
+  const [capLoading, setCapLoading] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [workingOn, setWorkingOn] = useState<string | null>(null);
   const [connError, setConnError] = useState<string | null>(null);
@@ -396,11 +416,11 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
   const createEngagement = async () => {
     const max = access?.agi.limits.max_allowlist_targets ?? 10;
     const picked = selectAllAssets
-      ? orgAssets
-      : orgAssets.filter((a) => selectedAssetIds.has(a.id));
+      ? allowedAssets
+      : allowedAssets.filter((a) => selectedAssetIds.has(a.id));
     const targets = picked.map((a) => a.value.trim()).filter(Boolean).slice(0, max);
     if (!newName.trim() || targets.length === 0) {
-      toast("error", selectAllAssets && orgAssets.length === 0 ? "No assets available yet — add assets first" : "Name and at least one target asset are required");
+      toast("error", selectAllAssets && orgAssets.length === 0 ? "No assets available yet. Add assets first." : "Name and at least one target asset are required");
       return;
     }
     setCreating(true);
@@ -433,6 +453,9 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     } catch (e) {
       const code = (e as any)?.detail?.code;
       if (code === "allowlist_too_large") toast("error", "Too many targets", `Reduce the allowlist (max ${max}).`);
+      else if (code === "allowlist_unverified") {
+        toast("error", "Verify the domain first", (e as any)?.detail?.message || "Every target must sit under a domain you have verified.");
+      }
       else toast("error", "Create failed", e instanceof Error ? e.message : "");
     } finally {
       setCreating(false);
@@ -483,15 +506,18 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     }
   };
 
-  const start = async () => {
-    const msg = instruction.trim();
-    if (!selectedEng || !msg) return;
-    if (!(await requireDualControl("Starting an Autonomous Pentest Agent session requires a dual-control operate session."))) return;
+  const doStart = async (msg: string) => {
+    if (!selectedEng) return;
     setStarting(true);
     setPolicyBanner(null);
     try {
       toast("info", "Provisioning container…", "Workspace setup can take up to ~2 minutes.");
-      const s = await startAgiSession(selectedEng, msg, { include_org_assets: false, autonomy: "medium" });
+      const s = await startAgiSession(selectedEng, msg, {
+        include_org_assets: false,
+        autonomy: "medium",
+        // One click confirms the capability set for the run.
+        confirm_capabilities: true,
+      });
       setSession(s);
       setRunning(true);
       reportSubmitted.current = false;
@@ -504,6 +530,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       setOverrideDrafts({});
       setInstruction("");
       if (s.loop?.working_on) setWorkingOn(s.loop.working_on);
+      setCapGate(null);
       toast("success", "Session started", "Streaming live from the engagement container...");
     } catch (e) {
       const blocked = isAgiPolicyBlocked(e);
@@ -512,7 +539,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         toast(
           "error",
           "Start failed at the gateway",
-          "The session may still be starting. Wait a minute and reload this page before retrying — " +
+          "The session may still be starting. Wait a minute and reload this page . " +
           "retrying immediately can create a duplicate session. If it persists, contact support and " +
           "include the reference shown above.",
         );
@@ -520,6 +547,23 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       else toast("error", "Start failed", e instanceof Error ? e.message : "");
     } finally {
       setStarting(false);
+    }
+  };
+
+  // The start button first shows the capability checklist; confirming starts it.
+  const start = async () => {
+    const msg = instruction.trim();
+    if (!selectedEng || !msg) return;
+    if (!(await requireDualControl("Starting an Autonomous Pentest Agent session requires a dual-control operate session."))) return;
+    setCapLoading(true);
+    setPolicyBanner(null);
+    try {
+      const attestation = await loadEngagementCapabilities(selectedEng);
+      setCapGate({ instruction: msg, attestation });
+    } catch (e) {
+      toast("error", "Could not load the capability checklist", e instanceof Error ? e.message : "");
+    } finally {
+      setCapLoading(false);
     }
   };
 
@@ -537,7 +581,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       // generates the deliverable from Report Solutions on the Core app. So we
       // surface that instruction instead of navigating to a /reports route that
       // only exists in the Core app (here it would just 404).
-      toast("success", "Assessment complete", "Findings submitted — generate reports from Report Solutions on the Core app.");
+      toast("success", "Assessment complete", "Findings submitted. Generate reports from Report Solutions on the Core app.");
     } catch (e) {
       toast("error", "Stop failed", e instanceof Error ? e.message : "");
     } finally {
@@ -629,14 +673,14 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       const message = String(e?.message ?? "");
       // Dual-control expired while session still running — clearer copy
       if (/dual.?control|authenticator session|X-Dual-Control/i.test(message) && running) {
-        setConnError("Operate session expired — unlock it in the dialog, then resend your message.");
+        setConnError("Operate session expired. Unlock it in the dialog, then resend your message.");
         toast("warning", "Operate session expired", "Unlock the operate session to continue, then resend.");
         return false;
       }
       if (name === "TimeoutError" || name === "AbortError" || /timeout|timed out/i.test(message)) {
-        setConnError("Timed out — the agent server is unavailable. Check your connection and try again.");
+        setConnError("Timed out. The agent server is unavailable. Check your connection and try again.");
       } else if (/failed to fetch|networkerror|network error|load failed|fetch/i.test(message)) {
-        setConnError("Failed to fetch — could not reach the agent server. Check your connection and try again.");
+        setConnError("Failed to fetch. Could not reach the agent server. Check your connection and try again.");
       } else {
         setConnError(message || "Failed to reach the agent server.");
       }
@@ -767,8 +811,11 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     try {
       await promoteAgiFinding(session.id, String(findingId));
       toast("success", "Promoted", "The finding is now in your risk register.");
-      const fs = await loadAgiFindings(session.id);
-      setDrawerFindings(Array.isArray(fs) ? fs : []);
+      // The promote succeeded; a failed refresh must not be reported as a
+      // failed promote, and must not clear the drawer.
+      void loadAgiFindings(session.id)
+        .then((fs) => setDrawerFindings(Array.isArray(fs) ? fs : []))
+        .catch(() => {});
     } catch (e) {
       toast("error", "Could not promote", e instanceof Error ? e.message : "");
     } finally {
@@ -909,6 +956,8 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     };
     const refreshActions = () => { void loadAgiPendingActions(session.id).then(setActions).catch(() => {}); };
     const refreshFindings = () => { void loadAgiFindings(session.id).then((fs) => setDrawerFindings(Array.isArray(fs) ? fs : [])).catch(() => {}); };
+    // Finding titles per fix index for the autofix run in progress.
+    let autofixTitles: Record<number, string> = {};
 
     void streamAgiSession(session.id, (event, data) => {
       try {
@@ -931,6 +980,27 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
               });
             }
             lastOutputAtRef.current = Date.now();
+          }
+          return;
+        }
+        if (event === "mission_control") {
+          const p = JSON.parse(data) as {
+            verdict?: string; policy_code?: string; capability?: string | null;
+            blocked?: boolean; reasons?: string[]; steering?: string | null;
+          };
+          setMissionControl({
+            verdict: p.verdict ?? "",
+            policy_code: p.policy_code ?? "",
+            capability: p.capability ?? undefined,
+            blocked: !!p.blocked,
+            steering: p.steering ?? undefined,
+          });
+          if (p.blocked) {
+            pushLive(
+              `mc-${p.policy_code}-${Date.now()}`,
+              `Mission control blocked a step: ${(p.reasons || []).join(" ") || p.policy_code}`,
+              { kind: "mission_control", event, ...p },
+            );
           }
           return;
         }
@@ -959,7 +1029,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           const p = JSON.parse(data) as { title?: string; verdict?: string; confidence?: number; reason?: string };
           pushLive(
             `dropped-${p.title ?? ""}-${p.confidence ?? ""}`,
-            `Candidate dropped as a non-vulnerability — "${p.title || "candidate"}" (${p.verdict || p.reason || "control"}, confidence ${p.confidence ?? "?"})`,
+            `Candidate dropped as a non-vulnerability: "${p.title || "candidate"}" (${p.verdict || p.reason || "control"}, confidence ${p.confidence ?? "?"})`,
             { kind: "finding_dropped", event, ...p },
           );
           return;
@@ -973,11 +1043,28 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         }
         if (event === "loop_paused") { setPaused(true); pushLive(`paused-${Date.now()}`, "Operator paused the agent.", { kind: "loop_paused", event }); return; }
         if (event === "loop_resumed") { setPaused(false); pushLive(`resumed-${Date.now()}`, "Operator resumed the agent.", { kind: "loop_resumed", event }); return; }
+        if (event === "autofix_subagent") {
+          // The runner streams `fix` frames (finding title per index) and then a
+          // `completed` frame with the full fixes: steps, stack and the
+          // before/after example. The tool row only keeps 1500 chars of that
+          // JSON, so the live frame is what gets painted.
+          const p = JSON.parse(data) as { status?: string; index?: number; title?: string; fixes?: unknown[] };
+          if (p.status === "started") { autofixTitles = {}; return; }
+          if (p.status === "fix" && typeof p.index === "number" && p.title) { autofixTitles[p.index] = p.title; return; }
+          if (p.status === "completed" && Array.isArray(p.fixes) && p.fixes.length) {
+            const fixes = p.fixes.map((f, i) =>
+              f && typeof f === "object" && autofixTitles[i] ? { ...(f as Record<string, unknown>), title: autofixTitles[i] } : f,
+            );
+            const sig = fixes.map((f) => String((f as { summary?: unknown } | null)?.summary ?? "")).join("|").slice(0, 240);
+            pushLive(`autofix-${fixes.length}-${sig}`, `Autofix: ${fixes.length} fix${fixes.length === 1 ? "" : "es"} suggested.`, { kind: "autofix", event, fixes });
+          }
+          return;
+        }
         if (event === "campaign_done") {
           const p = JSON.parse(data) as { found?: number; assets?: number; summary?: { elapsed?: number; categories?: string[] } };
           pushLive(
             `campaign-${p.summary?.elapsed ?? ""}-${p.assets ?? 0}-${p.found ?? 0}`,
-            `Campaign complete — ${p.found ?? 0} finding(s) across ${p.assets ?? 0} asset(s) in ${p.summary?.elapsed ?? "?"}s.`,
+            `Campaign complete: ${p.found ?? 0} finding(s) across ${p.assets ?? 0} asset(s) in ${p.summary?.elapsed ?? "?"}s.`,
             { kind: "campaign_done", event, ...p },
           );
           return;
@@ -986,7 +1073,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           const p = JSON.parse(data) as { verdict?: string; unresolved?: string[]; next?: string[]; findings?: number };
           pushLive(
             `review-${(p.unresolved || []).length}-${(p.next || []).join(",")}`,
-            `Decision review — verdict: ${p.verdict || "continue"}. ${(p.unresolved || []).length} open lead(s).`,
+            `Decision review. Verdict: ${p.verdict || "continue"}. ${(p.unresolved || []).length} open lead(s).`,
             { kind: "decision_review", event, ...p },
           );
           return;
@@ -996,7 +1083,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           if (typeof p.count === "number") {
             pushLive(
               `verify-${p.count}-${p.verified ?? 0}-${p.dismissed ?? 0}-${p.inconclusive ?? 0}`,
-              `Verification — ${p.count} finding(s): ${p.verified ?? 0} confirmed, ${p.dismissed ?? 0} dismissed, ${p.inconclusive ?? 0} inconclusive`,
+              `Verification. ${p.count} finding(s): ${p.verified ?? 0} confirmed, ${p.dismissed ?? 0} dismissed, ${p.inconclusive ?? 0} inconclusive`,
               { kind: "verify_all", event, ...p },
             );
             refreshFindings();
@@ -1007,7 +1094,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           const p = JSON.parse(data) as { estimated_credits?: number; total_tokens?: number };
           pushLive(
             `credits-${p.estimated_credits ?? 0}-${p.total_tokens ?? 0}`,
-            `AI spend — ${p.estimated_credits ?? 0} credit(s) across ${p.total_tokens ?? 0} token(s).`,
+            `AI spend: ${p.estimated_credits ?? 0} credit(s) across ${p.total_tokens ?? 0} token(s).`,
             { kind: "ai_credit_spend", event, ...p },
           );
           return;
@@ -1205,6 +1292,26 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         </div>
       )}
 
+      {session && missionControl && missionControl.verdict && missionControl.verdict !== "allow" && (
+        <div
+          className={cx(
+            "flex items-center gap-2 border-b px-4 py-1.5",
+            missionControl.blocked
+              ? "border-severity-medium/30 bg-severity-medium/10"
+              : missionControl.verdict === "steer"
+                ? "border-gold-400/30 bg-gold-400/10"
+                : "border-phantix-700/40 bg-phantix-900/40",
+          )}
+        >
+          <ShieldAlert size={12} className={cx("shrink-0", missionControl.blocked ? "text-severity-medium" : "text-gold-300")} />
+          <p className="wb-xs leading-relaxed text-slate-300">
+            Mission control · {missionControl.blocked ? "blocked" : missionControl.verdict}
+            {missionControl.capability ? ` · ${missionControl.capability}` : ""}
+            {missionControl.steering ? ` · ${missionControl.steering}` : ""}
+          </p>
+        </div>
+      )}
+
       {/* Blocked state */}
       {!canUse && !agreementRequired && (
         <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
@@ -1234,7 +1341,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           <p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">
             The Autonomous Pentest Agent only runs against your approved engagement allowlist. State-changing steps pause for your approval.
           </p>
-          <button onClick={() => void openAgreement()} className="btn-primary mt-4 !text-xs"><ShieldCheck size={13} /> Review & accept agreement</button>
+          <button onClick={() => void openAgreement()} className="btn-primary mt-4 !text-xs"><ShieldCheck size={13} /> Review and accept agreement</button>
 
           {/* What is actually being agreed to. A gate that only says "accept"
               asks for consent without stating the terms it governs. */}
@@ -1277,155 +1384,10 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
               <div className="overflow-hidden rounded-xl border border-phantix-700/40 bg-phantix-900/40">
                 <div className="flex items-center justify-between border-b border-phantix-700/40 px-3 py-2">
                   <p className="wb-pane-title">1 · Choose an engagement</p>
-                  <button onClick={() => setCreateOpen((v) => !v)} className="btn-ghost !px-2 !py-1 wb-xs"><Plus size={12} className="mr-1 inline" /> New</button>
+                  <button onClick={() => setCreateOpen(true)} className="btn-ghost !px-2 !py-1 wb-xs"><Plus size={12} className="mr-1 inline" /> New</button>
                 </div>
 
                 <div className="wb-scroll max-h-[min(45vh,380px)] overflow-y-auto p-2">
-                  {createOpen && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-2 space-y-2 rounded-xl border border-phantix-700/40 bg-phantix-900/50 p-3">
-                  <p className="wb-pane-title">New engagement</p>
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-slate-400">Engagement name</span>
-                    <input
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      placeholder="e.g. Lab external web"
-                      className="wb-sm w-full rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40"
-                    />
-                  </label>
-                  <div className="rounded-lg border border-phantix-700/50 bg-phantix-950/60 p-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="wb-pane-title">Target assets</p>
-                        <p className="mt-0.5 text-[12px] leading-4 text-slate-500">
-                          Pick the assets this engagement may touch. Only selected assets become allowlist targets.
-                        </p>
-                      </div>
-                      <label className="wb-xs flex shrink-0 cursor-pointer items-center gap-1.5 pt-0.5 text-slate-400">
-                        <input
-                          type="checkbox"
-                          checked={selectAllAssets}
-                          onChange={(e) => setSelectAllAssets(e.target.checked)}
-                          className="h-3 w-3 accent-gold-400"
-                        />
-                        Select all
-                      </label>
-                    </div>
-                    <input
-                      value={assetSearch}
-                      onChange={(e) => setAssetSearch(e.target.value)}
-                      placeholder={selectAllAssets ? "All assets selected" : "Search assets…"}
-                      disabled={selectAllAssets}
-                      className="wb-xs mt-1.5 w-full rounded-md border border-phantix-700/50 bg-phantix-950/70 px-2 py-1.5 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40 disabled:opacity-50"
-                    />
-                    {assetLoading ? (
-                      <p className="wb-xs py-3 text-center text-slate-500"><Loader2 size={11} className="mr-1 animate-spin inline" /> Loading assets…</p>
-                    ) : orgAssets.length === 0 ? (
-                      <p className="wb-xs py-3 text-center text-slate-500">No assets in your inventory yet. Add assets first, then create an engagement.</p>
-                    ) : (
-                      <div className="wb-scroll mt-2 max-h-64 space-y-3 overflow-y-auto pr-1">
-                        {assetGroups.map((group) => {
-                          const visible = selectAllAssets
-                            ? group.assets
-                            : group.assets.filter((a) => !assetSearch.trim() || a.value.toLowerCase().includes(assetSearch.toLowerCase()) || a.name.toLowerCase().includes(assetSearch.toLowerCase()));
-                          if (visible.length === 0) return null;
-                          const allSelected = selectAllAssets || visible.every((a) => selectedAssetIds.has(a.id));
-                          return (
-                            <div key={group.name}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (selectAllAssets) return;
-                                  setSelectedAssetIds((prev) => {
-                                    const next = new Set(prev);
-                                    for (const a of visible) {
-                                      if (allSelected) next.delete(a.id); else next.add(a.id);
-                                    }
-                                    return next;
-                                  });
-                                }}
-                                className="mb-1 flex w-full items-center gap-2 text-left"
-                              >
-                                <span className={cx("flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[12px]", allSelected ? "border-gold-400/50 bg-gold-400/20 text-gold-300" : "border-phantix-600 text-transparent")}>
-                                  {allSelected ? "✓" : ""}
-                                </span>
-                                <span className="wb-2xs font-semibold uppercase tracking-wider text-slate-400">{group.name}</span>
-                                <span className="wb-2xs text-slate-600">{visible.length} asset{visible.length === 1 ? "" : "s"}</span>
-                              </button>
-                              <div className="space-y-1 pl-5">
-                                {visible.map((a) => (
-                                  <label
-                                    key={a.id}
-                                    className={cx(
-                                      "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
-                                      selectAllAssets ? "opacity-60" : "hover:bg-phantix-800/50",
-                                      selectedAssetIds.has(a.id) && !selectAllAssets && "bg-phantix-800/40",
-                                    )}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectAllAssets || selectedAssetIds.has(a.id)}
-                                      disabled={selectAllAssets}
-                                      onChange={(e) => {
-                                        setSelectedAssetIds((prev) => {
-                                          const next = new Set(prev);
-                                          if (e.target.checked) next.add(a.id); else next.delete(a.id);
-                                          return next;
-                                        });
-                                      }}
-                                      className="h-3 w-3 shrink-0 accent-gold-400"
-                                    />
-                                    <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", a.criticality === "critical" ? "bg-severity-critical" : a.criticality === "high" ? "bg-severity-high" : a.criticality === "medium" ? "bg-severity-medium" : "bg-severity-low")} />
-                                    <span className="wb-xs min-w-0 flex-1 truncate font-mono text-slate-200">{a.value}</span>
-                                    <span className="wb-2xs shrink-0 uppercase tracking-wider text-slate-500">{humanize(a.asset_type)}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <p className="wb-2xs mt-1.5 text-slate-600">
-                      {selectAllAssets
-                        ? `${orgAssets.length} asset${orgAssets.length === 1 ? "" : "s"} selected (all)`
-                        : `${selectedAssetIds.size} of ${orgAssets.length} selected`}
-                    </p>
-                  </div>
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-slate-400">Rules of engagement</span>
-                    <input
-                      value={newRoe}
-                      onChange={(e) => setNewRoe(e.target.value)}
-                      placeholder="e.g. Business hours only, no destructive actions"
-                      className="wb-sm w-full rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40"
-                    />
-                    <span className="mt-1 block text-[12px] leading-4 text-slate-600">Optional. Defaults to authorized targets only, no destructive actions.</span>
-                  </label>
-                  <div className="space-y-2">
-                    <span className="block text-xs font-semibold text-slate-400">Testing mode</span>
-                    <TestingModePicker value={newMode} onChange={setNewMode} disabled={creating} />
-                    <span className="block text-[12px] leading-4 text-slate-600">
-                      {TESTING_MODES.find((m) => m.id === newMode)?.description}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="block text-xs font-semibold text-slate-400">
-                      Engagement context — answers the agent up front so it does not stop to ask
-                    </span>
-                    <EngagementContextFields
-                      mode={newMode}
-                      values={engContext}
-                      onChange={setEngContext}
-                      disabled={creating}
-                    />
-                  </div>
-                  <button onClick={() => void createEngagement()} disabled={creating} className="btn-primary w-full !py-2 wb-sm">
-                    {creating ? <Loader2 size={12} className="mr-1 animate-spin inline" /> : <Plus size={12} className="mr-1 inline" />} Create engagement
-                  </button>
-                </motion.div>
-              )}
-
               {engLoading ? (
                 <div className="space-y-2">
                   <div className="skeleton h-16 rounded-xl" />
@@ -1433,8 +1395,13 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {engagements.length === 0 && !createOpen && (
-                    <p className="wb-sm rounded-xl border border-dashed border-phantix-700/50 px-3 py-4 text-center text-slate-500">No engagements yet. Create one with a tight allowlist to start.</p>
+                  {engagements.length === 0 && (
+                    <div className="wb-sm rounded-xl border border-dashed border-phantix-700/50 px-3 py-4 text-center text-slate-500">
+                      <p>No engagements yet. Create one with a tight allowlist to start.</p>
+                      <button onClick={() => setCreateOpen(true)} className="btn-primary mt-3 !px-3 !py-1.5 wb-xs">
+                        <Plus size={12} className="mr-1 inline" /> New engagement
+                      </button>
+                    </div>
                   )}
                   {engagements.map((e) => (
                     <div key={e.id} className="relative">
@@ -1464,7 +1431,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                     <button
                       type="button"
                       onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}
-                      title="Edit testing mode & engagement context"
+                      title="Edit testing mode and engagement context"
                       className="absolute right-2 top-2 rounded-md border border-phantix-700/50 bg-phantix-900/80 p-1 text-slate-500 transition-colors hover:text-gold-300"
                     >
                       <Pencil size={11} />
@@ -1511,8 +1478,8 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                     );
                   })}
                 </div>
-                <button onClick={() => void start()} disabled={!selectedEng || !instruction.trim() || starting} className="btn-primary mt-2 w-full !py-2.5 wb-sm">
-                  {starting ? <Loader2 size={13} className="mr-1 animate-spin inline" /> : <Radar size={13} className="mr-1 inline" />} Start session
+                <button onClick={() => void start()} disabled={!selectedEng || !instruction.trim() || starting || capLoading} className="btn-primary mt-2 w-full !py-2.5 wb-sm">
+                  {starting || capLoading ? <Loader2 size={13} className="mr-1 animate-spin inline" /> : <Radar size={13} className="mr-1 inline" />} {capLoading ? "Checking capabilities…" : "Start session"}
                 </button>
               </div>
             </div>
@@ -1629,7 +1596,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                   {!running && (session.status === "stopped" || session.status === "torn_down" || session.status === "failed") && (
                     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-phantix-700/40 bg-phantix-900/60 px-3 py-2.5">
                       <p className="wb-xs flex-1 text-slate-400">
-                        Session ended{session.status === "failed" ? " — check the engine logs" : ""}. Ready to run a fresh assessment?
+                        Session ended{session.status === "failed" ? " Check the engine logs." : ""}. Ready to run a fresh assessment?
                       </p>
                       <button onClick={exitToPicker} className="btn-primary !px-2.5 !py-1 wb-xs shrink-0"><Plus size={11} className="mr-1 inline" /> New session</button>
                     </div>
@@ -1697,12 +1664,12 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                     />
                   )}
                   {running && transcript.length > 0 && !thinking && !connError && actions.length === 0 && !openClarification && !stalled && (
-                    <p className="wb-xs text-center text-slate-600">— awaiting engine output —</p>
+                    <p className="wb-xs text-center text-slate-600">Awaiting engine output</p>
                   )}
                   {running && !thinking && !connError && actions.length === 0 && !openClarification && stalled && (
                     <div className="mx-auto my-1 flex max-w-md flex-col items-center gap-2 rounded-xl border border-phantix-700/50 bg-phantix-900/50 px-4 py-3 text-center">
                       <p className="wb-xs text-slate-400">
-                        The agent has been quiet for a while — re-syncing the transcript. If it stays idle, resume the run.
+                        . Re-syncing the transcript. If it stays idle, resume the run.
                       </p>
                       <button
                         type="button"
@@ -1807,7 +1774,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                       e.preventDefault();
                       send();
                     }}
-                    placeholder={loopStopped ? "Loop stopped — send a message to continue..." : running ? "Further instructions for the agent..." : "Session stopped"}
+                    placeholder={loopStopped ? "Loop stopped. Send a message to continue..." : running ? "Further instructions for the agent..." : "Session stopped"}
                     disabled={!running}
                     className="wb-md flex-1 bg-transparent text-slate-200 outline-none placeholder:text-slate-500 disabled:opacity-50"
                   />
@@ -1816,7 +1783,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                 <p className="wb-xs mt-2 flex items-center gap-1.5 text-slate-600">
                   <ShieldCheck size={11} className="shrink-0" />
                   {chatSend.hint === "queued"
-                    ? "Queued — press Enter again to send now, or wait for the current reply."
+                    ? "Queued. Press Enter again to send now, or wait for the current reply."
                     : "Read-only steps stream live · state-changing steps wait for your approval · container destroyed on stop"}
                 </p>
               </div>
@@ -1826,6 +1793,262 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
       )}
 
       {/* Agreement modal */}
+      {/* Capability confirmation — one click at session start. Shows exactly what
+          the agent may do and the guardrail that bounds each capability. */}
+      <Modal
+        open={!!capGate}
+        onClose={() => { if (!starting) setCapGate(null); }}
+        title="Confirm agent capabilities"
+        wide
+      >
+        {capGate && (() => {
+          const att = capGate.attestation;
+          const pending = att.capabilities.filter((c) => c.state === "pending_confirmation");
+          const blocked = att.capabilities.filter((c) => c.state === "blocked");
+          const groups = Array.from(new Set(att.capabilities.map((c) => c.group)));
+          return (
+            <div className="space-y-4">
+              <p className="text-[13px] leading-5 text-slate-400">
+                These are the mechanisms the sandbox already provides for this engagement.
+                Confirming lets the agent use them . Each stays bounded by
+                the guardrail shown, and nothing outside the engagement scope is reachable.
+              </p>
+              {groups.map((g) => (
+                <div key={g}>
+                  <p className="mb-1.5 text-[12px] uppercase tracking-wide text-slate-500">{g}</p>
+                  <ul className="space-y-2">
+                    {att.capabilities.filter((c) => c.group === g).map((c) => (
+                      <li key={c.id} className="rounded-lg border border-phantix-700/40 bg-phantix-950/40 p-2.5">
+                        <div className="flex items-start gap-2">
+                          <span className={cx("mt-0.5", c.state === "blocked" ? "text-severity-medium" : "text-emerald-400")}>
+                            {c.state === "blocked" ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-medium text-slate-200">
+                              {c.label}
+                              <span className="ml-2 font-mono text-[11px] text-slate-500">{c.id}</span>
+                            </p>
+                            <p className="text-[12px] leading-4 text-slate-500">{c.description}</p>
+                            {c.state === "blocked" ? (
+                              <p className="mt-1 text-[12px] text-severity-medium">{c.blocked_reason}</p>
+                            ) : (
+                              <p className="mt-1 flex flex-wrap gap-1">
+                                {c.guardrails.map((gr) => (
+                                  <span
+                                    key={gr.id}
+                                    className="chip border-phantix-600/40 bg-phantix-800/50 text-[11px] text-slate-400"
+                                    title={gr.detail}
+                                  >
+                                    {gr.id}
+                                  </span>
+                                ))}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <p className="text-[12px] text-slate-500">
+                  {pending.length} to confirm{blocked.length ? ` · ${blocked.length} unavailable` : ""}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button className="btn-ghost !text-sm" onClick={() => setCapGate(null)} disabled={starting}>
+                    Cancel
+                  </button>
+                  <button className="btn-primary !text-sm" onClick={() => void doStart(capGate.instruction)} disabled={starting}>
+                    {starting ? <Loader2 size={13} className="mr-1 inline animate-spin" /> : <ShieldCheck size={13} className="mr-1 inline" />}
+                    {starting ? "Starting…" : "Confirm and start"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* New engagement. An overlay rather than an inline form, so the asset
+          picker and context fields get room; closing keeps the draft. */}
+      <Modal open={createOpen} onClose={() => !creating && setCreateOpen(false)} title="New engagement" wide>
+        <div className="space-y-5">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-slate-400">Engagement name</span>
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Lab external web"
+                  className="wb-sm w-full rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-slate-400">Rules of engagement</span>
+                <textarea
+                  value={newRoe}
+                  onChange={(e) => setNewRoe(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Business hours only, no destructive actions"
+                  className="wb-sm w-full resize-y rounded-lg border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40"
+                />
+                <span className="mt-1 block text-[12px] leading-4 text-slate-600">Optional. Defaults to authorized targets only, no destructive actions.</span>
+              </label>
+              <div className="space-y-2">
+                <span className="block text-xs font-semibold text-slate-400">Testing mode</span>
+                <TestingModePicker value={newMode} onChange={setNewMode} disabled={creating} />
+                <span className="block text-[12px] leading-4 text-slate-600">
+                  {TESTING_MODES.find((m) => m.id === newMode)?.description}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex min-h-0 flex-col rounded-lg border border-phantix-700/50 bg-phantix-950/60 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="wb-pane-title">Target assets</p>
+                  <p className="mt-0.5 text-[12px] leading-4 text-slate-500">
+                    Pick the assets this engagement may touch. Only selected assets become allowlist targets.
+                  </p>
+                </div>
+                <label className="wb-xs flex shrink-0 cursor-pointer items-center gap-1.5 pt-0.5 text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={selectAllAssets}
+                    onChange={(e) => setSelectAllAssets(e.target.checked)}
+                    className="h-3 w-3 accent-gold-400"
+                  />
+                  Select all
+                </label>
+              </div>
+              <input
+                value={assetSearch}
+                onChange={(e) => setAssetSearch(e.target.value)}
+                placeholder={selectAllAssets ? "All assets selected" : "Search assets…"}
+                disabled={selectAllAssets}
+                className="wb-xs mt-2 w-full rounded-md border border-phantix-700/50 bg-phantix-950/70 px-2 py-1.5 text-slate-200 outline-none placeholder:text-slate-600 focus:border-gold-400/40 disabled:opacity-50"
+              />
+              {assetLoading ? (
+                <p className="wb-xs py-3 text-center text-slate-500"><Loader2 size={11} className="mr-1 animate-spin inline" /> Loading assets…</p>
+              ) : orgAssets.length === 0 ? (
+                <p className="wb-xs py-3 text-center text-slate-500">No assets in your inventory yet. Add assets first, then create an engagement.</p>
+              ) : (
+                <div className="wb-scroll mt-2 max-h-[min(40vh,360px)] min-h-[160px] space-y-3 overflow-y-auto pr-1">
+                  {assetGroups.map((group) => {
+                    const visible = selectAllAssets
+                      ? group.assets
+                      : group.assets.filter((a) => !assetSearch.trim() || a.value.toLowerCase().includes(assetSearch.toLowerCase()) || a.name.toLowerCase().includes(assetSearch.toLowerCase()));
+                    if (visible.length === 0) return null;
+                    const selectable = visible.filter(assetAllowed);
+                    const allSelected = selectable.length > 0 && (selectAllAssets || selectable.every((a) => selectedAssetIds.has(a.id)));
+                    return (
+                      <div key={group.name}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectAllAssets) return;
+                            setSelectedAssetIds((prev) => {
+                              const next = new Set(prev);
+                              for (const a of selectable) {
+                                if (allSelected) next.delete(a.id); else next.add(a.id);
+                              }
+                              return next;
+                            });
+                          }}
+                          className="mb-1 flex w-full items-center gap-2 text-left"
+                        >
+                          <span className={cx("flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[12px]", allSelected ? "border-gold-400/50 bg-gold-400/20 text-gold-300" : "border-phantix-600 text-transparent")}>
+                            {allSelected ? "✓" : ""}
+                          </span>
+                          <span className="wb-2xs font-semibold uppercase tracking-wider text-slate-400">{group.name}</span>
+                          <span className="wb-2xs text-slate-600">{visible.length} asset{visible.length === 1 ? "" : "s"}</span>
+                        </button>
+                        <div className="space-y-1 pl-5">
+                          {visible.map((a) => {
+                            const allowed = assetAllowed(a);
+                            return (
+                            <label
+                              key={a.id}
+                              title={allowed ? undefined : "Outside your verified domains. Verify the domain to test it."}
+                              className={cx(
+                                "flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
+                                !allowed ? "cursor-not-allowed opacity-50" : selectAllAssets ? "cursor-pointer opacity-60" : "cursor-pointer hover:bg-phantix-800/50",
+                                allowed && selectedAssetIds.has(a.id) && !selectAllAssets && "bg-phantix-800/40",
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={allowed && (selectAllAssets || selectedAssetIds.has(a.id))}
+                                disabled={selectAllAssets || !allowed}
+                                onChange={(e) => {
+                                  setSelectedAssetIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked) next.add(a.id); else next.delete(a.id);
+                                    return next;
+                                  });
+                                }}
+                                className="h-3 w-3 shrink-0 accent-gold-400"
+                              />
+                              <span className={cx("h-1.5 w-1.5 shrink-0 rounded-full", a.criticality === "critical" ? "bg-severity-critical" : a.criticality === "high" ? "bg-severity-high" : a.criticality === "medium" ? "bg-severity-medium" : "bg-severity-low")} />
+                              <span className="wb-xs min-w-0 flex-1 truncate font-mono text-slate-200">{a.value}</span>
+                              {!allowed && !isIpLike(a.value) ? (
+                                <PlatformSetupLink task={{ kind: "verify_domain", domain: suggestDomain(a.value) }} className="wb-2xs shrink-0">
+                                  Verify
+                                </PlatformSetupLink>
+                              ) : !allowed ? (
+                                <span className="wb-2xs shrink-0 text-slate-500">needs AUP</span>
+                              ) : (
+                                <span className="wb-2xs shrink-0 uppercase tracking-wider text-slate-500">{humanize(a.asset_type)}</span>
+                              )}
+                            </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="wb-2xs mt-2 text-slate-600">
+                {selectAllAssets
+                  ? `${allowedAssets.length} verified asset${allowedAssets.length === 1 ? "" : "s"} selected (all)`
+                  : `${allowedAssets.filter((a) => selectedAssetIds.has(a.id)).length} of ${allowedAssets.length} verified selected`}
+                {orgAssets.length > allowedAssets.length && ` · ${orgAssets.length - allowedAssets.length} locked until verified`}
+                {` · max ${access?.agi.limits.max_allowlist_targets ?? 10} targets`}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-phantix-700/40 pt-4">
+            <span className="block text-xs font-semibold text-slate-400">
+              Engagement context. This answers the agent up front, so it does not stop to ask.
+            </span>
+            <EngagementContextFields
+              mode={newMode}
+              values={engContext}
+              onChange={setEngContext}
+              disabled={creating}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-phantix-700/40 pt-4">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(false)}
+              disabled={creating}
+              className="wb-sm rounded-lg border border-phantix-700/50 px-3 py-2 text-slate-300 hover:border-phantix-500/50"
+            >
+              Cancel
+            </button>
+            <button type="button" onClick={() => void createEngagement()} disabled={creating} className="btn-primary wb-sm">
+              {creating ? <Loader2 size={12} className="mr-1 animate-spin inline" /> : <Plus size={12} className="mr-1 inline" />} Create engagement
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <Modal open={!!editEng} onClose={() => setEditEng(null)} title={`Engagement settings · ${editEng?.name ?? ""}`} wide>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -1851,7 +2074,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         </div>
       </Modal>
 
-      <Modal open={agreementOpen} onClose={() => setAgreementOpen(false)} title="Autonomous Pentest Agent — Usage Agreement">
+      <Modal open={agreementOpen} onClose={() => setAgreementOpen(false)} title="Autonomous Pentest Agent: Usage Agreement">
         <div className="space-y-3">
           <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-phantix-700/40 bg-phantix-950/60 p-4">
             <MarkdownView source={agreementBody} />
@@ -1866,7 +2089,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
             <span className="text-xs leading-5 text-slate-400">I am authorized to test the listed targets under the stated rules of engagement, and understand that state-changing steps require approval.</span>
           </label>
           <button onClick={() => void accept()} disabled={!agreementChecked || accepting} className="btn-primary w-full !py-2.5 !text-xs">
-            {accepting ? <Loader2 size={12} className="mr-1 animate-spin inline" /> : <ShieldCheck size={13} className="mr-1 inline" />} Accept & continue
+            {accepting ? <Loader2 size={12} className="mr-1 animate-spin inline" /> : <ShieldCheck size={13} className="mr-1 inline" />} Accept and continue
           </button>
           {/* Help sits under the button so the agreement is read first — the guide
               explains scope, approvals and what the agent may never touch.

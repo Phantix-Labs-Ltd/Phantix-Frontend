@@ -1,6 +1,6 @@
 import React from "react";
 import { Activity, Boxes, KeyRound, Lock, Network, RefreshCw, ShieldCheck, ShieldAlert, Timer, XCircle } from "lucide-react";
-import { Card, CardHeader, StatCard } from "../ui";
+import { Card, CardHeader } from "../ui";
 import type { CloudPosture } from "../data";
 import { cx, timeAgo } from "../utils";
 
@@ -45,10 +45,10 @@ function PackRow({
       )}
       <div className="min-w-0">
         <p className="text-xs font-medium text-slate-200">
-          {label} — <span className={enabled ? "text-emerald-400" : "text-severity-medium"}>{enabled ? "enabled" : "held"}</span>
+          {label}: <span className={enabled ? "text-emerald-400" : "text-severity-medium"}>{enabled ? "enabled" : "held"}</span>
+          {extra}
         </p>
         {!enabled && reason && <p className="mt-0.5 text-[13px] leading-5 text-slate-500">{reason}</p>}
-        {extra}
       </div>
     </div>
   );
@@ -84,7 +84,7 @@ export default function CloudPosturePanel({
         <CardHeader title="Posture capabilities" subtitle="Packs, exposure, TLS, host baselines, execution" />
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-severity-medium/30 bg-severity-medium/10 p-3">
           <ShieldAlert size={16} className="shrink-0 text-severity-medium" />
-          <p className="min-w-0 flex-1 text-[13px] leading-5 text-severity-medium">
+          <p className="min-w-[12rem] flex-1 text-[13px] leading-5 text-severity-medium">
             {error
               ? `Could not load posture capabilities: ${error}`
               : "Posture capabilities are unavailable for this organization."}
@@ -123,9 +123,9 @@ export default function CloudPosturePanel({
           reason={packs.cloud.reason}
           extra={
             (packs.cloud.providers_configured?.length ?? 0) > 0 ? (
-              <p className="mt-0.5 text-[13px] text-slate-500">
-                Providers: {packs.cloud.providers_configured?.join(", ").toUpperCase()}
-              </p>
+              <span className="ml-1.5 font-normal text-slate-500">
+                · {packs.cloud.providers_configured?.join(", ").toUpperCase()}
+              </span>
             ) : undefined
           }
         />
@@ -133,7 +133,7 @@ export default function CloudPosturePanel({
       </div>
 
       {/* 2 · Network exposure with first/last seen */}
-      <div className="mt-5">
+      <div className="mt-4">
         <p className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wider text-slate-500">
           <Network size={12} /> Network exposure
         </p>
@@ -144,11 +144,21 @@ export default function CloudPosturePanel({
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatCard label="Reachable hosts" value={String(summary.hosts_reachable ?? 0)} icon={<Boxes size={16} />} />
-              <StatCard label="Open ports/services" value={String(summary.open_now ?? 0)} icon={<Activity size={16} />} />
-              <StatCard label="New (7d)" value={String(summary.new_7d ?? 0)} icon={<Timer size={16} />} />
-              <StatCard label="Quiet 30d" value={String(summary.stale_30d ?? 0)} icon={<Timer size={16} />} />
+            {/* Counts as one inline strip: these sit inside a card, so nested
+                stat cards would box the same numbers twice. */}
+            <div className="grid grid-cols-2 divide-phantix-700/40 rounded-md border border-phantix-700/40 bg-phantix-950/40 sm:grid-cols-4 sm:divide-x">
+              {([
+                ["Reachable hosts", summary.hosts_reachable, <Boxes key="h" size={13} />],
+                ["Open ports/services", summary.open_now, <Activity key="o" size={13} />],
+                ["New (7d)", summary.new_7d, <Timer key="n" size={13} />],
+                ["Quiet 30d", summary.stale_30d, <Timer key="q" size={13} />],
+              ] as const).map(([label, value, icon]) => (
+                <div key={label} className="flex items-center gap-2 px-3 py-2">
+                  <span className="text-slate-500">{icon}</span>
+                  <span className="font-mono text-base font-semibold text-white">{String(value ?? 0)}</span>
+                  <span className="truncate text-xs text-slate-500">{label}</span>
+                </div>
+              ))}
             </div>
             {(network_exposure.items?.length ?? 0) > 0 && (
               <div className="mt-3 overflow-x-auto rounded-md border border-phantix-700/50">
@@ -170,7 +180,7 @@ export default function CloudPosturePanel({
                           {row.port}/{row.protocol ?? "tcp"}
                           {row.tls && <span className="chip ml-1 border-emerald-400/30 text-emerald-400">tls</span>}
                         </td>
-                        <td className="td text-[13px] text-slate-400">{row.service ?? "—"}</td>
+                        <td className="td text-[13px] text-slate-400">{row.service ?? "Not set"}</td>
                         <td className="td text-[13px] text-slate-500" title={row.first_seen_at ?? ""}>{timeAgo(row.first_seen_at ?? null)}</td>
                         <td className="td text-[13px] text-slate-400" title={row.last_seen_at ?? ""}>{timeAgo(row.last_seen_at ?? null)}</td>
                       </tr>
@@ -251,7 +261,7 @@ export default function CloudPosturePanel({
             {execution.docker_isolated ? "Docker-isolated" : "No container runtime"}
           </span>
           <span className="chip border-phantix-700 text-slate-400">
-            {execution.one_active_scan_per_org ? "1 active scan / org" : "Concurrency: organisation"}
+            {execution.one_active_scan_per_org ? "1 active scan per organization" : "Concurrency: organization"}
           </span>
           {execution.global_scan_concurrency != null && (
             <span className="chip border-phantix-700 text-slate-400">

@@ -1,17 +1,22 @@
 import React, { Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { ApplicationShell } from "@sg/shell/ApplicationShell";
 import type { ApplicationKey } from "@sg/shell/types";
-import Docs from "@sg/pages/Docs";
-import DocPage from "@sg/pages/DocPage";
-import DocsChrome from "@sg/pages/DocsChrome";
+// Docs load when visited, not with the first paint.
+const Docs = React.lazy(() => import("@sg/pages/Docs"));
+const DocPage = React.lazy(() => import("@sg/pages/DocPage"));
+const DocsChrome = React.lazy(() => import("@sg/pages/DocsChrome"));
 import { StoreProvider, ToastViewport } from "@sg/store";
 import DualControlOverlay from "@sg/components/DualControlOverlay";
+import AiBudgetOverlay from "@sg/components/AiBudgetOverlay";
+import ApprovalSentOverlay from "@sg/components/ApprovalSentOverlay";
 import { BrandLoader } from "@sg/components/BrandLoader";
+import { APP_URL } from "@sg/config";
 import { HOSTS } from "./hosts";
 import { NAV } from "./nav";
 import AgiDrawer from "@sg/components/AgiDrawer";
 import SectionGate from "@sg/components/SectionGate";
+import { useSeo } from "./lib/useSeo";
 
 const Agent = React.lazy(() => import("@sg/pages/Agent"));
 const NotFound = React.lazy(() => import("@sg/pages/NotFound"));
@@ -24,10 +29,14 @@ const VaptSchedules = React.lazy(() => import("./pages/VaptSchedules"));
 const VaptProcedures = React.lazy(() => import("./pages/VaptProcedures"));
 const VaptSettings = React.lazy(() => import("./pages/VaptSettings"));
 const Mobile = React.lazy(() => import("./pages/Mobile"));
-const Remediation = React.lazy(() => import("./pages/Remediation"));
+// The remediation queue is the finding tracker now, with fix guidance embedded.
+// One shared page keeps the board identical here and in Core.
+const Tracker = React.lazy(() => import("@sg/pages/Tracker"));
 const PriorReports = React.lazy(() => import("./pages/PriorReports"));
 
 export default function App() {
+  // Per-route SEO: /docs stays indexable, every operator route is noindex.
+  useSeo();
   return (
     <StoreProvider>
       <Suspense fallback={<BrandLoader label="Attack" message="Loading" />}>
@@ -73,7 +82,12 @@ export default function App() {
           <Route path="/vapt/procedures" element={<VaptProcedures />} />
           <Route path="/vapt/settings" element={<VaptSettings />} />
           <Route path="/scans" element={<Scans />} />
-          <Route path="/remediation" element={<Remediation />} />
+          <Route
+            path="/tracker"
+            element={<Tracker reportHref={`${APP_URL}/reports`} assetBase={`${APP_URL}/assets`} />}
+          />
+          {/* The old remediation URL is kept as a redirect so bookmarks still work. */}
+          <Route path="/remediation" element={<Navigate to="/tracker" replace />} />
           <Route path="/assistant" element={<Agent allowAgi />} />
           <Route path="*" element={<NotFound homePath="/" />} />
         </Route>
@@ -87,6 +101,8 @@ export default function App() {
       </Suspense>
       <ToastViewport />
       <DualControlOverlay />
+      <AiBudgetOverlay />
+      <ApprovalSentOverlay />
       <AgiDrawer />
     </StoreProvider>
   );

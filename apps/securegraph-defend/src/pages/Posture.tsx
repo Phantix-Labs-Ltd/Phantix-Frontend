@@ -165,15 +165,15 @@ export default function Posture() {
         <div className="space-y-5">
           {/* Overall + surfaces */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Overall posture" value={snapshot?.overall_score != null ? `${snapshot.overall_score}` : "—"} hint={postureSourceHint} />
+            <StatCard label="Overall posture" value={snapshot?.overall_score != null ? `${snapshot.overall_score}` : "Not set"} hint={postureSourceHint} />
             <StatCard
               label="Findings-adjusted"
-              value={snapshot?.findings_adjusted_score != null ? `${snapshot.findings_adjusted_score}` : "—"}
+              value={snapshot?.findings_adjusted_score != null ? `${snapshot.findings_adjusted_score}` : "Not set"}
               hint="Open criticals/highs deducted"
             />
             <StatCard
               label="Asset posture"
-              value={snapshot?.asset_posture_score != null ? `${snapshot.asset_posture_score}` : "—"}
+              value={snapshot?.asset_posture_score != null ? `${snapshot.asset_posture_score}` : "Not set"}
               hint="Dashboard asset-risk score"
             />
             <StatCard
@@ -205,7 +205,7 @@ export default function Posture() {
                     {surfaces.map(([name, s]) => (
                       <tr key={name} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
                         <td className="td text-sm capitalize text-slate-200">{name}</td>
-                        <td className={cx("td text-sm font-semibold", scoreTone(s.score))}>{s.score ?? "—"}</td>
+                        <td className={cx("td text-sm font-semibold", scoreTone(s.score))}>{s.score ?? "Not set"}</td>
                         <td className="td text-sm text-slate-300">{s.reportable ?? 0}</td>
                         <td className="td text-sm text-severity-critical">{s.critical ?? 0}</td>
                         <td className="td text-sm text-severity-high">{s.high ?? 0}</td>
@@ -243,7 +243,7 @@ export default function Posture() {
               <p className="text-xs text-slate-500">Select a project to compute drift.</p>
             ) : (drift.drift?.length ?? 0) === 0 ? (
               <p className="text-xs text-slate-500">
-                No drift — the current model matches the product context{drift?.projects != null ? ` (${drift.projects} project(s) checked)` : ""}.
+                No drift. The current model matches the product context{drift?.projects != null ? ` (${drift.projects} project(s) checked)` : ""}.
               </p>
             ) : (
               <ul className="space-y-1.5">
@@ -252,7 +252,7 @@ export default function Posture() {
                     <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                     <span>
                       <strong className="text-amber-200">{d.project_name || `Project #${d.project_id}`}</strong>
-                      {" — "}
+                      {" · "}
                       {d.reason || d.detail || "context changed since the last model"}
                     </span>
                   </li>
@@ -296,10 +296,10 @@ export default function Posture() {
                     {due.map((r) => (
                       <tr key={r.id} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
                         <td className="td text-sm text-slate-200">{r.title || `Risk #${r.id}`}</td>
-                        <td className="td">{r.risk_level ? <RiskBadge level={r.risk_level} /> : <span className="text-xs text-slate-500">—</span>}</td>
-                        <td className="td text-xs text-slate-300">{r.residual_risk_score ?? r.residual_risk_level ?? "—"}</td>
-                        <td className="td text-xs text-slate-500">{r.accepted_at ? timeAgo(r.accepted_at) : "—"}</td>
-                        <td className="td text-xs text-severity-high">{r.next_review_at ? timeAgo(r.next_review_at) : "—"}</td>
+                        <td className="td">{r.risk_level ? <RiskBadge level={r.risk_level} /> : <span className="text-xs text-slate-500">Not set</span>}</td>
+                        <td className="td text-xs text-slate-300">{r.residual_risk_score ?? r.residual_risk_level ?? "Not set"}</td>
+                        <td className="td text-xs text-slate-500">{r.accepted_at ? timeAgo(r.accepted_at) : "Not set"}</td>
+                        <td className="td text-xs text-severity-high">{r.next_review_at ? timeAgo(r.next_review_at) : "Not set"}</td>
                       </tr>
                     ))}
                   </tbody>

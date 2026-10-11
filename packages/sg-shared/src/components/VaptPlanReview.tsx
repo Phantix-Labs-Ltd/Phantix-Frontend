@@ -173,7 +173,7 @@ function StepBlock({
         </div>
       ) : (
         <p className="px-3 py-2 text-[13px] text-slate-500">
-          {step.target || "Runs its own pipeline — no per-type breakdown."}
+          {step.target || "Runs its own pipeline, with no per-type breakdown."}
         </p>
       )}
     </div>
@@ -257,9 +257,9 @@ export default function VaptPlanReview({
             <Info size={11} className="mt-0.5 shrink-0" />
             Vulnerability types are seeded automatically from the scan catalog
             {coverage.catalog_total_checks
-              ? ` (${coverage.catalog_total_checks} checks available)`
-              : ""}
-            — a newly added check joins the next plan without a code change.
+              ? ` (${coverage.catalog_total_checks} checks available).`
+              : "."}
+            A newly added check joins the next plan without a code change.
           </p>
         )}
 
@@ -267,7 +267,7 @@ export default function VaptPlanReview({
           (plan.process_flows ?? []).length > 0) && (
           <div className="rounded-md border border-phantix-700/40 bg-phantix-900/30 p-3">
             <h4 className="mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-slate-400">
-              <Workflow size={11} /> Inferred surfaces &amp; process flows
+              <Workflow size={11} /> Inferred surfaces and process flows
             </h4>
             {(plan.asset_surfaces?.surfaces ?? []).length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
@@ -299,7 +299,7 @@ export default function VaptPlanReview({
               </p>
             )}
             <p className="mt-1.5 text-[12px] leading-4 text-slate-500">
-              The surface decides the pipeline each web/API step runs — an API-only scope skips
+              The surface decides the pipeline each web or API step runs. An API-only scope skips
               browser XSS and screenshots, a GraphQL scope adds introspection and operation
               discovery.
             </p>
@@ -333,7 +333,7 @@ export default function VaptPlanReview({
               </div>
             ) : (
               <p className="text-[13px] leading-5 text-slate-500">
-                None documented — targeting is inventory-driven. Add components and flows so the
+                None documented. Targeting is inventory-driven. Add components and flows so the
                 plan can prioritise by what the software actually does.
               </p>
             )}
@@ -351,7 +351,7 @@ export default function VaptPlanReview({
                 </p>
                 {(intel.regressions ?? []).length > 0 && (
                   <p className="text-severity-critical">
-                    {(intel.regressions ?? []).length} regression(s) tested first —{" "}
+                    {(intel.regressions ?? []).length} regression(s) tested first.{" "}
                     {(intel.regressions ?? []).join(", ")}
                   </p>
                 )}
@@ -369,7 +369,7 @@ export default function VaptPlanReview({
               </div>
             ) : (
               <p className="text-[13px] leading-5 text-slate-500">
-                First assessment for these targets — no priors to apply.
+                . No priors to apply.
               </p>
             )}
           </div>
@@ -402,7 +402,7 @@ export default function VaptPlanReview({
 
         <div className="space-y-2">
           <h4 className="text-[13px] font-semibold uppercase tracking-wide text-slate-400">
-            Steps &amp; vulnerability types
+            Steps and vulnerability types
           </h4>
           {steps.length === 0 ? (
             <p className="text-[13px] text-slate-500">This plan has no steps.</p>
@@ -433,7 +433,7 @@ export default function VaptPlanReview({
 
         {disabled.size > 0 && (
           <p className="text-[13px] leading-4 text-amber-300">
-            {disabled.size} vulnerability {disabled.size === 1 ? "type" : "types"} switched off —
+            {disabled.size} vulnerability {disabled.size === 1 ? "type" : "types"} switched off.
             their checks will not run. The rest of each step is unaffected.
           </p>
         )}

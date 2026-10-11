@@ -6,17 +6,20 @@ single-column article.
 
 ## Architecture
 
-- **This app** — a client-only React/Vite SPA. It fetches posts from an admin
-  backend and renders them.
+- **This app** — a React/Vite SPA. It fetches posts from an admin backend and
+  renders them. `npm run build` also prerenders the issue page and every essay
+  to static HTML (`prerender.mjs`), embedding the content each page was built
+  from; the browser shows it at once and refreshes it from the API.
 - **The SecureGraph API** — the Phantix backend. It serves the read-only
   public endpoints below and receives the analytics beacons.
 - **The Staff Portal** — the *only* place posts are written, imported (.md),
   edited, published and unpublished (`/weekly`, admin staff only). It calls
   `/api/v1/admin/blog/*`, which requires an admin staff session. Readers and
   this app can only ever see published posts.
-- **Demo fixtures** — `src/content/posts/*.md` are bundled in and used when no
-  backend is configured, so the site runs with zero setup and doubles as the
-  reference format for the admin backend.
+- **Bundled launch issue** — `src/content/posts/*.md` are bundled in and used
+  when no backend is configured, or while the backend has no published posts,
+  so the site never shows an empty issue. They also serve as the reference
+  format for the admin backend.
 
 ## Content source
 

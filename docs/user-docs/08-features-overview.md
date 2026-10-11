@@ -11,8 +11,8 @@ Honest summary of what customers can use. Plan limits apply.
 | Multi-user organizations | Invite team members with roles |
 | Dual-control | Sensitive actions need more than one person |
 | Audit trail | Who did what, when |
-| Billing & entitlements | Free, Premium, add-ons, coupons |
-| Org setup & verification | Privacy, email OTP, optional domain / CAC |
+| Billing and entitlements | Free, Premium, add-ons, coupons |
+| Org setup and verification | Privacy, email OTP, optional domain and CAC |
 
 ---
 
@@ -21,10 +21,10 @@ Honest summary of what customers can use. Plan limits apply.
 | Feature | Public description |
 |---------|-------------------|
 | Inventory | Domains, IPs, APIs, repos, mobile packages |
-| Tags & criticality | Mark crown jewels |
+| Tags and criticality | Mark crown jewels |
 | Discovery | Expand surface where entitled |
 | Intelligence views | Exposure-oriented context |
-| GitHub App | Modern install & repo selection |
+| GitHub App | Modern install and repo selection |
 
 ---
 
@@ -40,7 +40,7 @@ Honest summary of what customers can use. Plan limits apply.
 
 ---
 
-## Risk & compliance
+## Risk and compliance
 
 | Feature | Public description |
 |---------|-------------------|
@@ -67,7 +67,7 @@ Honest summary of what customers can use. Plan limits apply.
 | Feature | Public description |
 |---------|-------------------|
 | Email via your SMTP | Brandable security alerts |
-| WhatsApp / Telegram | Optional chat channels |
+| WhatsApp or Telegram | Optional chat channels |
 | Event filters | Choose what notifies |
 
 ---
@@ -77,7 +77,7 @@ Honest summary of what customers can use. Plan limits apply.
 | Feature | Public description |
 |---------|-------------------|
 | Finding explanations | Plain language from evidence |
-| Domain agents | SOC, GRC, VAPT, TI, Asset — on demand |
+| Domain agents | SOC, GRC, VAPT, TI, Asset. On demand |
 | Skills | Reusable playbooks that improve over time (privacy-preserving) |
 | Public API | **AI Agent plan only** |
 

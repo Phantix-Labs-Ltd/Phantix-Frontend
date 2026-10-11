@@ -1,0 +1,44 @@
+<svg style="background:#0A0A0A" xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" font-family="Geist Variable, Space Grotesk, Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0A0A0A"/><stop offset="100%" stop-color="#2A2A2E"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A1A1AA"/>
+    </marker>
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#E8B54D"/>
+    </marker>
+  </defs>
+  <rect width="900" height="470" fill="#0A0A0A"/>
+  <text x="450.0" y="40" text-anchor="middle" font-size="20" font-weight="700" fill="#F4F4F5">Three Numbers, Three Decisions</text>
+  <text x="450.0" y="63" text-anchor="middle" font-size="13" fill="#A1A1AA">A board update that ends in a decision, not a discussion</text>
+  <rect x="60" y="110" width="240" height="250" rx="8" fill="url(#boxGrad)" stroke="#E8B54D" stroke-width="1.5"/>
+  <text x="180.0" y="239.0" text-anchor="middle" font-size="12.5" fill="#E4E4E7"></text>
+  <text x="180" y="160" text-anchor="middle" font-size="16" font-weight="700" fill="#F4F4F5">Exposed</text>
+  <line x1="90" y1="182" x2="270" y2="182" stroke="#3F3F46" stroke-width="1"/>
+  <text x="84" y="214" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">Verified, exploitable </text>
+  <text x="84" y="234" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">issues on assets that </text>
+  <text x="84" y="254" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">matter </text>
+  <text x="84" y="300" text-anchor="start" font-size="11" font-weight="700" fill="#E8B54D">Decision</text>
+  <text x="84" y="324" text-anchor="start" font-size="12" font-weight="400" fill="#E4E4E7">Reduce scope or fund the </text>
+  <text x="84" y="343" text-anchor="start" font-size="12" font-weight="400" fill="#E4E4E7">fix </text>
+  <rect x="330" y="110" width="240" height="250" rx="8" fill="url(#boxGrad)" stroke="#E8B54D" stroke-width="1.5"/>
+  <text x="450.0" y="239.0" text-anchor="middle" font-size="12.5" fill="#E4E4E7"></text>
+  <text x="450" y="160" text-anchor="middle" font-size="16" font-weight="700" fill="#F4F4F5">Time to fix</text>
+  <line x1="360" y1="182" x2="540" y2="182" stroke="#3F3F46" stroke-width="1"/>
+  <text x="354" y="214" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">Days from verified finding </text>
+  <text x="354" y="234" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">to proven fix </text>
+  <text x="354" y="300" text-anchor="start" font-size="11" font-weight="700" fill="#E8B54D">Decision</text>
+  <text x="354" y="324" text-anchor="start" font-size="12" font-weight="400" fill="#E4E4E7">Fix the process or the </text>
+  <text x="354" y="343" text-anchor="start" font-size="12" font-weight="400" fill="#E4E4E7">ownership </text>
+  <rect x="600" y="110" width="240" height="250" rx="8" fill="url(#boxGrad)" stroke="#E8B54D" stroke-width="1.5"/>
+  <text x="720.0" y="239.0" text-anchor="middle" font-size="12.5" fill="#E4E4E7"></text>
+  <text x="720" y="160" text-anchor="middle" font-size="16" font-weight="700" fill="#F4F4F5">Coverage</text>
+  <line x1="630" y1="182" x2="810" y2="182" stroke="#3F3F46" stroke-width="1"/>
+  <text x="624" y="214" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">Share of the known estate </text>
+  <text x="624" y="234" text-anchor="start" font-size="12" font-weight="400" fill="#A1A1AA">tested this period </text>
+  <text x="624" y="300" text-anchor="start" font-size="11" font-weight="700" fill="#E8B54D">Decision</text>
+  <text x="624" y="324" text-anchor="start" font-size="12" font-weight="400" fill="#E4E4E7">Change the budget or the </text>
+  <text x="624" y="343" text-anchor="start" font-size="12" font-weight="400" fill="#E4E4E7">scope </text>
+</svg>

@@ -617,6 +617,11 @@ p {
 
   .th {
     @apply h-10 px-3 py-2 text-left align-middle text-[13px] font-semibold text-slate-300;
+    /* Contain absolutely-positioned children — chiefly the sr-only header labels
+       ("Actions", "Open"). Without a positioned ancestor they sit at their static
+       spot past the table edge, outside the scroll container, and widen the whole
+       page on a phone. */
+    position: relative;
     /* Visible row dividers: the header rule is the strongest line, each row
        gets its own hairline, so a dense list scans like a spreadsheet. */
     border-bottom: 1px solid rgb(var(--border-strong) / 0.7);
@@ -886,22 +891,33 @@ p {
 }
 
 /* ── Attack-tree adaptive labels ──────────────────────────────────────────────
-   Long node/phase labels collapse to their compact form as the attack-tree pane
-   narrows. The pane is a CSS size container (`.wb-pane`), so `@container pane`
-   resolves against the actual pane width — resize the pane or shrink the window
-   and the tree re-labels itself (e.g. "reconnaissance" → "recon",
-   "authentication" → "auth", "authorization" → "authz"). */
+   Node/phase labels have three tiers that follow the attack-tree pane width, in
+   both directions as the pane is dragged. The pane is a CSS size container
+   (`.wb-pane`), so `@container pane` resolves against the actual pane width:
+     ≥ 520px   full label        "Authentication and session testing"
+     420–519px short label       "Auth and session"
+     < 420px   one-word tag      "Auth" (the tool line is hidden too)
+   Cards also clip and wrap, so no tier can push text outside its card. */
 .at-long { display: inline; }
-.at-short { display: none; }
-@container pane (max-width: 520px) {
+.at-short,
+.at-tiny { display: none; }
+@container pane (max-width: 519.98px) {
   .at-long { display: none; }
   .at-short { display: inline; }
 }
+@container pane (max-width: 419.98px) {
+  .at-short,
+  .at-tool { display: none; }
+  .at-tiny { display: inline; }
+  .at-card { padding-inline: 2px; }
+}
 @media (max-width: 420px) {
   /* Very small viewports force the tree pane narrow even before the user drags
-     the handle; collapse labels there too as a fallback. */
-  .at-long { display: none; }
-  .at-short { display: inline; }
+     the handle; use the one-word tags there too as a fallback. */
+  .at-long,
+  .at-short,
+  .at-tool { display: none; }
+  .at-tiny { display: inline; }
 }
 
 /* Respect users who prefer less motion across all workbench transitions. */
@@ -1052,4 +1068,119 @@ p {
 .sg-sidebar[data-collapsed]:hover nav,
 .sg-sidebar[data-collapsed]:focus-within nav {
   overflow-x: visible;
+}
+
+/* ── Phone feel ────────────────────────────────────────────────────────────
+   App-style press feedback for the mobile shell (tab bar, More tiles). */
+.tap {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 0.12s ease;
+}
+.tap:active {
+  transform: scale(0.95);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /* No grey flash on tap, no double-tap zoom delay. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
+  }
+  /* Buttons answer the finger like native controls. */
+  .btn-primary:active,
+  .btn-secondary:active,
+  .btn-ghost:active,
+  .btn-danger:active {
+    transform: scale(0.98);
+  }
+  /* 16px keeps iOS Safari from zooming the page when a field is focused. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ── Tables as lists on phones ──────────────────────────────────────────────
+   lib/useTableCards.ts labels every cell with its column header and adds
+   .sg-cards; below md each row becomes a list item of "LABEL  value" lines,
+   instead of a table the finger has to scroll sideways. */
+@media (max-width: 767px) {
+  table.sg-cards {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+  }
+  table.sg-cards thead {
+    display: none;
+  }
+  table.sg-cards tbody {
+    display: block;
+  }
+  table.sg-cards tr {
+    display: block;
+    height: auto !important; /* rows set a fixed table-row height */
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgb(var(--border-subtle) / 0.45);
+  }
+  table.sg-cards tr:last-child {
+    border-bottom: 0;
+  }
+  table.sg-cards td {
+    display: flex;
+    height: auto !important;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0 !important;
+    border: 0 !important;
+    text-align: right;
+    white-space: normal !important;
+    min-width: 0;
+  }
+  table.sg-cards td > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  table.sg-cards td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    padding-top: 0.15rem;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgb(var(--slate-500));
+  }
+  /* First cell reads as the row title; empty-label cells (actions, full-width
+     notes and empty states) take the whole line. */
+  table.sg-cards td:first-child {
+    justify-content: flex-start;
+    text-align: left;
+    font-weight: 600;
+  }
+  table.sg-cards td:first-child::before {
+    display: none;
+  }
+  table.sg-cards td[data-label=""] {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  table.sg-cards td[data-label=""]::before {
+    display: none;
+  }
+  table.sg-cards td:empty {
+    display: none;
+  }
 }

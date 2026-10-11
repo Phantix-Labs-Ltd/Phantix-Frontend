@@ -24,7 +24,7 @@ export function Markdown({ children }: { children: string }) {
         code: ({ node: _n, ...props }) => <code className="md-code" {...props} />,
         pre: ({ node: _n, ...props }) => <pre className="md-pre" {...props} />,
         hr: ({ node: _n, ...props }) => <hr className="md-hr" {...props} />,
-        img: ({ node: _n, ...props }) => <img className="md-img" {...props} />,
+        img: ({ node: _n, alt, ...props }) => <img className="md-img" alt={alt ?? ""} loading="lazy" {...props} />,
         table: ({ node: _n, ...props }) => <table className="md-table" {...props} />,
         th: ({ node: _n, ...props }) => <th className="md-th" {...props} />,
         td: ({ node: _n, ...props }) => <td className="md-td" {...props} />,
