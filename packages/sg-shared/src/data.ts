@@ -462,6 +462,24 @@ export async function verifyScanResult(
   return raw ? normalizeScanResult(raw) : null;
 }
 
+/**
+ * Verify, reject or mark a false positive from the findings tracker, by the
+ * row's finding key. Works for a row from any finding store: the scan-result
+ * route only knows scanner ids, so a VAPT or pentest-agent row sent there hit
+ * the wrong table and came back unverified on reload.
+ */
+export async function verifyTrackerFinding(
+  finding: Pick<TrackerFinding, "finding_key" | "source_finding_id">,
+  body: { verification_status: "manually_verified" | "rejected" | "false_positive"; note?: string },
+): Promise<void> {
+  if (isDemoMode()) {
+    // The demo's tracker rows are all scanner-backed; reuse that path.
+    if (finding.source_finding_id != null) await verifyScanResult(finding.source_finding_id, body);
+    return;
+  }
+  await api.post(`/reports/tracker/${encodeURIComponent(finding.finding_key)}/verification`, body);
+}
+
 export async function loadVaptBundle() {
   if (isDemoMode()) {
     await delay();

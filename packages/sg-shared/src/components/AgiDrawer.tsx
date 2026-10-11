@@ -64,9 +64,17 @@ export default function AgiDrawer() {
     <>
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("phantix:agi-open"))}
-        // Phones: a floating action button above the tab bar. Wider: the edge tab.
+        // Phones: a floating action button above the tab bar. Wider: the edge
+        // tab, tucked off the right edge so it never covers the page. A 14px
+        // strip stays visible (green while a session runs) and the whole tab
+        // slides out on hover or keyboard focus.
         aria-label="Open the Pentest Agent"
-        className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-3 z-[70] flex items-center gap-2 rounded-full border border-gold-400/40 bg-phantix-900/95 p-3.5 text-gold-300 shadow-card backdrop-blur-xl transition-colors hover:border-gold-400/40 hover:bg-phantix-800/90 md:bottom-auto md:right-0 md:top-1/2 md:-translate-y-1/2 md:rounded-none md:rounded-l-xl md:border-r-0 md:border-phantix-700/50 md:bg-phantix-900/90 md:px-2.5 md:py-3"
+        className={cx(
+          "fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-3 z-[70] flex items-center gap-2 rounded-full border border-gold-400/40 bg-phantix-900/95 p-3.5 text-gold-300 shadow-card backdrop-blur-xl transition-colors hover:border-gold-400/40 hover:bg-phantix-800/90",
+          "md:bottom-auto md:right-0 md:top-1/2 md:-translate-y-1/2 md:rounded-none md:rounded-l-xl md:border-r-0 md:border-phantix-700/50 md:bg-phantix-900/90 md:px-2.5 md:py-3",
+          "md:translate-x-[calc(100%-14px)] md:border-l-[3px] md:transition-[transform,background-color,border-color] md:duration-300 md:ease-out md:hover:translate-x-0 md:focus-visible:translate-x-0 motion-reduce:transition-none",
+          live ? "md:border-l-emerald-400" : "md:border-l-gold-400/70",
+        )}
         title={live ? "Pentest Agent: session running" : "Autonomous Pentest Agent"}
       >
         <span className="relative">

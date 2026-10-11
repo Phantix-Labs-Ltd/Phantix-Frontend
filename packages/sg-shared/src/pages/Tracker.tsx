@@ -13,7 +13,7 @@ import {
   loadTrackerBundle,
   patchTrackerFinding,
   retestTrackerFinding,
-  verifyScanResult,
+  verifyTrackerFinding,
 } from "../data";
 import { isDemoMode } from "../api";
 import { useSseStream } from "../useSse";
@@ -348,7 +348,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
   const [verifyNote, setVerifyNote] = useState("");
   const runVerify = async (decision: VerifyDecision) => {
     const target = verifyTarget;
-    if (!target || target.source_finding_id == null) return;
+    if (!target) return;
     if (!(await requireDualControl("Changing the verification status of a finding requires a dual-control operate session."))) return;
     setVerifyBusy(decision);
     const key = target.finding_key;
@@ -365,7 +365,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
       ),
     }));
     try {
-      await verifyScanResult(target.source_finding_id, { verification_status: decision, note: verifyNote.trim() || undefined });
+      await verifyTrackerFinding(target, { verification_status: decision, note: verifyNote.trim() || undefined });
       toast(
         "success",
         decision === "manually_verified" ? "Finding verified" : decision === "false_positive" ? "Marked false positive" : "Finding rejected",
@@ -666,10 +666,9 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                             {normalizeTrackerVerification(f.verification_status) === "unverified" && (
                               <button
                                 type="button"
-                                title={f.source_finding_id == null ? "This finding has no source row to verify" : "Confirm this finding as evidence, or exclude it"}
+                                title="Confirm this finding as evidence, or exclude it"
                                 aria-label={`Verify ${f.finding_key}`}
                                 className="inline-flex h-7 items-center gap-1.5 rounded-md border border-severity-medium/40 bg-severity-medium/10 px-2.5 text-[12px] font-medium text-severity-medium hover:bg-severity-medium/20 disabled:cursor-not-allowed disabled:opacity-40"
-                                disabled={f.source_finding_id == null}
                                 onClick={() => { setVerifyTarget(f); setVerifyNote(""); }}
                               >
                                 <ShieldCheck size={13} /> Verify
