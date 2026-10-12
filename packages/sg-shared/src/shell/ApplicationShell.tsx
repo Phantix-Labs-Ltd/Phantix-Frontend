@@ -1,17 +1,16 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import PageErrorBoundary from "@sg/components/PageErrorBoundary";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
   Building2,
-  ChevronDown,
-  ChevronLeft,
+  Check,
   ChevronRight,
-  Command,
   Database,
   ExternalLink,
   FlaskConical,
+  Grip,
   KeyRound,
   LayoutGrid,
   LifeBuoy,
@@ -19,11 +18,14 @@ import {
   LogOut,
   Menu,
   MessageSquareWarning,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   ShieldCheck,
   Sparkles,
   Timer,
   Unlock,
+  UserRound,
   X,
 } from "lucide-react";
 import { useSidebarCollapsed } from "../useSidebarCollapsed";
@@ -106,6 +108,26 @@ function activeGroupLabel(nav: NavSection[], pathname: string): string | null {
   return best?.label ?? null;
 }
 
+/** Whether a scroll box has content below its visible bottom edge. Rechecks on
+ *  scroll and whenever the box or its content resizes (a group opening). */
+function useMoreBelow(el: HTMLElement | null): boolean {
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    if (!el) return;
+    const update = () => setMore(el.scrollTop + el.clientHeight < el.scrollHeight - 1);
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [el]);
+  return more;
+}
+
 function NavLeafLink({ item, collapsible }: { item: NavLeaf; collapsible: boolean }) {
   return (
     <NavLink
@@ -166,10 +188,10 @@ function NavGroup({
       >
         {section.icon ?? section.items[0]?.icon}
         {collapsible ? <span className="sg-hide-collapsed">{section.label}</span> : section.label}
-        <ChevronDown
+        <ChevronRight
           size={14}
           className={`ml-auto shrink-0 text-slate-500 transition-transform duration-200 ${
-            open ? "rotate-180" : ""
+            open ? "rotate-90" : ""
           } ${collapsible ? "sg-hide-collapsed" : ""}`}
         />
       </button>
@@ -183,7 +205,7 @@ function NavGroup({
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className={`overflow-hidden ${collapsible ? "sg-hide-collapsed" : ""}`}
           >
-            <div className="ml-[1.1rem] mb-1 mt-1 space-y-1 border-l border-phantix-700/50 pl-2.5">
+            <div className="ml-[1.1rem] my-0.5 space-y-0.5 border-l border-phantix-700/50 pl-2.5">
               {section.items.map((item) => (
                 <NavLeafLink key={item.to} item={item} collapsible={collapsible} />
               ))}
@@ -351,6 +373,8 @@ export function ApplicationShell({
   const phoneTitle = usePhoneTitle(nav, APPLICATION_LABEL[application]);
   const [mainEl, setMainEl] = useState<HTMLElement | null>(null);
   useTableCards(mainEl);
+  const [navEl, setNavEl] = useState<HTMLElement | null>(null);
+  const navMoreBelow = useMoreBelow(navEl);
   const [cards, setCards] = useState<ApplicationCard[] | null>(null);
   const [opening, setOpening] = useState<ApplicationKey | "">("");
   // Nothing (not even the shell) renders until identity + this application's
@@ -454,12 +478,18 @@ export function ApplicationShell({
     setSwitcherOpen(false);
   }, [location.pathname]);
 
-  // Any number of groups can be open; landing on a page also opens the group
-  // it lives in, without closing the others.
+  // Every group starts open, including groups the backend nav adds after the
+  // fallback rendered. The operator can close any of them, and landing on a
+  // page reopens the group it lives in without closing the others.
   const activeGroup = useMemo(() => activeGroupLabel(nav, location.pathname), [nav, location.pathname]);
-  const [openGroups, setOpenGroups] = useState<Set<string>>(
-    () => new Set(activeGroup ? [activeGroup] : []),
-  );
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set(nav.map((s) => s.label)));
+  const seenGroups = useRef(new Set(nav.map((s) => s.label)));
+  useEffect(() => {
+    const fresh = nav.map((s) => s.label).filter((label) => !seenGroups.current.has(label));
+    if (fresh.length === 0) return;
+    for (const label of fresh) seenGroups.current.add(label);
+    setOpenGroups((open) => new Set([...open, ...fresh]));
+  }, [nav]);
   useEffect(() => {
     if (activeGroup) {
       setOpenGroups((open) => (open.has(activeGroup) ? open : new Set(open).add(activeGroup)));
@@ -656,15 +686,42 @@ export function ApplicationShell({
             collapsed ? "w-[72px]" : "w-[248px]"
           }`}
         >
-          <div className="flex items-center gap-3 px-4 pb-3 pt-4">
+          {/* Brand row: the lockup, this application's label, and the collapse
+              control, on one line. */}
+          <div className="flex items-center gap-2 px-4 pb-3 pt-4">
             <BrandMark className="sg-show-collapsed h-8 w-8 shrink-0" />
-            <div className="sg-hide-collapsed flex flex-col">
-              <BrandWordmark className="h-8 self-start" />
-              <p className="mt-0.5 pl-[2.25rem] text-[12px] font-medium uppercase tracking-[0.18em] text-gold-400">{subtitle}</p>
-            </div>
+            <BrandWordmark className="sg-hide-collapsed h-7 shrink-0" />
+            <span className="sg-hide-collapsed shrink-0 rounded-md border border-gold-400/30 bg-gold-400/10 px-1.5 py-1 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-gold-300">
+              {subtitle}
+            </span>
+            <button
+              onClick={(e) => {
+                toggle();
+                // The rail widens while anything in it has focus, so a mouse
+                // click would hold the collapsed rail open. Keyboard users keep
+                // their focus.
+                if (e.detail > 0) e.currentTarget.blur();
+              }}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className="sg-hide-collapsed ml-auto shrink-0 rounded-md p-1.5 text-slate-500 transition-colors hover:bg-phantix-800/60 hover:text-slate-100"
+            >
+              {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            </button>
           </div>
 
-          <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 pb-4 pt-1">{renderNav(true)}</nav>
+          {/* The list fades out at the bottom edge while more of it is below. */}
+          <div className="relative min-h-0 flex-1">
+            <nav ref={setNavEl} className="h-full overflow-y-auto px-3 pb-4 pt-1">
+              <div className="space-y-0.5">{renderNav(true)}</div>
+            </nav>
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[rgb(var(--surface-sidebar))] to-transparent transition-opacity duration-200 ${
+                navMoreBelow ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          </div>
 
           {/* Dual-control widget — present on every page of every application. */}
           <div className="sg-hide-collapsed border-t border-phantix-700/60 p-2">
@@ -757,25 +814,41 @@ export function ApplicationShell({
               </>)}
             </div>
           </div>
+        </aside>
 
-          {/* Application switcher */}
-          <div className="border-t border-phantix-700/60 p-2">
-            <div ref={switcherRef} className="relative">
+        <div
+          className={`flex min-h-screen min-w-0 flex-1 flex-col ${
+            collapsed ? "lg:ml-[72px]" : "lg:ml-[248px]"
+          }`}
+        >
+          {/* Topbar */}
+          <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-phantix-700/60 bg-phantix-950 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-3 sm:px-6">
+            {/* Phones navigate with the bottom tab bar; the dropdown stays for tablets. */}
+            <button
+              onClick={() => setMobileNav((v) => !v)}
+              aria-label={mobileNav ? "Close navigation" : "Open navigation"}
+              className="hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:inline-flex lg:hidden"
+            >
+              {mobileNav ? <X size={18} /> : <Menu size={18} />}
+            </button>
+            {/* Phone app bar: brand mark + the current page. */}
+            <BrandMark className="h-7 w-7 shrink-0 md:hidden" />
+            <span className="min-w-0 flex-1 truncate font-display text-[17px] font-bold text-white md:hidden">{phoneTitle}</span>
+
+            {/* Application switcher. Phones switch apps from the More sheet. */}
+            <div ref={switcherRef} className="relative hidden md:block">
               <button
                 onClick={() => setSwitcherOpen((v) => !v)}
                 title="Switch application"
+                aria-label="Switch application"
                 aria-haspopup="menu"
                 aria-expanded={switcherOpen}
-                className="nav-item w-full justify-between"
+                className="inline-flex rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
               >
-                <span className="flex items-center gap-3">
-                  <LayoutGrid size={16} />
-                  <span className="sg-hide-collapsed">Applications</span>
-                </span>
-                <ChevronDown size={14} className="sg-hide-collapsed text-slate-500" />
+                <Grip size={16} />
               </button>
               {switcherOpen && (
-                <div className="absolute bottom-full left-0 z-50 mb-1 w-56 rounded-md border border-phantix-700 bg-phantix-900 p-1 shadow-card">
+                <div className="absolute left-0 top-full z-50 mt-2 w-56 rounded-md border border-phantix-700 bg-phantix-900 p-1 shadow-card">
                   {switcherItems.map((card) => (
                     <button
                       key={card.key}
@@ -803,51 +876,12 @@ export function ApplicationShell({
                 </div>
               )}
             </div>
-          </div>
-        </aside>
-
-        <div
-          className={`flex min-h-screen min-w-0 flex-1 flex-col ${
-            collapsed ? "lg:ml-[72px]" : "lg:ml-[248px]"
-          }`}
-        >
-          {/* Topbar */}
-          <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-phantix-700/60 bg-phantix-950 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-3 sm:px-6">
-            {/* Phones navigate with the bottom tab bar; the dropdown stays for tablets. */}
-            <button
-              onClick={() => setMobileNav((v) => !v)}
-              aria-label={mobileNav ? "Close navigation" : "Open navigation"}
-              className="hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:inline-flex lg:hidden"
-            >
-              {mobileNav ? <X size={18} /> : <Menu size={18} />}
-            </button>
-            {/* Phone app bar: brand mark + the current page. */}
-            <BrandMark className="h-7 w-7 shrink-0 md:hidden" />
-            <span className="min-w-0 flex-1 truncate font-display text-[17px] font-bold text-white md:hidden">{phoneTitle}</span>
-
-            <button
-              onClick={toggle}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className="hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white lg:inline-flex"
-            >
-              {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-            </button>
 
             <button
               onClick={() => setPaletteOpen(true)}
-              className="hidden w-72 items-center gap-2.5 rounded-md border border-phantix-700 bg-phantix-900 px-3.5 py-2 text-sm text-slate-500 transition-colors hover:border-phantix-600 hover:text-slate-300 sm:flex"
-            >
-              <Search size={15} />
-              <span>Search surfaces...</span>
-              <span className="ml-auto flex items-center gap-0.5 rounded-sm border border-phantix-600/60 bg-phantix-850 px-1.5 py-0.5 font-mono text-[12px] font-semibold">
-                <Command size={9} />K
-              </span>
-            </button>
-            <button
-              onClick={() => setPaletteOpen(true)}
+              title="Search (Ctrl K)"
               aria-label="Search"
-              className="rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white sm:hidden"
+              className="rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
             >
               <Search size={16} />
             </button>
@@ -879,13 +913,23 @@ export function ApplicationShell({
               </button>
               <NotificationBell />
               <span
-                className={`chip hidden whitespace-nowrap xl:inline-flex ${
-                  securityDbReady
-                    ? "border-gold-400/30 bg-gold-400/10 text-gold-300"
-                    : "border-severity-medium/30 bg-severity-medium/10 text-severity-medium"
-                }`}
+                role="img"
+                title={securityDbReady ? "Security database connected" : "Security database not connected"}
+                aria-label={securityDbReady ? "Security database connected" : "Security database not connected"}
+                className="relative hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 sm:inline-flex"
               >
-                <Database size={12} /> Security DB · {securityDbReady ? "ready" : "not ready"}
+                <Database size={16} />
+                <span
+                  className={`absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full ring-2 ring-phantix-950 ${
+                    securityDbReady ? "bg-severity-low" : "bg-severity-critical"
+                  }`}
+                >
+                  {securityDbReady ? (
+                    <Check size={9} strokeWidth={3.5} className="text-white" />
+                  ) : (
+                    <X size={9} strokeWidth={3.5} className="text-white" />
+                  )}
+                </span>
               </span>
               <span className="chip hidden whitespace-nowrap border-phantix-700 bg-phantix-900 font-mono text-slate-300 2xl:inline-flex">
                 <KeyRound size={12} className="text-gold-400" /> {org.slug}
@@ -911,20 +955,10 @@ export function ApplicationShell({
                   aria-haspopup="menu"
                   aria-expanded={userMenu}
                   aria-label="Account"
-                  className="flex items-center gap-2.5 rounded-md border border-phantix-700 bg-phantix-900 p-1.5 transition-colors hover:border-phantix-600 md:pr-2.5"
+                  title={session?.userName ?? me?.full_name ?? me?.email ?? "Account"}
+                  className="inline-flex rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gold-400/40 bg-phantix-850 font-display text-xs font-bold text-gold-300">
-                    {(session?.userName ?? me?.full_name ?? "A").slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="hidden text-left sm:block">
-                    <span className="block max-w-[120px] truncate text-xs font-semibold leading-tight text-slate-200">
-                      {session?.userName ?? me?.full_name ?? me?.email ?? "Guest"}
-                    </span>
-                    <span className="block max-w-[120px] truncate text-[12px] leading-tight text-slate-500">
-                      {org.name || me?.organization_name || APPLICATION_LABEL[application]}
-                    </span>
-                  </span>
-                  <ChevronDown size={14} className="hidden text-slate-500 md:block" />
+                  <UserRound size={16} />
                 </button>
                 <AnimatePresence>
                   {userMenu && (
@@ -940,6 +974,9 @@ export function ApplicationShell({
                         </p>
                         <p className="truncate text-xs text-slate-500">
                           {session?.userEmail ?? me?.email ?? "demo mode"}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-slate-400">
+                          {org.name || me?.organization_name || APPLICATION_LABEL[application]}
                         </p>
                         {me?.effective_role && (
                           <p className="mt-1 font-mono text-[12px] uppercase tracking-wider text-slate-600">
@@ -1047,7 +1084,7 @@ export function ApplicationShell({
                 exit={{ opacity: 0, height: 0 }}
                 className="fixed inset-x-0 top-[57px] z-40 hidden max-h-[calc(100vh-57px)] overflow-y-auto border-b border-phantix-600/60 bg-[rgb(var(--surface-card))] shadow-2xl md:block lg:hidden"
               >
-                <nav className="space-y-1.5 px-3 py-4">{renderNav(false)}</nav>
+                <nav className="space-y-0.5 px-3 py-4">{renderNav(false)}</nav>
                 <div className="border-t border-phantix-700/40 px-2.5 pb-3">
                   <div className="rounded-md border border-phantix-700 bg-phantix-900 p-2">
                     <p className="text-[13px] font-semibold text-slate-500">{dualControl.policy_mode === "off" ? "Solo mode" : "Dual control"}</p>

@@ -28,18 +28,18 @@ export const NAV: NavSection[] = [
     icon: <Target size={17} />,
     items: [
       { to: "/targets", label: "Targets", icon: <Target size={17} /> },
-      { to: "/pentest-scope", label: "Pentest scope", icon: <FileSignature size={17} /> },
-      { to: "/pentest-agent", label: "Pentest agent", icon: <Bot size={17} /> },
+      { to: "/pentest-scope", label: "Engagements", icon: <FileSignature size={17} /> },
+      { to: "/pentest-agent", label: "Agent", icon: <Bot size={17} /> },
     ],
   },
   {
     label: "Testing",
     icon: <Radar size={17} />,
     items: [
-      { to: "/scans", label: "Web and API", icon: <Radar size={17} /> },
+      { to: "/scans", label: "Scans", icon: <Radar size={17} /> },
       { to: "/mobile", label: "Mobile", icon: <Smartphone size={17} /> },
       // The remediation queue is the tracker with fix guidance embedded.
-      { to: "/tracker", label: "Findings tracker", icon: <KanbanSquare size={17} /> },
+      { to: "/tracker", label: "Tracker", icon: <KanbanSquare size={17} /> },
     ],
   },
   {
@@ -48,9 +48,9 @@ export const NAV: NavSection[] = [
     items: [
       { to: "/vapt", label: "Campaigns", icon: <Crosshair size={17} /> },
       { to: "/vapt/schedules", label: "Schedules", icon: <CalendarClock size={17} /> },
-      { to: "/prior-reports", label: "Prior reports", icon: <FileText size={17} /> },
-      { to: "/vapt/procedures", label: "Procedures and rules", icon: <BookOpen size={17} /> },
-      { to: "/vapt/settings", label: "Engine settings", icon: <SlidersHorizontal size={17} /> },
+      { to: "/prior-reports", label: "Archive", icon: <FileText size={17} /> },
+      { to: "/vapt/procedures", label: "Rulebook", icon: <BookOpen size={17} /> },
+      { to: "/vapt/settings", label: "Settings", icon: <SlidersHorizontal size={17} /> },
     ],
   },
   {

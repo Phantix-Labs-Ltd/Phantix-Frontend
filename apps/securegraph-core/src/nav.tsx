@@ -37,8 +37,8 @@ export function coreNav({ isAuthorizer = false }: { isAuthorizer?: boolean } = {
     label: "Governance",
     icon: <Landmark size={17} />,
     items: [
-      { to: "/audit", label: "Audit trail", icon: <ScrollText size={17} /> },
-      { to: "/agent-activity", label: "Agent activity", icon: <Activity size={17} /> },
+      { to: "/audit", label: "Audit", icon: <ScrollText size={17} /> },
+      { to: "/agent-activity", label: "Activity", icon: <Activity size={17} /> },
     ],
   };
   if (isAuthorizer) {
@@ -58,17 +58,17 @@ export function coreNav({ isAuthorizer = false }: { isAuthorizer?: boolean } = {
       label: "Findings",
       icon: <KanbanSquare size={17} />,
       items: [
-        { to: "/tracker", label: "Findings tracker", icon: <KanbanSquare size={17} /> },
-        { to: "/findings", label: "Findings intake", icon: <Inbox size={17} /> },
-        { to: "/reports", label: "Report solutions", icon: <FileText size={17} /> },
+        { to: "/tracker", label: "Tracker", icon: <KanbanSquare size={17} /> },
+        { to: "/findings", label: "Intake", icon: <Inbox size={17} /> },
+        { to: "/reports", label: "Reports", icon: <FileText size={17} /> },
       ],
     },
     {
-      label: "Security graph",
+      label: "Graph",
       icon: <Network size={17} />,
       items: [
         { to: "/assets", label: "Assets", icon: <Boxes size={17} /> },
-        { to: "/integrations", label: "Integrations hub", icon: <Plug size={17} /> },
+        { to: "/integrations", label: "Integrations", icon: <Plug size={17} /> },
       ],
     },
     {
@@ -76,14 +76,14 @@ export function coreNav({ isAuthorizer = false }: { isAuthorizer?: boolean } = {
       icon: <ShieldCheck size={17} />,
       items: [
         { to: "/assurance", label: "Engagements", icon: <ClipboardCheck size={17} /> },
-        { to: "/assurance/regimes", label: "Regulatory profile", icon: <Globe2 size={17} /> },
+        { to: "/assurance/regimes", label: "Regulations", icon: <Globe2 size={17} /> },
         { to: "/assurance/reports", label: "Attestations", icon: <FileText size={17} /> },
-        { to: "/assurance/monitoring", label: "Continuous assurance", icon: <Radar size={17} /> },
+        { to: "/assurance/monitoring", label: "Monitoring", icon: <Radar size={17} /> },
       ],
     },
     governance,
     {
-      label: "Help and support",
+      label: "Help",
       icon: <LifeBuoy size={17} />,
       items: [
         { to: "/assistant", label: "Assistant", icon: <Bot size={17} /> },
@@ -93,10 +93,10 @@ export function coreNav({ isAuthorizer = false }: { isAuthorizer?: boolean } = {
       ],
     },
     {
-      label: "Danger zone",
+      label: "Danger",
       icon: <AlertTriangle size={17} />,
       items: [
-        { to: "/danger-zone", label: "Asset removal", icon: <AlertTriangle size={17} /> },
+        { to: "/danger-zone", label: "Decommission", icon: <AlertTriangle size={17} /> },
       ],
     },
   ];
