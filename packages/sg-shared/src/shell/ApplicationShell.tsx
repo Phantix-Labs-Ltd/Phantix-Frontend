@@ -52,6 +52,7 @@ import { PLATFORM_IDENTITY_URL } from "../links";
 import { apiGet, appToken, clearStoredSession, setApplication } from "./api";
 import { isDemoMode, migrateToCookieSession, setActiveApplication, setSessionCardMounted } from "../api";
 import { consumeHandoff, handoffUrl, signOutEverywhere } from "./session";
+import { useDismiss } from "../useDismiss";
 import { IS_DEV_HOSTS } from "../config";
 import { useNoIndex } from "../pageTitle";
 import {
@@ -323,8 +324,11 @@ export function ApplicationShell({
     expireSession,
   } = useStore();
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  // Topbar and sidebar menus close on a press outside them or on Escape.
+  const switcherRef = useDismiss(switcherOpen, () => setSwitcherOpen(false));
   const [me, setMe] = useState<AppIdentity | null>(null);
   const [userMenu, setUserMenu] = useState(false);
+  const userMenuRef = useDismiss(userMenu, () => setUserMenu(false));
   const [mobileNav, setMobileNav] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sandboxEnrolled, setSandboxEnrolled] = useState(false);
@@ -751,7 +755,7 @@ export function ApplicationShell({
 
           {/* Application switcher */}
           <div className="border-t border-phantix-700/60 p-2">
-            <div className="relative">
+            <div ref={switcherRef} className="relative">
               <button
                 onClick={() => setSwitcherOpen((v) => !v)}
                 title="Switch application"
@@ -892,7 +896,7 @@ export function ApplicationShell({
                 <span className="hidden lg:inline">AI Assistant</span>
               </button>
 
-              <div className="relative">
+              <div ref={userMenuRef} className="relative">
                 <button
                   onClick={() => {
                     // Phones: the account lives in the More sheet.
