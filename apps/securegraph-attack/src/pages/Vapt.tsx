@@ -18,6 +18,7 @@ import type { VaptCampaign, VaptFinding, VaptQuota } from "@sg/types";
 import { UpsellBanner } from "@sg/components/UpgradeGate";
 import { SetupRequired } from "@sg/platformSetup";
 import FirstVaptJourney from "../FirstVaptJourney";
+import CampaignAssetPicker from "../CampaignAssetPicker";
 
 /**
  * Free-plan quota strip. The shared free pool is 10 campaigns/day across every
@@ -167,7 +168,10 @@ export default function Vapt() {
     setDetailScrolled(e.currentTarget.scrollTop > 0);
   };
 
+  // The assets the new campaign tests. Without them a draft has nothing in scope.
+  const [createAssetIds, setCreateAssetIds] = useState<number[]>([]);
   const resetCreateForm = () => {
+    setCreateAssetIds([]);
     setCreateForm({ name: "", campaign_type: "web_scan", procedure_key: "web_scan", researchDepth: "standard", bruteforceAcked: false, runGraphql: false, runWebhook: false });
     setCreds({ username: "", password: "", token: "" });
     setAltCreds({ username: "", password: "", token: "" });
@@ -286,6 +290,7 @@ export default function Vapt() {
 
   const handleCreate = async () => {
     if (!createForm.name) { toast("error", "Enter a campaign name"); return; }
+    if (!createAssetIds.length) { toast("error", "Select at least one asset", "A campaign needs assets in scope to test."); return; }
     if (createForm.bruteforceAcked && !bfConfirmText.trim()) {
       toast("warning", "Bruteforce authorization", "Type BRUTEFORCE to confirm the capped login bruteforce.");
       setBfConfirmOpen(true);
@@ -298,6 +303,7 @@ export default function Vapt() {
         campaign_name: createForm.name,
         campaign_type: createForm.campaign_type,
         procedure_key: createForm.procedure_key,
+        asset_scope: { asset_ids: createAssetIds },
         run_inline: false,
         ...(webConfig ? { config: webConfig } : {}),
       });
@@ -1213,6 +1219,13 @@ export default function Vapt() {
             </div>
           </div>
 
+          <div>
+            <label className="label">Assets</label>
+            {createOpen && (
+              <CampaignAssetPicker procedureKey={createForm.procedure_key} selected={createAssetIds} onChange={setCreateAssetIds} />
+            )}
+          </div>
+
           {/* Research depth + ROE gates (VAPT_RESEARCH_ROE_TOGGLES_FE.md §2) */}
           {["web_scan", "api_scan", "full_vapt"].includes(createForm.campaign_type) && (
             <div className="rounded-xl border border-phantix-700/50 bg-phantix-950/50 p-3.5 space-y-3">
@@ -1278,7 +1291,9 @@ export default function Vapt() {
           <p className="text-xs text-slate-500 p-2 rounded-lg bg-phantix-800/40">
             Campaign starts as a <strong>draft</strong> --- you can review and start it from the campaign detail view. Full VAPT requires dual-control approval. Brute-force uses a tiny built-in wordlist and stops on first hit.
           </p>
-          <button className="btn-primary w-full" type="submit">Create campaign</button>
+          <button className="btn-primary w-full" type="submit" disabled={!createAssetIds.length}>
+            {createAssetIds.length ? `Create campaign with ${createAssetIds.length} asset${createAssetIds.length === 1 ? "" : "s"}` : "Select assets to continue"}
+          </button>
         </form>
       </Modal>
 
