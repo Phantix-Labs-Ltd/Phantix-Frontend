@@ -23,10 +23,24 @@ function dnt(): boolean {
   return navigator.doNotTrack === "1" || (window as { doNotTrack?: string }).doNotTrack === "1";
 }
 
+/**
+ * PageSense's "Verify" opens the site with ?ps_verifyscript=true and waits for
+ * its script to run. That URL is only used by Zoho's checker, so on it alone
+ * the script loads without a consent choice; every other visit needs consent.
+ */
+function verifyingSnippet(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get("ps_verifyscript") === "true";
+  } catch {
+    return false;
+  }
+}
+
 /** Add the PageSense script once, when the visitor has accepted it. */
 export function loadPageSense(): void {
   if (loaded || typeof document === "undefined") return;
-  if (DEV || DISABLED || dnt() || getMarketingConsent() !== "accepted") return;
+  if (DEV || DISABLED) return;
+  if (!verifyingSnippet() && (dnt() || getMarketingConsent() !== "accepted")) return;
   loaded = true;
   try {
     const inert = document.getElementById(TAG_ID) as HTMLScriptElement | null;
