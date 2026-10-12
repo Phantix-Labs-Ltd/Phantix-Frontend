@@ -1,37 +1,43 @@
 # The SecureGraph Weekly
 
-A Markdown-driven magazine. The issue landing is a full-screen two-page spread
-(SecureGraph gold-on-dark palette), and every post opens as its own full-page,
-single-column article.
+A Markdown-driven magazine. The issue landing is a full-screen two-page spread in
+the SecureGraph gold-on-dark palette, and every post opens as its own full-page,
+single-column article. Readers only ever see published posts; writing happens in
+the staff portal.
 
-## Architecture
+| | |
+| --- | --- |
+| **Live** | https://blog.phantixlabs.com |
+| **Users** | Public readers |
+| **Part of** | Phantix-Frontend monorepo, `apps/securegraph-blog` |
+| **Stack** | React 18, TypeScript, Vite 5; uses only the `siteFiles` Vite plugin from `packages/sg-shared` |
+| **Local** | http://localhost:5178 |
+| **Deploys to** | Vercel, on push to `main` |
 
-- **This app** — a React/Vite SPA. It fetches posts from an admin backend and
-  renders them. `npm run build` also prerenders the issue page and every essay
-  to static HTML (`prerender.mjs`), embedding the content each page was built
-  from; the browser shows it at once and refreshes it from the API.
-- **The SecureGraph API** — the Phantix backend. It serves the read-only
-  public endpoints below and receives the analytics beacons.
-- **The Staff Portal** — the *only* place posts are written, imported (.md),
+## What it does
+
+| Area | Routes |
+| --- | --- |
+| Issue landing: lead essay on the left page, the other posts summarised on the right | `/` |
+| Full article | `/posts/:slug` |
+
+- Posts are ordered by `order`, then `no`. The `featured` post (or the first)
+  is the lead essay.
+- `npm run build` prerenders the issue page and every essay to static HTML,
+  embedding the content each page was built from. The browser shows it at once
+  and refreshes it from the API.
+- The bundled launch issue (`src/content/posts/*.md`) is shown when no backend is
+  configured or the backend has no published posts, so the issue is never empty.
+
+## How it fits
+
+- **The SecureGraph API** serves the read-only public endpoints below and
+  receives the analytics beacons.
+- **The staff portal** is the only place posts are written, imported (`.md`),
   edited, published and unpublished (`/weekly`, admin staff only). It calls
-  `/api/v1/admin/blog/*`, which requires an admin staff session. Readers and
-  this app can only ever see published posts.
-- **Bundled launch issue** — `src/content/posts/*.md` are bundled in and used
-  when no backend is configured, or while the backend has no published posts,
-  so the site never shows an empty issue. They also serve as the reference
-  format for the admin backend.
+  `/api/v1/admin/blog/*`.
 
-## Content source
-
-Set `VITE_BLOG_API_URL` to switch from demo to live:
-
-| Value | Meaning |
-|-------|---------|
-| unset | demo mode — bundled fixtures |
-| `https://api.example.com/api/v1/blog` | live, absolute (backend must allow CORS) |
-| `/api/v1/blog` | live, same-origin (add a Vercel rewrite for `/api/v1` → backend) |
-
-### Public read contract (`/api/v1/blog`)
+Public read contract (`/api/v1/blog`):
 
 ```
 GET {base}/posts
@@ -58,17 +64,44 @@ GET {base}/posts/{slug}
 → { ...same fields as above..., "body": "# raw markdown…" }
 ```
 
-Only published posts are returned; drafts never leave the Staff Portal. Posts
-are ordered by `order` (then `no`). The `featured` post (or the first post)
-is the lead essay on the left page, shown as its standfirst and opening
-paragraphs with a link to the full piece; the rest are summarised on the right
-page. Every post has its own full page at `/posts/:slug`.
+Analytics are first-party, cookieless, consent-gated and respect Do Not Track.
+Nothing is sent until the reader accepts the banner; consent is shared with the
+landing page through the same cookie key.
 
-### Markdown / frontmatter format
+```
+POST {VITE_ANALYTICS_URL | /api/v1/analytics/collect}
+{
+  app: "blog",
+  sid, path, ref, screen, lang, tz, utm, ts,
+  event: "page_view" | "post_view" | "post_read" | "subscribe_click" | "external_click",
+  slug?, url?
+}
+```
 
-Drop a file like `src/content/posts/05-some-title.md` for the demo issue, or
-import the same file in the Staff Portal (The Weekly → Import .md) to publish it. The numeric prefix becomes the default `no` and the
-filename becomes the slug.
+`post_read` fires when the reader has scrolled through about 90% of an article.
+
+## Run it locally
+
+Prerequisites: Node 20; `npm install` at the repository root.
+
+```bash
+npm run dev:blog          # from the repository root → http://localhost:5178, bundled posts
+```
+
+To read live posts locally, set `VITE_BLOG_API_URL` (below).
+
+## Configuration
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VITE_BLOG_API_URL` | unset: demo mode with the bundled posts | `/api/v1/blog` for same-origin (the committed `vercel.json` rewrites `/api/v1` to the backend), or an absolute `https://…/api/v1/blog` (the backend must allow CORS for the blog origin). |
+| `VITE_ANALYTICS_URL` | `/api/v1/analytics/collect` | Where analytics beacons go. |
+| `VITE_ANALYTICS_DISABLED` | unset | `true` turns analytics off. |
+| `VITE_NEWSLETTER_URL` | unset | Newsletter link when the issue does not set `newsletterUrl`. |
+
+Post format, for a bundled file such as `src/content/posts/05-some-title.md` or a
+file imported in the staff portal (The Weekly → Import .md). The numeric prefix
+becomes the default `no` and the filename becomes the slug.
 
 ```md
 ---
@@ -88,45 +121,37 @@ First paragraph (gets the gold drop cap if it starts the article)…
 Body text with **bold**, *italic*, `inline code`, > quotes, - lists, and links.
 ```
 
-## Analytics (readers analysis)
-
-First-party, cookieless, consent-gated, DNT-respecting. Nothing is sent until
-the reader accepts the banner (consent is shared with the landing page via the
-same cookie key).
+## Project layout
 
 ```
-POST {VITE_ANALYTICS_URL | /api/v1/analytics/collect}
-{
-  app: "blog",
-  sid, path, ref, screen, lang, tz, utm, ts,
-  event: "page_view" | "post_view" | "post_read" | "subscribe_click" | "external_click",
-  slug?, url?
-}
+src/
+  App.tsx           Routes: the issue and the article
+  pages/            Landing (the spread), Post (the article)
+  components/       Header, Markdown, ConsentBanner, loading and error states
+  content/posts/    The bundled launch issue
+  lib/              Content loading, frontmatter, analytics, consent, SEO
+  entry-server.tsx  Server entry for prerendering
+prerender.mjs       Static HTML for the issue and every post
+vercel.json         Build, /api/v1 rewrite, CSP
 ```
 
-Events: `page_view` (every route), `post_view` (article opened), `post_read`
-(scrolled through ~90%), `subscribe_click`, `external_click`. Kill switch:
-`VITE_ANALYTICS_DISABLED=true`. Custom endpoint: `VITE_ANALYTICS_URL`.
-
-## Running
+## Checks
 
 ```bash
-cd apps/securegraph-blog && npm run dev     # 5178, demo fixtures
-cd apps/securegraph-blog && npm run build
+npm run typecheck         # in apps/securegraph-blog
+npm run build
 ```
 
-Or from the repo root (after `npm install`): `npm run dev:blog` / `npm run build:blog`.
+CI runs both on every push and pull request.
 
-## Deploying (Vercel)
+## Deploy
 
-Create a Vercel project for this folder with Root Directory
-`apps/securegraph-blog`. For live content either set `VITE_BLOG_API_URL` to the
-SecureGraph API's absolute `.../api/v1/blog` URL (enable CORS for the blog origin), or set it to
-`/api/v1/blog`; the committed `vercel.json` already rewrites `/api/v1` to the backend:
+The Vercel project has its Root Directory set to `apps/securegraph-blog`. A push
+to `main` deploys production. The committed CSP allows `connect-src 'self' https:`
+and `img-src 'self' data: blob: https:`, so both same-origin proxying and absolute
+backend or image URLs work.
 
-```json
-{ "source": "/api/v1/:path*", "destination": "https://staging.phantix.site/api/v1/:path*" }
-```
+## Related
 
-The committed CSP allows `connect-src 'self' https:` and `img-src 'self' data:
-blob: https:`, so both same-origin proxying and absolute backend/image URLs work.
+- [Repository README](../../README.md) and [DEPLOYMENT.md](../../DEPLOYMENT.md)
+- Staff portal (`Phantix-Labs-Ltd/phantix-staff`): `/weekly`, where posts are written
