@@ -683,11 +683,11 @@ p {
   .skeleton:nth-child(n + 6)::after { animation-delay: 0.45s; }
 
   .nav-item {
-    @apply flex items-center gap-3 rounded-md px-3 py-2 text-sm leading-tight font-medium text-slate-400
+    @apply flex items-center gap-3 rounded-md px-3 py-1.5 text-sm leading-tight font-medium text-slate-400
       transition-all duration-150 hover:text-slate-100 hover:bg-phantix-800/60;
   }
   .nav-item.active {
-    @apply text-slate-100 bg-phantix-850 border-l-2 border-gold-400 -ml-0.5 pl-[10px];
+    @apply text-slate-100 bg-phantix-800;
   }
 
   /* Sidebar section label — quiet grouping caption, not a shouted all-caps
