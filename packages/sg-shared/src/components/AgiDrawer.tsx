@@ -20,6 +20,11 @@ export default function AgiDrawer() {
   const [open, setOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [live, setLive] = useState(() => Boolean(readPersistedAgiSession()));
+  // The workspace mounts once the shell has verified the session (or the
+  // operator opens the drawer). Mounted earlier, during a cross-app handoff, its
+  // first requests carry whatever session this origin held before, and a 401 on
+  // that one tears down the session the handoff is establishing.
+  const [mountWorkspace, setMountWorkspace] = useState(false);
   const location = useLocation();
   const drawer = useDragResize({ initial: DRAWER.reset, min: DRAWER.min, max: DRAWER.max, side: "end" });
 
@@ -42,19 +47,23 @@ export default function AgiDrawer() {
     const onOpen = (e: Event) => {
       const full = Boolean((e as CustomEvent<{ fullscreen?: boolean }>).detail?.fullscreen);
       setOpen(true);
+      setMountWorkspace(true);
       setFullscreen(full);
     };
     const onClose = () => { setOpen(false); setFullscreen(false); };
     const onLive = (e: Event) => {
       setLive(Boolean((e as CustomEvent<{ running?: boolean }>).detail?.running));
     };
+    const onAuthenticated = () => setMountWorkspace(true);
     window.addEventListener("phantix:agi-open", onOpen);
     window.addEventListener("phantix:agi-close", onClose);
     window.addEventListener("phantix:agi-live", onLive);
+    window.addEventListener("phantix:app-authenticated", onAuthenticated);
     return () => {
       window.removeEventListener("phantix:agi-open", onOpen);
       window.removeEventListener("phantix:agi-close", onClose);
       window.removeEventListener("phantix:agi-live", onLive);
+      window.removeEventListener("phantix:app-authenticated", onAuthenticated);
     };
   }, []);
 
@@ -138,9 +147,11 @@ export default function AgiDrawer() {
           </div>
         </div>
         <div className="wb-pane min-h-0 flex-1 bg-phantix-950/95">
-          <Suspense fallback={null}>
-            <AgiWorkspace variant={fullscreen ? "console" : "drawer"} />
-          </Suspense>
+          {mountWorkspace && (
+            <Suspense fallback={null}>
+              <AgiWorkspace variant={fullscreen ? "console" : "drawer"} />
+            </Suspense>
+          )}
         </div>
       </aside>
     </>
