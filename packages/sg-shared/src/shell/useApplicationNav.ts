@@ -9,10 +9,11 @@ import type { ApplicationKey, NavLeaf, NavSection } from "./types";
 // whether the current plan has unlocked it. Building the sidebar from that is
 // what stops the four `nav.tsx` files drifting from the backend.
 //
-// The backend decides which pages exist, their labels and lock state. The
-// static per-app `nav.tsx` decides the grouping: a page it knows sits in its
-// group (with that group's icon, in that order), so the sidebar's dropdowns
-// stay curated. A page it does not know falls back to the backend's `group`.
+// The backend decides which pages exist and their lock state. The static
+// per-app `nav.tsx` decides the grouping and the label: a page it knows sits in
+// its group (with that group's icon and its own label, in that order), so the
+// sidebar stays curated. A page it does not know falls back to the backend's
+// `group` and `label`.
 // It is also the offline/demo fallback and the icon registry, matched by path.
 // If the snapshot has no surfaces we return the fallback unchanged.
 
@@ -61,9 +62,9 @@ export function useApplicationNav(
         const leaf = leafByPath.get(item.to);
         if (!leaf || placed.has(item.to)) continue;
         placed.add(item.to);
-        // A renamed route keeps the frontend's label; the backend's is stale.
-        const renamed = Object.values(RETIRED_PATHS).includes(item.to);
-        items.push({ ...leaf, label: renamed ? item.label : leaf.label, icon: item.icon });
+        // A page the frontend curates keeps its curated label: the sidebar
+        // uses single-word names, and the backend catalog's longer ones lag.
+        items.push({ ...leaf, label: item.label, icon: item.icon });
       }
       if (items.length) groups.push({ label: section.label, icon: section.icon, items });
     }

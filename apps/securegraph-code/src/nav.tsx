@@ -14,13 +14,13 @@ export const NAV: NavSection[] = [
     items: [{ to: "/", label: "Overview", icon: <LayoutDashboard size={17} /> }],
   },
   {
-    label: "Code review",
+    label: "Review",
     icon: <ShieldCheck size={17} />,
     items: [
-      { to: "/code-review", label: "Security review", icon: <ShieldCheck size={17} /> },
+      { to: "/code-review", label: "Findings", icon: <ShieldCheck size={17} /> },
       { to: "/code-review/scans", label: "Scans", icon: <History size={17} /> },
       { to: "/code-review/repositories", label: "Repositories", icon: <GitBranch size={17} /> },
-      { to: "/code-review/pull-requests", label: "Pull requests", icon: <GitPullRequest size={17} /> },
+      { to: "/code-review/pull-requests", label: "Runs", icon: <GitPullRequest size={17} /> },
     ],
   },
   {
@@ -28,12 +28,12 @@ export const NAV: NavSection[] = [
     icon: <Workflow size={17} />,
     items: [
       { to: "/code-review/autofix", label: "AutoFix", icon: <Wrench size={17} /> },
-      { to: "/code-review/continuous-pr", label: "Continuous PR", icon: <Workflow size={17} /> },
-      { to: "/cicd", label: "CI/CD monitoring", icon: <Activity size={17} /> },
+      { to: "/code-review/continuous-pr", label: "Patches", icon: <Workflow size={17} /> },
+      { to: "/cicd", label: "Pipelines", icon: <Activity size={17} /> },
     ],
   },
   {
-    label: "Source control",
+    label: "Sources",
     icon: <GitBranch size={17} />,
     items: [
       { to: "/code-review/providers", label: "Providers", icon: <Plug size={17} /> },
@@ -46,8 +46,8 @@ export const NAV: NavSection[] = [
     label: "Design",
     icon: <PenTool size={17} />,
     items: [
-      { to: "/threat-models", label: "Threat models", icon: <ShieldQuestion size={17} /> },
-      { to: "/context", label: "Product context", icon: <Workflow size={17} /> },
+      { to: "/threat-models", label: "Threats", icon: <ShieldQuestion size={17} /> },
+      { to: "/context", label: "Context", icon: <Workflow size={17} /> },
     ],
   },
   {
