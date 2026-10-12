@@ -43,7 +43,7 @@ import SessionExpiredOverlay from "../components/SessionExpiredOverlay";
 import { openFeedbackReporter } from "../feedback";
 import { OperationsProvider } from "../operations";
 import SandboxBanner from "../components/SandboxBanner";
-import CookieConsent from "../components/CookieConsent";
+import { onSignedIn } from "../analytics";
 import { useStore } from "../store";
 import { shortName } from "../utils";
 import { loadSandboxMe } from "../sandbox";
@@ -475,6 +475,11 @@ export function ApplicationShell({
         new CustomEvent("phantix:app-authenticated", { detail: { identity: me } }),
       );
     }
+  }, [authReady, me]);
+
+  // A signed-in operator accepted the Terms, so the apps ask no cookie question.
+  useEffect(() => {
+    if (authReady && me && !isDemoMode()) onSignedIn();
   }, [authReady, me]);
 
   // Keep an *attended* app session warm. The backend signs out after
@@ -1285,7 +1290,6 @@ export function ApplicationShell({
       {/* Analytics consent banner — lost when the Command Centre monolith was
           retired in favor of this shared shell; nothing was tracked because
           consent could never be granted with no banner to grant it from. */}
-      <CookieConsent />
       </NotificationProvider>
     </OperationsProvider>
   );

@@ -1,17 +1,19 @@
 import React from "react";
 import { Cookie, ShieldCheck, RefreshCw } from "lucide-react";
 import { PageHeader, Card, CardHeader } from "@sg/ui";
-import { clearConsent, getConsent } from "@sg/consent";
+import { getConsent, setConsent } from "@sg/consent";
 
 // ── Cookies and analytics policy ───────────────────────────────────────────────
-// Public page (no auth) linked from the consent banner. States exactly what the
+// Public page (no auth). States exactly what the
 // first-party analytics records and how to change your choice.
 
 export default function Cookies() {
   const consent = getConsent();
 
-  const reset = () => {
-    clearConsent();
+  // The apps show no consent banner (signed-in users accepted the Terms), so the
+  // choice is made here directly.
+  const choose = (choice: "accepted" | "declined") => {
+    setConsent(choice);
     window.location.reload();
   };
 
@@ -57,17 +59,18 @@ export default function Cookies() {
         <Card>
           <CardHeader
             title="Your choice"
-            subtitle="Analytics runs only after you accept"
+            subtitle="On for signed-in users unless you turn it off"
             action={<ShieldCheck size={16} className="text-emerald-300" />}
           />
           <p className="text-sm leading-6 text-slate-300">
-            You can accept or decline analytics at any time. Declining stops all beacons; nothing else in the
-            product is affected.
+            Signed-in users have accepted the Terms of Service, so the apps don't show a consent banner and
+            count page views while you are signed in. You can turn analytics off at any time; that stops all
+            beacons and nothing else in the product is affected. On signed-out pages, nothing is counted
+            unless you accepted analytics on phantixlabs.com.
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-400">
             Your answer is remembered in one strictly-necessary preference cookie,{" "}
-            <code>phantix_cookie_consent</code>, shared by Core, Attack, Defend and Code so you are only asked
-            once. It holds only &ldquo;accepted&rdquo; or &ldquo;declined&rdquo; and expires after a year.
+            <code>phantix_cookie_consent</code>, shared by every Phantix site so one choice applies everywhere. It holds only &ldquo;accepted&rdquo; or &ldquo;declined&rdquo; and expires after a year.
           </p>
           <p className="mt-2 text-xs text-slate-500">
             Current choice:{" "}
@@ -75,8 +78,8 @@ export default function Cookies() {
               {consent === "accepted" ? "Accepted" : consent === "declined" ? "Declined" : "Not set"}
             </strong>
           </p>
-          <button className="btn-secondary mt-4 text-xs" onClick={reset}>
-            <RefreshCw size={13} className="mr-1.5 inline" /> Change my choice
+          <button className="btn-secondary mt-4 text-xs" onClick={() => choose(consent === "declined" ? "accepted" : "declined")}>
+            <RefreshCw size={13} className="mr-1.5 inline" /> {consent === "declined" ? "Turn analytics on" : "Turn analytics off"}
           </button>
         </Card>
 

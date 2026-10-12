@@ -726,6 +726,21 @@ p { text-wrap: pretty; }
   line-height: 1.5;
   color: var(--ink);
 }
+.consent-copy a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.consent-banner-settings { display: block; }
+.consent-settings { display: grid; gap: 0.75rem; }
+.consent-settings .consent-actions { justify-content: flex-end; }
+.consent-option {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.consent-option strong { display: block; color: var(--ink); font-weight: 600; }
+.consent-option input { margin-top: 0.2rem; accent-color: var(--accent); }
 .consent-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 .consent-accept,
 .consent-decline {

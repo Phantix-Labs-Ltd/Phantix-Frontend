@@ -14,6 +14,7 @@
 //   }
 
 import { getConsent } from "./consent";
+import { loadPageSense } from "./pagesense";
 
 export type BlogEvent =
   | { type: "page_view" }
@@ -126,11 +127,13 @@ export function trackPageView(): void {
 /** Arm the tracker once consent is already on file. Safe to call repeatedly. */
 export function initAnalytics(): void {
   if (getConsent() === "accepted") armed = true;
+  loadPageSense();
 }
 
 /** Called by the consent banner when the reader accepts. */
 export function onConsentAccepted(): void {
   armed = true;
+  loadPageSense();
   lastPath = "";
   trackPageView();
 }
