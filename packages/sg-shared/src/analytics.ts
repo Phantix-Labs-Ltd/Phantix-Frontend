@@ -6,7 +6,11 @@
 // Collected server-side by POST /api/v1/analytics/collect and surfaced to
 // staff via GET /api/v1/admin/analytics/summary (staff portal → Analytics).
 //
-// Consent-gated: nothing is sent until the operator accepts analytics.
+// Signed-in operators have accepted the Terms of Service, so the apps show no
+// consent banner: counting starts once the shell has verified the session, unless
+// the visitor declined analytics on the landing site (the choice is shared across
+// every Phantix site through one parent-domain cookie). Signed-out pages count
+// only when analytics was accepted there.
 
 import { getConsent } from "./consent";
 
@@ -102,15 +106,12 @@ function start(): void {
   send();
 }
 
-/**
- * Install the tracker only when the operator has already accepted analytics.
- * Nothing is sent before consent; the banner calls :func:`onConsentAccepted`.
- */
+/** On page load: count straight away only when analytics was accepted. */
 export function initAnalytics(): void {
   if (getConsent() === "accepted") start();
 }
 
-/** Called by the consent banner when the operator accepts. */
-export function onConsentAccepted(): void {
-  start();
+/** Called once the shell has verified a signed-in session. */
+export function onSignedIn(): void {
+  if (getConsent() !== "declined") start();
 }
