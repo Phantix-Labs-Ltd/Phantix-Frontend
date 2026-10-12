@@ -9,6 +9,7 @@ import { api, API_BASE, ApiError, isDemoMode } from "../api";
 import { PLATFORM_URL } from "../config";
 import { timeAgo, cx } from "../utils";
 import { CrossAppLink } from "./CrossAppLink";
+import { useDismiss } from "../useDismiss";
 import type { ApplicationKey } from "../shell/types";
 import type { AlertEvent } from "../types";
 
@@ -373,8 +374,11 @@ export function NotificationBell() {
     if (panelOpen) markAllRead();
   }, [panelOpen, markAllRead]);
 
+  // Pressing anywhere outside the bell or the panel closes it.
+  const ref = useDismiss(panelOpen, () => setPanelOpen(false));
+
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <button
         onClick={() => setPanelOpen((v) => !v)}
         className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-phantix-700/50 bg-phantix-900 text-slate-300 transition-colors hover:border-phantix-500/50 hover:text-white"
@@ -395,7 +399,6 @@ export function NotificationBell() {
       <AnimatePresence>
         {panelOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80]" onClick={() => setPanelOpen(false)} />
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
