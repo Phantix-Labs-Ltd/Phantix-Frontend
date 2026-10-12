@@ -7,6 +7,10 @@
 
 import { getMarketingConsent } from "./consent";
 
+// index.html carries the snippet as an inert tag (type="text/plain") so the
+// PageSense verifier finds it; the browser neither fetches nor runs it. On
+// consent it is replaced by a live script with the same src.
+const TAG_ID = "zoho-pagesense";
 const SRC = "https://cdn.pagesense.io/js/942607551/d62bd6ac25c94fd6b41c27af8080279f.js";
 
 const ENV = (import.meta as unknown as { env?: Record<string, unknown> }).env ?? {};
@@ -25,11 +29,13 @@ export function loadPageSense(): void {
   if (DEV || DISABLED || dnt() || getMarketingConsent() !== "accepted") return;
   loaded = true;
   try {
+    const inert = document.getElementById(TAG_ID) as HTMLScriptElement | null;
     const script = document.createElement("script");
     script.type = "text/javascript";
     script.async = true;
-    script.src = SRC;
-    document.head.appendChild(script);
+    script.src = inert?.getAttribute("src") || SRC;
+    if (inert) inert.replaceWith(script);
+    else document.head.appendChild(script);
   } catch {
     /* marketing analytics must never break the page */
   }
