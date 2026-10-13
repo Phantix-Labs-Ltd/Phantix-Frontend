@@ -9,6 +9,19 @@ import type { IssueMeta, Post, PostSummary } from "../lib/types";
 
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
+function joinNames(names: string[]): string {
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/** The writer(s) of a piece, shown under the headline when the data has them. */
+function ContributorLine({ post }: { post: PostSummary }) {
+  const names = (post.contributors ?? []).map((c) => c.name).filter(Boolean);
+  if (!names.length) return null;
+  return <p className="contrib-byline">By {joinNames(names)}</p>;
+}
+
 export function Landing() {
   const { issue, posts, loading, error } = useIssue();
   const featuredSlug = posts.find((p) => p.featured)?.slug ?? posts[0]?.slug;
@@ -108,6 +121,7 @@ function FeaturedEssay({ post }: { post: Post }) {
     <section className="sec" data-reveal style={d(350)}>
       <p className="sec-no">{post.no}</p>
       <h2 className="sec-title">{post.title}</h2>
+      <ContributorLine post={post} />
       {post.excerpt ? <p className="essay-standfirst">{post.excerpt}</p> : null}
       <div className="essay">
         <Markdown>{leadParagraphs(post.body)}</Markdown>
@@ -162,6 +176,7 @@ function SectionSummary({ post }: { post: PostSummary }) {
     <section className="sec" data-reveal style={d(220)}>
       <p className="sec-no">{post.no}</p>
       <h2 className="sec-title">{post.title}</h2>
+      <ContributorLine post={post} />
       <div className="sec-body">
         <p>{post.excerpt}</p>
       </div>
