@@ -48,6 +48,8 @@ export interface PostSummary {
 /** A full post with its raw markdown body. */
 export interface Post extends PostSummary {
   body: string;
+  /** Reader-ready rendering from the editor (exact spacing); prefer when set. */
+  body_html?: string;
 }
 
 /** GET /posts — the admin backend's list shape. */
