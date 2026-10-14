@@ -282,6 +282,15 @@ p { text-wrap: pretty; }
 .byline a { color: var(--accent); text-decoration: none; }
 .byline a:hover { color: var(--accent-bright); }
 
+.contrib-byline {
+  margin: 0.4rem 0 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
 /* ── Section heading pattern (01–04) ────────────────────────────────────── */
 .sec { margin-top: clamp(2.5rem, 5vw, 4rem); scroll-margin-top: 2rem; }
 .sec-no {
@@ -569,6 +578,45 @@ p { text-wrap: pretty; }
   text-transform: uppercase;
   color: var(--ink-soft);
 }
+
+.post-contributors {
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--hairline);
+}
+.post-contributors .colophon-label { margin: 0 0 0.6rem; }
+.contributor-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.contributor-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.contributor-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-bright);
+  font-size: 0.6rem;
+  letter-spacing: 0.02em;
+}
+.contributor-edits { opacity: 0.65; }
 
 .article { margin-top: clamp(2rem, 4vw, 3rem); }
 .article .md-p { font-size: clamp(1.05rem, 1.2vw, 1.15rem); line-height: 1.8; }

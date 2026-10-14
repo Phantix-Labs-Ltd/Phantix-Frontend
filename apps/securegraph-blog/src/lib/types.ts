@@ -13,6 +13,24 @@ export interface IssueMeta {
   newsletterUrl: string;
 }
 
+/** A byline: someone who wrote or rewrote the copy (approvers are not listed). */
+export interface Contributor {
+  name: string;
+  initials: string;
+  edits: number;
+  first_at: string | null;
+  last_at: string | null;
+}
+
+/** The compact issue a post belongs to. */
+export interface IssueRef {
+  id: number;
+  slug: string;
+  number: string;
+  name: string;
+  date: string;
+}
+
 /** A post as returned by the list endpoint (no markdown body). */
 export interface PostSummary {
   slug: string;
@@ -23,6 +41,8 @@ export interface PostSummary {
   kicker?: string;
   excerpt: string;
   featured?: boolean;
+  contributors?: Contributor[];
+  issue?: IssueRef | null;
 }
 
 /** A full post with its raw markdown body. */
