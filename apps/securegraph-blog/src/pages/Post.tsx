@@ -65,7 +65,11 @@ export function Post() {
         {post.excerpt ? <p className="post-standfirst" data-reveal style={d(240)}>{post.excerpt}</p> : null}
 
         <div className="article" data-reveal style={d(280)}>
-          <Markdown>{post.body}</Markdown>
+          {post.body_html?.trim() ? (
+            <div className="post-html" dangerouslySetInnerHTML={{ __html: post.body_html }} />
+          ) : (
+            <Markdown>{post.body}</Markdown>
+          )}
         </div>
 
         {contributors.length > 1 ? (
