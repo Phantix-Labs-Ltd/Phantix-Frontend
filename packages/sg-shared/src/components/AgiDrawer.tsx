@@ -69,6 +69,24 @@ export default function AgiDrawer() {
 
   const hide = () => { setOpen(false); setFullscreen(false); };
 
+  // Closed, the panel slides off the right edge and is then taken out of
+  // layout (display: none, so the workspace stays mounted). Left translated,
+  // phones counted it as page width and the page scrolled sideways.
+  const [parked, setParked] = useState(true);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setShown(false);
+      // Backstop for a close that never ran the slide (e.g. closed mid-open).
+      const t = window.setTimeout(() => setParked(true), 400);
+      return () => window.clearTimeout(t);
+    }
+    setParked(false);
+    let inner = 0;
+    const outer = requestAnimationFrame(() => { inner = requestAnimationFrame(() => setShown(true)); });
+    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
+  }, [open]);
+
   return (
     <>
       <button
@@ -107,7 +125,8 @@ export default function AgiDrawer() {
       </AnimatePresence>
 
       <aside
-        className={cxPanel(fullscreen, open)}
+        className={cx(cxPanel(fullscreen, shown), parked && "!hidden")}
+        onTransitionEnd={(e) => { if (e.target === e.currentTarget && !open) setParked(true); }}
         style={fullscreen ? undefined : { width: drawer.size, maxWidth: "94vw" }}
         onClick={(e) => e.stopPropagation()}
         aria-hidden={!open}
@@ -160,7 +179,7 @@ export default function AgiDrawer() {
 
 function cxPanel(fullscreen: boolean, open: boolean): string {
   // Phones: the agent takes the whole screen like a native app view.
-  const base = "fixed z-[85] flex flex-col overflow-hidden bg-phantix-950/95 shadow-card border-l border-phantix-700/40 transition-transform duration-300 max-md:left-0 max-md:!w-auto max-md:border-l-0 max-md:pt-[env(safe-area-inset-top)]";
+  const base = "fixed z-[85] flex flex-col overflow-hidden bg-phantix-950/95 shadow-card border-l border-phantix-700/40 transition-transform duration-300 max-md:left-0 max-md:!w-auto max-md:!max-w-none max-md:border-l-0 max-md:pt-[env(safe-area-inset-top)]";
   const hidden = open ? "" : "pointer-events-none translate-x-full";
   if (fullscreen) return cx(base, "inset-0 !border-l-0", hidden);
   return cx(base, "right-0 top-0 bottom-0", hidden);
