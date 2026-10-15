@@ -16,7 +16,6 @@ import {
   LifeBuoy,
   Lock,
   LogOut,
-  Menu,
   MessageSquareWarning,
   PanelLeftClose,
   PanelLeftOpen,
@@ -351,7 +350,6 @@ export function ApplicationShell({
   const [me, setMe] = useState<AppIdentity | null>(null);
   const [userMenu, setUserMenu] = useState(false);
   const userMenuRef = useDismiss(userMenu, () => setUserMenu(false));
-  const [mobileNav, setMobileNav] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sandboxEnrolled, setSandboxEnrolled] = useState(false);
   // Sandbox is only offered to organizations enrolled in a cohort. The backend
@@ -473,7 +471,6 @@ export function ApplicationShell({
   }, [application, hosts.core, expireSession]);
 
   useEffect(() => {
-    setMobileNav(false);
     setUserMenu(false);
     setSwitcherOpen(false);
   }, [location.pathname]);
@@ -823,14 +820,6 @@ export function ApplicationShell({
         >
           {/* Topbar */}
           <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-phantix-700/60 bg-phantix-950 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:gap-3 sm:px-6">
-            {/* Phones navigate with the bottom tab bar; the dropdown stays for tablets. */}
-            <button
-              onClick={() => setMobileNav((v) => !v)}
-              aria-label={mobileNav ? "Close navigation" : "Open navigation"}
-              className="hidden rounded-md border border-phantix-700 bg-phantix-900 p-2 text-slate-400 transition-colors hover:border-phantix-600 hover:text-white md:inline-flex lg:hidden"
-            >
-              {mobileNav ? <X size={18} /> : <Menu size={18} />}
-            </button>
             {/* Phone app bar: brand mark + the current page. */}
             <BrandMark className="h-7 w-7 shrink-0 md:hidden" />
             <span className="min-w-0 flex-1 truncate font-display text-[17px] font-bold text-white md:hidden">{phoneTitle}</span>
@@ -1061,61 +1050,6 @@ export function ApplicationShell({
             </div>
           </header>
 
-          {/* Mobile nav drawer */}
-          <AnimatePresence>
-            {mobileNav && (
-              <motion.div
-                key="mobile-nav-scrim"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setMobileNav(false)}
-                aria-hidden="true"
-                className="fixed inset-x-0 bottom-0 top-[57px] z-30 hidden bg-black/75 backdrop-blur-sm md:block lg:hidden"
-              />
-            )}
-            {mobileNav && (
-              // Tablets only (phones use the tab bar): an opaque, raised panel over
-              // a dimmed page, so it never reads as drawn onto the content.
-              <motion.div
-                key="mobile-nav-panel"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="fixed inset-x-0 top-[57px] z-40 hidden max-h-[calc(100vh-57px)] overflow-y-auto border-b border-phantix-600/60 bg-[rgb(var(--surface-card))] shadow-2xl md:block lg:hidden"
-              >
-                <nav className="space-y-0.5 px-3 py-4">{renderNav(false)}</nav>
-                <div className="border-t border-phantix-700/40 px-2.5 pb-3">
-                  <div className="rounded-md border border-phantix-700 bg-phantix-900 p-2">
-                    <p className="text-[13px] font-semibold text-slate-500">{dualControl.policy_mode === "off" ? "Solo mode" : "Dual control"}</p>
-                    {dualControl.policy_mode === "off" ? (
-                      <p className="mt-1 text-[13px] text-slate-500">Sensitive actions ask for a code.</p>
-                    ) : operate.unlocked ? (
-                      <p className="mt-1 text-xs font-medium text-emerald-300">
-                        Operating as {shortName(operate.actingUser ?? session?.userName)}
-                      </p>
-                    ) : dualControl.configured ? (
-                      <button
-                        onClick={() =>
-                          void requireDualControl(
-                            "Unlock operate mode to perform protected mutations.",
-                          )
-                        }
-                        className="btn-primary mt-1 w-full !px-3 !py-1 !text-[13px]"
-                      >
-                        <Unlock size={12} /> Unlock operate
-                      </button>
-                    ) : (
-                      <p className="mt-1 text-[13px] text-slate-500">
-                        Not set up. Configure it on the Platform
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Demo tenant banner */}
           {demoActive && (
             <div className="relative z-20 flex flex-wrap items-center gap-3 border-b border-phantix-700/60 bg-phantix-950 px-4 py-2.5 sm:px-6">
@@ -1147,7 +1081,7 @@ export function ApplicationShell({
               fills the space left between the header and the footer. */}
           <main
             ref={setMainEl}
-            className="flex min-w-0 flex-1 flex-col px-4 pb-[calc(88px+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:py-6 lg:px-8"
+            className="flex min-w-0 flex-1 flex-col px-4 pb-[calc(88px+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:pt-6 lg:px-8 lg:pb-6"
           >
             {/* The one content measure, defined here so page, skeleton and
                 shell cannot drift apart. 1600px is a backstop: an ultrawide
@@ -1171,7 +1105,7 @@ export function ApplicationShell({
             </div>
           </main>
 
-          <footer className="hidden items-center justify-between border-t border-phantix-700/60 px-6 py-4 text-[13px] text-slate-600 md:flex lg:px-8">
+          <footer className="hidden items-center justify-between border-t border-phantix-700/60 px-6 py-4 text-[13px] text-slate-600 lg:flex lg:px-8">
             <span>
               Phantix Labs Ltd
               <span className="block">
@@ -1185,7 +1119,7 @@ export function ApplicationShell({
         </div>
       </div>
 
-      {/* Phone shell: bottom tabs from this app's nav, and the More sheet. */}
+      {/* Below desktop width: bottom tabs from this app's nav, and the More sheet. */}
       <MobileTabBar nav={nav} moreOpen={moreOpen} onMore={() => setMoreOpen((v) => !v)} />
       <MobileMoreSheet
         open={moreOpen}

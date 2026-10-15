@@ -173,7 +173,7 @@ export function PageHeader({
           too so a phone gets two lines of buttons, not a sideways-scrolling page.
           Header buttons run compact: they sit beside a title, not a form. */}
       {actions && (
-        <div className={cx("flex min-w-0 max-w-full flex-wrap items-center gap-2 [&>div]:flex-wrap", HEADER_BTN)}>{actions}</div>
+        <div className={cx("flex min-w-0 max-w-full flex-wrap items-center gap-2 [&>div]:flex-wrap [&>span]:flex-wrap [&_a]:whitespace-nowrap [&_button]:whitespace-nowrap", HEADER_BTN)}>{actions}</div>
       )}
     </motion.div>
   );
