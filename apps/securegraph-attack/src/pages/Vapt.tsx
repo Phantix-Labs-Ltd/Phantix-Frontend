@@ -26,27 +26,66 @@ import CampaignAssetPicker from "../CampaignAssetPicker";
  * queued and rolls over each day until it runs. Showing this keeps the operator
  * in the loop instead of meeting a 429 with no context.
  */
+/** Ticking clock for the weekly-allowance countdown. */
+function useNow(intervalMs = 1000): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(t);
+  }, [intervalMs]);
+  return now;
+}
+
+/** "3d 4h" / "5h 12m" / "8m" until an ISO timestamp. */
+function cooldownLabel(iso: string | null | undefined, now: number): string {
+  if (!iso) return "";
+  const end = new Date(iso).getTime();
+  if (Number.isNaN(end)) return "";
+  const ms = end - now;
+  if (ms <= 0) return "available now";
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
 function VaptQuotaBanner({ quota }: { quota: VaptQuota }) {
+  const now = useNow();
   if (!quota?.is_free) return null;
   const pool = quota.daily_slots ?? 10;
   const remaining = quota.remaining_today ?? 0;
   const exhausted = quota.pool_exhausted ?? remaining <= 0;
   const weekLeft = quota.requests_remaining_this_week ?? null;
+  // Weekly allowance spent: upgrade, or wait for the cooldown to lapse.
+  const weeklyOut = quota.can_request === false || weekLeft === 0;
+  const resetAt = quota.next_request_at ?? null;
   return (
-    <Card className={cx("!p-3 mb-3 border", exhausted ? "border-severity-medium/40 bg-severity-medium/5" : "border-emerald-400/30 bg-emerald-400/5")}>
+    <Card className={cx("!p-3 mb-3 border", weeklyOut ? "border-severity-high/40 bg-severity-high/5" : exhausted ? "border-severity-medium/40 bg-severity-medium/5" : "border-emerald-400/30 bg-emerald-400/5")}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
         <span className="font-semibold text-slate-200">Free plan quota</span>
-        <span className={exhausted ? "text-severity-medium" : "text-emerald-300"}>
-          Shared pool: {remaining} of {pool} campaign{pool === 1 ? "" : "s"} left today
-        </span>
-        {weekLeft != null && (
-          <span className="text-slate-400">
-            Weekly requests: {weekLeft} of {quota.weekly_limit ?? 1} left
+        {weeklyOut ? (
+          <span className="text-severity-high">
+            You have used your free VAPT allowance of 1 request per week. Upgrade for
+            unlimited scans, or wait until <strong>{resetAt ? formatDateTime(resetAt) : "next week"}</strong>
+            {resetAt ? ` (${cooldownLabel(resetAt, now)} left)` : ""}.
           </span>
-        )}
-        {(quota.queued ?? 0) > 0 && <span className="text-slate-400">{quota.queued} queued</span>}
-        {exhausted && (
-          <span className="text-slate-400">New requests are queued and roll over daily until they run.</span>
+        ) : (
+          <>
+            <span className={exhausted ? "text-severity-medium" : "text-emerald-300"}>
+              Shared pool: {remaining} of {pool} campaign{pool === 1 ? "" : "s"} left today
+            </span>
+            {weekLeft != null && (
+              <span className="text-slate-400">
+                Weekly requests: {weekLeft} of {quota.weekly_limit ?? 1} left
+              </span>
+            )}
+            {(quota.queued ?? 0) > 0 && <span className="text-slate-400">{quota.queued} queued</span>}
+            {exhausted && (
+              <span className="text-slate-400">New requests are queued and roll over daily until they run.</span>
+            )}
+          </>
         )}
       </div>
     </Card>
@@ -135,6 +174,8 @@ export default function Vapt() {
   const vaptApprovals = data.approvals;
   const securityDbBlocked = data.securityDbBlocked;
   const loadError = data.error;
+  // Intelligent Plan is Premium-only (see plan_catalog); grey it out on Free.
+  const intelligentPlanEnabled = data.quota?.intelligent_plan_enabled ?? true;
   const [tab, setTab] = useState("campaigns");
   const [selected, setSelected] = useState<VaptCampaign | null>(null);
   // A concurrency 409 names the campaign in the way + the actions the state
@@ -478,9 +519,14 @@ export default function Vapt() {
           <>
             <DocLink docId="howto-app-06" label="VAPT how-to" />
             <button
-              className="btn-secondary"
+              className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
               onClick={handlePlan}
-              disabled={planning}
+              disabled={planning || !intelligentPlanEnabled}
+              title={
+                intelligentPlanEnabled
+                  ? undefined
+                  : "The Intelligent Plan is a Premium feature. Upgrade to generate intelligent assessments."
+              }
             >
               <Sparkles size={15} /> {planning ? "Planning..." : "Intelligent Plan"}
             </button>

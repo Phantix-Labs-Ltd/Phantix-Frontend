@@ -480,6 +480,12 @@ export interface VaptQuota {
   queued?: number;
   next_slot_at?: string;
   pool_exhausted?: boolean;
+  /** Weekly request cap: may the org request now, and when it may next act. */
+  can_request?: boolean;
+  next_request_at?: string | null;
+  message?: string;
+  /** Intelligent Plan (Intelligent Orchestrator) is a paid feature. */
+  intelligent_plan_enabled?: boolean;
 }
 
 /** One vulnerability type under a campaign scan step. */
