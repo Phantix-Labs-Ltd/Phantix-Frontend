@@ -69,12 +69,13 @@
 ### Buy AI credits
 
 1. Read the **AI credits** strip. It shows the total, the cycle, and each bucket.
-2. Click a bundle: 500, 2,000, or 5,000 credits.
+2. Under **Top up**, click an amount: ₦5,000, ₦10,000, ₦20,000, ₦30,000 or ₦50,000. Each button shows the credits it buys.
+   Or click **Custom**, enter an amount from ₦5,000 to ₦1,000,000, read the credits it buys, then click **Buy**.
 3. Complete the operate prompt when Platform asks.
 4. Complete the payment on the Paystack page.
 5. Confirm the new balance.
 
-**Result:** The credit wallet holds the new total for the cycle.
+**Result:** The credit wallet holds the new total. Top-up credits never expire.
 
 ---
 
@@ -109,7 +110,9 @@
 
 | Item | Detail |
 | --- | --- |
-| Bundles | 500 credits, 2,000 credits, and 5,000 credits |
+| Top-up amounts | ₦5,000, ₦10,000, ₦20,000, ₦30,000, ₦50,000, or a custom amount from ₦5,000 to ₦1,000,000 |
+| Top-up rate | ₦6 per credit, set by the backend (`top_up_options.ngn_per_credit`); for example ₦30,000 buys 5,000 credits |
+| Plan credits | Starter 5,000 a month, Growth 10,000 a month, Free 500 once |
 | Buckets | `allowance`, `allotment`, and `topup` |
 | States | `exhausted` and `low` |
 | Cycle | A month value, for example `2026-09` |
