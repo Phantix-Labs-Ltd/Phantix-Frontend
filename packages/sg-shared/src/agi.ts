@@ -4,6 +4,7 @@
 
 import { api, ApiError, delay, isDemoMode, publicDetailCopy, streamSse } from "./api";
 import { AGI_ENABLED as AGI_FLAG } from "./config";
+import { AGI_PILOT, clampAgiAutonomy, type AgiAutonomy } from "./agiPilot";
 import type {
   AgiAccess,
   AgiAction,
@@ -16,6 +17,17 @@ import type {
   AgiSession,
   AgiTranscriptChunk,
 } from "./types";
+
+export {
+  AGI_PILOT,
+  clampAgiAutonomy,
+  readAgiPilotPosture,
+  agiHardStopRemaining,
+  isCustomerAgiFindingVisible,
+  agiPilotStatusCopy,
+  type AgiAutonomy,
+  type AgiPilotPostureSummary,
+} from "./agiPilot";
 
 /** Master switch — mirrors backend PHANTIX_AGI_ENABLED (see config.ts). */
 export const AGI_ENABLED = AGI_FLAG;
@@ -214,7 +226,7 @@ function demoAccess(): AgiAccess {
       can_use: canUse,
       limits: {
         daily_session_limit: 5,
-        max_session_minutes: 60,
+        max_session_minutes: AGI_PILOT.defaultHardStopMinutes,
         max_allowlist_targets: 10,
         allow_state_changing: true,
         require_dual_control_for_active: false,
@@ -260,7 +272,7 @@ function demoSeedEngagements(): void {
         target_allowlist: ["https://lab.acme.example", "https://api.acme-lab.example"],
         forbidden_actions: ["dos", "ransomware", "data_exfil_bulk"],
         rules_of_engagement: "Business hours only. Stop on PII.",
-        max_session_minutes: 60,
+        max_session_minutes: AGI_PILOT.defaultHardStopMinutes,
       },
       status: "ready",
       config: { prompts: {}, tools: ["httpx", "nmap_safe", "nuclei_safe"], skills: { auto_select: true, auto_select_limit: 6 } },
@@ -276,7 +288,7 @@ function demoSeedEngagements(): void {
         target_allowlist: ["10.20.0.0/24", "staging.acme-lab.example"],
         forbidden_actions: ["dos"],
         rules_of_engagement: "Lab network only. No production hosts.",
-        max_session_minutes: 45,
+        max_session_minutes: AGI_PILOT.defaultHardStopMinutes,
       },
       status: "ready",
       config: { prompts: {}, tools: ["nmap_safe"], skills: { auto_select: true, auto_select_limit: 4 } },
@@ -418,6 +430,11 @@ export async function createAgiEngagement(payload: {
   scope: { target_allowlist: string[]; forbidden_actions: string[]; rules_of_engagement?: string; max_session_minutes?: number };
   config?: Record<string, unknown>;
 }): Promise<AgiEngagement> {
+  // Pilot hard-stop default (120m) when the caller omits a ceiling.
+  const hardStop =
+    payload.scope.max_session_minutes != null && payload.scope.max_session_minutes > 0
+      ? payload.scope.max_session_minutes
+      : AGI_PILOT.defaultHardStopMinutes;
   if (isDemoMode()) {
     await delay(300);
     const eng: AgiEngagement = {
@@ -429,7 +446,7 @@ export async function createAgiEngagement(payload: {
         target_allowlist: payload.scope.target_allowlist,
         forbidden_actions: payload.scope.forbidden_actions,
         rules_of_engagement: payload.scope.rules_of_engagement ?? "",
-        max_session_minutes: payload.scope.max_session_minutes ?? 60,
+        max_session_minutes: hardStop,
       },
       status: "ready",
       config: payload.config ?? { prompts: {}, tools: ["httpx", "nmap_safe", "nuclei_safe"], skills: { auto_select: true, auto_select_limit: 6 } },
@@ -447,7 +464,7 @@ export async function createAgiEngagement(payload: {
       rules_of_engagement: payload.scope.rules_of_engagement ?? "",
       target_environment: "staging",
       production_ack: false,
-      max_session_minutes: payload.scope.max_session_minutes,
+      max_session_minutes: hardStop,
     },
   }, { dualControl: true });
 }
@@ -509,7 +526,9 @@ export async function loadActiveAgiSession(): Promise<AgiSession | null> {
 }
 
 export type AgiSessionStartOpts = {
-  autonomy?: "low" | "medium" | "high";
+  autonomy?: AgiAutonomy | string;
+  /** Lab/eval only — pass true to allow autonomy "high" through the pilot clamp. */
+  allowHighAutonomy?: boolean;
   include_org_assets?: boolean;
   preapprove_lab_auth?: boolean;
   confirm_environment?: string;
@@ -531,7 +550,7 @@ export async function startAgiSession(
   }
   const body: Record<string, unknown> = {
     instruction,
-    autonomy: opts.autonomy ?? "medium",
+    autonomy: clampAgiAutonomy(opts.autonomy, { allowHigh: opts.allowHighAutonomy }),
     include_org_assets: opts.include_org_assets ?? false,
     confirm_environment: opts.confirm_environment ?? "staging",
   };

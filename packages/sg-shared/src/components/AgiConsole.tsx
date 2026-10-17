@@ -25,7 +25,7 @@ import {
 import { PaneHeader, ResizeHandle } from "./workbench";
 import PentestTodo from "./PentestTodo";
 import { useDragResize } from "../useDragResize";
-import { loadAgiFindings, decideAgiFindingVerification } from "../agi";
+import { loadAgiFindings, decideAgiFindingVerification, isCustomerAgiFindingVisible } from "../agi";
 import {
   deriveAttackGraph,
   deriveFindings,
@@ -85,7 +85,10 @@ function toAgiFinding(raw: Record<string, unknown>): AgiFinding {
   const severity: Severity = (SEV_SET.has(sevRaw) ? sevRaw : "info") as Severity;
   const statusRaw = String(raw.status ?? "").toLowerCase();
   const status: AgiFinding["status"] =
-    statusRaw === "validated" || statusRaw === "confirmed"
+    statusRaw === "validated" ||
+    statusRaw === "confirmed" ||
+    statusRaw === "verified" ||
+    statusRaw === "promoted"
       ? "validated"
       : statusRaw === "rejected" || statusRaw === "dismissed"
         ? "rejected"
@@ -610,14 +613,16 @@ export default function AgiConsole({
   }, [liveFindings]);
 
   const findings = useMemo(() => {
-    // Backend findings are the source of truth for the pane. The agent records
-    // real findings the transcript heuristic never recognizes, so show the
-    // live list first and keep derived entries only for titles the backend has
-    // not surfaced yet (demo mode / before the first finding lands).
-    const live = liveFindings.map(toAgiFinding);
+    // Backend findings are the source of truth for the pane. Under pilot
+    // posture the customer console only surfaces confirmed/verified rows
+    // (candidates stay internal until a verifier or operator confirms).
+    const live = liveFindings
+      .filter((f) => isCustomerAgiFindingVisible(f))
+      .map(toAgiFinding);
     const liveTitles = new Set(live.map((f) => f.title.trim().toLowerCase()));
     const derived = deriveFindings(transcript, actions, engagement)
       .filter((f) => !liveTitles.has(f.title.trim().toLowerCase()))
+      .filter((f) => f.status === "validated")
       .map((f) => {
         const liveMatch = verificationMap[`${f.title.toLowerCase()}|${f.target.toLowerCase()}`];
         if (!liveMatch?.verification) return f;
