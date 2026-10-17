@@ -26,7 +26,7 @@ export default defineConfig(({ mode, isSsrBuild }) => {
         ],
         // Every authenticated surface (see src/App.tsx). `/assets` is absent on
         // purpose: a prefix `Disallow: /assets` would also block Vite's hashed
-        // /assets/*.js bundle and break rendering-based indexing. The catch-all
+        // /static/*.js bundle and break rendering-based indexing. The catch-all
         // below still blocks the operator pages.
         disallow: [
           "/api/",
@@ -71,6 +71,11 @@ export default defineConfig(({ mode, isSsrBuild }) => {
       // ~700 KB and load only on the pages that draw diagrams. The first-paint
       // bundle has its own, stricter budget (siteFiles, in plugins above).
       chunkSizeWarningLimit: 700,
+      // Built files go to /static, not Vite's default /assets: /assets is also
+      // the Assets page. A full load of that page (a refresh, a bookmark, a
+      // cross-app link) hit the build folder first and served a JS file
+      // instead of the app.
+      assetsDir: "static",
       rollupOptions: {
         output: {
           manualChunks: {
