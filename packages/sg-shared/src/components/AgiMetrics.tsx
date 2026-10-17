@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AlertTriangle, ChevronDown, Clock, Gauge, Lock, ShieldCheck, Target } from "lucide-react";
+import { agiHardStopRemaining, agiPilotStatusCopy, readAgiPilotPosture } from "../agiPilot";
 import type { AgiAccess, AgiSession, AiUsage } from "../types";
 import { cx, humanize } from "../utils";
 
@@ -152,12 +153,23 @@ export default function AgiMetrics({
   className?: string;
 }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const agi = access?.agi;
   const limits = agi?.limits;
   const loop = session?.loop ?? null;
   const phase = loop?.active_phase || loop?.phase || (running ? "starting" : "Not set");
   const turn = typeof loop?.turn === "number" ? loop.turn : null;
   const blockers = loop?.blockers?.length ?? 0;
+  const posture = readAgiPilotPosture(session);
+  const hardStop = agiHardStopRemaining(session, nowMs);
+  const pilotCopy = session ? agiPilotStatusCopy(session) : null;
+
+  // Tick the hard-stop countdown while a session is live.
+  useEffect(() => {
+    if (!running || !session) return;
+    const t = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, [running, session]);
 
   // Budget state is the one metric that can stop a run mid-flight, so it is
   // stated rather than implied by a bar the eye has to measure.
@@ -183,6 +195,20 @@ export default function AgiMetrics({
       )}
       {(!collapsible || !collapsed) && (
         <>
+      {pilotCopy && (
+        <p
+          className={cx(
+            "rounded-lg border px-2.5 py-1.5 text-[12px] leading-relaxed",
+            posture.enabled
+              ? "border-gold-400/25 bg-gold-400/[0.06] text-gold-100/90"
+              : "border-amber-400/30 bg-amber-400/10 text-amber-200",
+          )}
+          title={pilotCopy}
+        >
+          {pilotCopy}
+          {hardStop ? ` · ${hardStop.label}` : ""}
+        </p>
+      )}
       {/* Run */}
       <section>
         <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -198,9 +224,20 @@ export default function AgiMetrics({
           <Metric label="Turn" value={turn != null ? turn : "Not set"} />
           <Metric label="Elapsed" value={sessionElapsed(session)} />
           <Metric
+            label="Hard stop"
+            value={hardStop ? hardStop.label : posture.hardStopMinutes ? `${posture.hardStopMinutes}m` : "—"}
+            tone={hardStop?.urgent ? "warn" : hardStop && hardStop.minutes <= 0 ? "bad" : "default"}
+            title={
+              posture.hardStopAt
+                ? `Session hard-stops at ${posture.hardStopAt}`
+                : "Wall-clock pilot ceiling (default 120 minutes)"
+            }
+          />
+          <Metric
             label="Findings"
             value={findingCount}
             tone={findingCount > 0 ? "gold" : "default"}
+            title="Confirmed findings visible in the customer console"
           />
           <Metric
             label="Approvals"
@@ -290,17 +327,34 @@ export default function AgiMetrics({
             title={agi?.active_policy_version ? `policy ${agi.active_policy_version}` : undefined}
           />
           <Metric
+            label="Autonomy"
+            value={session ? posture.autonomy : "medium"}
+            title={
+              posture.autonomyClampedFrom
+                ? `Clamped from ${posture.autonomyClampedFrom} under pilot posture`
+                : "Pilot caps autonomy at medium (exploit/brute gated)"
+            }
+          />
+          <Metric
             label="Targets per session"
             value={limits?.max_allowlist_targets ?? "Not set"}
             title="Most targets one session may run against"
           />
           <Metric
             label="Session cap"
-            value={limits?.max_session_minutes ? `${limits.max_session_minutes}m` : "uncapped"}
+            value={
+              posture.hardStopMinutes
+                ? `${posture.hardStopMinutes}m`
+                : limits?.max_session_minutes
+                  ? `${limits.max_session_minutes}m`
+                  : "uncapped"
+            }
             title={
-              limits?.max_session_minutes
-                ? "Sessions are torn down at this ceiling"
-                : "A session runs until the agent finishes, you stop it, or AI credits run out"
+              posture.hardStopMinutes
+                ? "Pilot hard-stop ceiling for this session"
+                : limits?.max_session_minutes
+                  ? "Sessions are torn down at this ceiling"
+                  : "A session runs until the agent finishes, you stop it, or AI credits run out"
             }
           />
           <Metric
@@ -320,6 +374,23 @@ export default function AgiMetrics({
           >
             {limits?.allow_state_changing ? "state-changing allowed" : "read-only"}
           </span>
+          {session && (
+            <span
+              className={cx(
+                "chip !px-2 !py-0.5 text-[12px]",
+                posture.enabled
+                  ? "border-gold-400/30 bg-gold-400/10 text-gold-300"
+                  : "border-amber-400/30 bg-amber-400/10 text-amber-300",
+              )}
+            >
+              {posture.enabled ? "pilot posture" : "lab mode"}
+            </span>
+          )}
+          {session && !posture.blanketApproval && (
+            <span className="chip !px-2 !py-0.5 border-phantix-600/40 bg-phantix-800/50 text-[12px] text-slate-400">
+              per-action approvals
+            </span>
+          )}
           {limits?.require_dual_control_for_active && (
             <span className="chip !px-2 !py-0.5 border-phantix-600/40 bg-phantix-800/50 text-[12px] text-slate-400">
               <Lock size={8} className="mr-1 inline" /> dual-control

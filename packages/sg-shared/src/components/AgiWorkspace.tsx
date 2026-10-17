@@ -45,6 +45,8 @@ import {
   streamAgiSession,
   pauseAgiSession,
   resumeAgiSession,
+  AGI_PILOT,
+  isCustomerAgiFindingVisible,
   normalizeAgiLoop,
   loadEngagementCapabilities,
   type AgiCapabilityAttestation,
@@ -432,6 +434,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
           target_allowlist: targets,
           forbidden_actions: ["dos", "ransomware", "data_exfil_bulk"],
           rules_of_engagement: newRoe.trim() || "Authorized targets only. No destructive actions.",
+          max_session_minutes: AGI_PILOT.defaultHardStopMinutes,
         },
         config: buildEngagementConfig(newMode, engContext, {
           prompts: {},
@@ -789,24 +792,37 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     };
   }, [session, running]);
 
+  // Customer console: only confirmed/verified findings are actionable. The
+  // backend already filters public lists; this is defense-in-depth for promote.
+  const customerFindings = useMemo(
+    () => drawerFindings.filter((f) => isCustomerAgiFindingVisible(f)),
+    [drawerFindings],
+  );
+
   const drawerIssueRows = useMemo(
     () =>
-      drawerFindings.map((f) => ({
+      customerFindings.map((f) => ({
         title: String(f.title ?? "Finding"),
         severity: String(f.severity ?? "info"),
         status: String(f.status ?? ""),
         cve: f.cve ? String(f.cve) : undefined,
         target: f.target ? String(f.target) : undefined,
       })),
-    [drawerFindings],
+    [customerFindings],
   );
 
   // ── Promote a finding / confirm the job ───────────────────────────────────
   const [promoting, setPromoting] = useState<string | null>(null);
   const [jobBusy, setJobBusy] = useState(false);
 
-  const promoteFinding = async (findingId: unknown) => {
-    if (!session || findingId == null) return;
+  const promoteFinding = async (finding: Record<string, unknown>) => {
+    if (!session) return;
+    const findingId = finding.id ?? finding.finding_id ?? finding.finding_key ?? finding.key;
+    if (findingId == null) return;
+    if (!isCustomerAgiFindingVisible(finding)) {
+      toast("warning", "Not confirmed yet", "Only verified findings can be promoted to the risk register.");
+      return;
+    }
     setPromoting(String(findingId));
     try {
       await promoteAgiFinding(session.id, String(findingId));
@@ -1607,6 +1623,13 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                       {drawerFindings.slice(0, 6).map((f, i) => {
                         const fid = f.id ?? f.finding_id ?? f.finding_key ?? f.key ?? i;
                         const promoted = Boolean(f.promoted ?? f.risk_id);
+                        const confirmed = isCustomerAgiFindingVisible(f);
+                        const verdict = String(
+                          (f.verification as Record<string, unknown> | undefined)?.verdict ??
+                            f.verification_status ??
+                            f.status ??
+                            "verifying",
+                        );
                         return (
                           <div
                             key={`${String(fid)}-${i}`}
@@ -1615,14 +1638,19 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                             <p className="wb-xs min-w-0 flex-1 truncate text-slate-300">
                               {String(f.title ?? "Finding")}
                             </p>
+                            {!confirmed && (
+                              <span className="chip shrink-0 border-amber-400/30 text-amber-300" title="Verification in progress — the finding is shown as soon as it is detected">
+                                {verdict}
+                              </span>
+                            )}
                             {promoted ? (
                               <span className="chip shrink-0 border-emerald-400/30 text-emerald-400">in risk register</span>
-                            ) : (
+                            ) : confirmed ? (
                               <button
-                                onClick={() => void promoteFinding(fid)}
+                                onClick={() => void promoteFinding(f)}
                                 disabled={promoting === String(fid)}
                                 className="btn-ghost shrink-0 !px-2 !py-0.5 wb-xs disabled:opacity-50"
-                                title="Promote this session finding into the org risk register"
+                                title="Promote this confirmed finding into the org risk register"
                               >
                                 {promoting === String(fid) ? (
                                   <Loader2 size={10} className="mr-1 inline animate-spin" />
@@ -1631,7 +1659,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                                 )}
                                 Promote
                               </button>
-                            )}
+                            ) : null}
                           </div>
                         );
                       })}
