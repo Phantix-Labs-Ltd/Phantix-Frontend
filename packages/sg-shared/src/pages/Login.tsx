@@ -6,7 +6,7 @@ import {
   Link2, Building2, User, AlertOctagon, AlertTriangle, Check, Send, RefreshCw, Github,
 } from "lucide-react";
 import { api, ApiError, publicDetailCopy, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId, adoptAppSession, type IssuedAppSession } from "@sg/api";
-import { firebaseConfigured, socialAuthErrorMessage, socialIdToken, type SocialProvider } from "@sg/socialAuth";
+import { firebaseConfigured, preloadSocialAuth, socialAuthErrorMessage, socialIdToken, type SocialProvider } from "@sg/socialAuth";
 import { useStore } from "@sg/store";
 import { PLATFORM_URL } from "@sg/links";
 import { cx, humanize } from "@sg/utils";
@@ -331,6 +331,13 @@ function ReturningLogin({
   };
 
   const [socialBusy, setSocialBusy] = useState<SocialProvider | null>(null);
+  // Fetch the Firebase SDK once the form has painted, so the click opens the
+  // popup at once (it is kept out of the entry bundle).
+  useEffect(() => {
+    if (!firebaseConfigured) return;
+    const t = window.setTimeout(preloadSocialAuth, 1500);
+    return () => window.clearTimeout(t);
+  }, []);
 
   /**
    * Solo-mode social sign-in. The API verifies the Firebase ID token, resolves
