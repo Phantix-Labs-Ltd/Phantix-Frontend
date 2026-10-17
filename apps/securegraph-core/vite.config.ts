@@ -32,7 +32,7 @@ export default defineConfig(({ mode, isSsrBuild }) => {
         // Everything the Core shell owns, plus the entry and reset flows that
         // must never be indexed. `/assets` is deliberately absent: robots.txt
         // matches by prefix, so `Disallow: /assets` would also block Vite's
-        // hashed /assets/*.js bundle and stop Google rendering /docs at all.
+        // hashed /static/*.js bundle and stop Google rendering /docs at all.
         // The catch-all below already blocks that page.
         disallow: [
           "/api/",
@@ -86,6 +86,11 @@ export default defineConfig(({ mode, isSsrBuild }) => {
       // ~700 KB and load only on the pages that draw diagrams. The first-paint
       // bundle has its own, stricter budget (siteFiles, in plugins above).
       chunkSizeWarningLimit: 700,
+      // Built files go to /static, not Vite's default /assets: /assets is also
+      // the Assets page. A full load of that page (a refresh, a bookmark, a
+      // cross-app link) hit the build folder first and served a JS file
+      // instead of the app.
+      assetsDir: "static",
       rollupOptions: {
         output: {
           manualChunks: {
