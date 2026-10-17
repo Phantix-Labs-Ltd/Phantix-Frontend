@@ -6,6 +6,7 @@ import {
   Link2, Building2, User, AlertOctagon, AlertTriangle, Check, Send, RefreshCw,
 } from "lucide-react";
 import { api, ApiError, publicDetailCopy, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId, adoptAppSession, type IssuedAppSession } from "@sg/api";
+import { firebaseConfigured, socialIdToken, type SocialProvider } from "@sg/socialAuth";
 import { useStore } from "@sg/store";
 import { PLATFORM_URL } from "@sg/links";
 import { cx, humanize } from "@sg/utils";
@@ -317,6 +318,38 @@ function ReturningLogin({
     dual_control_session_token?: string;
   };
 
+  const [socialBusy, setSocialBusy] = useState<SocialProvider | null>(null);
+
+  /**
+   * Solo-mode social sign-in. The API verifies the Firebase ID token, resolves
+   * the org-user by email, and issues the app session. Non-solo orgs are refused
+   * by the API (403 social_login_requires_solo_mode); its message is surfaced.
+   */
+  const signInSocial = async (provider: SocialProvider) => {
+    setSocialBusy(provider);
+    setError(null);
+    setBlocked(null);
+    try {
+      const idToken = await socialIdToken(provider);
+      const res = await api.post<{ access_token?: string; device_token?: string }>(
+        "/app/auth/firebase",
+        { id_token: idToken, device_id: deviceId() },
+      );
+      tokens.appSession = res.access_token ?? "";
+      tokens.device = res.device_token ?? "";
+      exitDemoMode();
+      navigate(chooseAppHref());
+    } catch (e) {
+      const detail = e instanceof ApiError ? (e.detail as Record<string, unknown> | undefined) : undefined;
+      const msg =
+        (detail && typeof detail.message === "string" ? detail.message : undefined) ??
+        (e instanceof Error ? e.message : "Sign-in failed. Try again.");
+      setError(msg);
+    } finally {
+      setSocialBusy(null);
+    }
+  };
+
   const finishLogin = (res: MfaResult, rotated = false) => {
     adoptAppSession(res);
     const dcSessionToken = res.dual_control_session_token ?? res.dual_control?.session_token;
@@ -464,6 +497,31 @@ function ReturningLogin({
 
             {!blocked && stage === "email" && (
               <motion.form key="email" initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -14 }} onSubmit={(e) => { e.preventDefault(); void startLogin(); }} className="space-y-4">
+                {firebaseConfigured && (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      className="btn-secondary w-full !py-3"
+                      disabled={socialBusy !== null || busy}
+                      onClick={() => void signInSocial("google")}
+                    >
+                      {socialBusy === "google" && <Loader2 size={14} className="mr-1.5 inline animate-spin" />}
+                      Continue with Google
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary w-full !py-3"
+                      disabled={socialBusy !== null || busy}
+                      onClick={() => void signInSocial("github")}
+                    >
+                      {socialBusy === "github" && <Loader2 size={14} className="mr-1.5 inline animate-spin" />}
+                      Continue with GitHub
+                    </button>
+                    <div className="flex items-center gap-3 pt-1 text-[11px] uppercase tracking-wide text-slate-600">
+                      <span className="h-px flex-1 bg-phantix-800/60" /> or <span className="h-px flex-1 bg-phantix-800/60" />
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="label">Work email</label>
                   <div className="relative">
