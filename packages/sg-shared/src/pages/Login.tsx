@@ -6,7 +6,7 @@ import {
   Link2, Building2, User, AlertOctagon, AlertTriangle, Check, Send, RefreshCw,
 } from "lucide-react";
 import { api, ApiError, publicDetailCopy, isDemoMode, isDemoFlagSet, exitDemoMode, tokens, API_BASE, deviceId, adoptAppSession, type IssuedAppSession } from "@sg/api";
-import { firebaseConfigured, socialIdToken, type SocialProvider } from "@sg/socialAuth";
+import { firebaseConfigured, socialAuthErrorMessage, socialIdToken, type SocialProvider } from "@sg/socialAuth";
 import { useStore } from "@sg/store";
 import { PLATFORM_URL } from "@sg/links";
 import { cx, humanize } from "@sg/utils";
@@ -329,14 +329,25 @@ function ReturningLogin({
     setSocialBusy(provider);
     setError(null);
     setBlocked(null);
+    let idToken: string;
     try {
-      const idToken = await socialIdToken(provider);
-      const res = await api.post<{ access_token?: string; device_token?: string }>(
+      idToken = await socialIdToken(provider);
+    } catch (e) {
+      // Closing the popup is a choice, not a failure: no message for it.
+      setError(socialAuthErrorMessage(e));
+      setSocialBusy(null);
+      return;
+    }
+    try {
+      const res = await api.post<IssuedAppSession>(
         "/app/auth/firebase",
         { id_token: idToken, device_id: deviceId() },
       );
-      tokens.appSession = res.access_token ?? "";
-      tokens.device = res.device_token ?? "";
+      // The API answers with HttpOnly cookies (no token in the body) or a
+      // bearer pair; adopt it the way the email sign-in does. Reading
+      // access_token directly left an empty token with a cookie session, and
+      // the shell sent the user straight back to sign-in.
+      if (!adoptAppSession(res)) throw new Error("Sign-in did not return a session. Try again.");
       exitDemoMode();
       navigate(chooseAppHref());
     } catch (e) {
