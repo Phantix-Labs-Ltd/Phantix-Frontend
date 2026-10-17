@@ -18,6 +18,7 @@ import {
 import { isDemoMode } from "../api";
 import { useSseStream } from "../useSse";
 import { CrossAppLink } from "../components/CrossAppLink";
+import FindingDetailDrawer from "../components/FindingDetailDrawer";
 import { useResource } from "../useResource";
 import { useStore } from "../store";
 import { cx, humanize, normalizeTrackerVerification, timeAgo, titleCase, TRACKER_STATUSES } from "../utils";
@@ -148,6 +149,8 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
   // Where a finding came from: GRC audits project their findings here too.
   const source = params.get("source") ?? "all";
   const highlightKey = params.get("key") ?? "";
+  /** The finding whose details are open beside the board (shareable; Back closes it). */
+  const openKey = params.get("finding") ?? "";
   const [sortKey, sortDir] = (() => {
     const [k, d] = (params.get("sort") ?? "severity:desc").split(":");
     return [(k in SORTERS ? k : "severity") as SortKey, d === "asc" ? "asc" : "desc"];
@@ -573,13 +576,15 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                         className={cx("h-10 border-b border-phantix-800/40 hover:bg-phantix-800/35", highlightKey === f.finding_key && "bg-gold-400/10 ring-1 ring-inset ring-gold-400/30")}
                       >
                         <td className="td w-24 whitespace-nowrap">
-                          <span
-                            className="font-mono text-[13px] font-semibold text-gold-300"
-                            title={f.finding_key}
-                            aria-label={f.finding_key}
+                          <button
+                            type="button"
+                            onClick={() => update({ finding: f.finding_key }, false)}
+                            className="font-mono text-[13px] font-semibold text-gold-300 hover:text-gold-200 hover:underline"
+                            title={`${f.finding_key} · open details`}
+                            aria-label={`Open details for ${f.finding_key}`}
                           >
                             {f.finding_key.slice(0, KEY_DISPLAY_MAX)}
-                          </span>
+                          </button>
                         </td>
                         <td className="td max-w-[14rem]">
                           <span
@@ -589,7 +594,13 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                             {f.source_store === "compliance_audit" && (
                               <span className="mr-1.5 rounded border border-gold-400/40 bg-gold-400/10 px-1.5 py-0.5 text-[11px] font-semibold text-gold-300" title="Raised in a GRC audit">Audit</span>
                             )}
-                            {f.title}
+                            <button
+                              type="button"
+                              onClick={() => update({ finding: f.finding_key }, false)}
+                              className="text-left hover:text-gold-200 hover:underline"
+                            >
+                              {f.title}
+                            </button>
                             {f.campaign_name && <span className="ml-2 font-normal text-slate-500">{f.campaign_name}</span>}
                             {f.source_store === "compliance_audit" && /^AUDIT-\d+$/.test(f.finding_key) && (
                               <CrossAppLink app="core" to={`/assurance/findings/${f.finding_key}`} className="ml-2 text-[12px] font-normal text-gold-400 hover:text-gold-300">
@@ -892,6 +903,13 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
           </div>
         )}
       </Modal>
+
+      <FindingDetailDrawer
+        findingKey={openKey || null}
+        row={findings.find((x) => x.finding_key === openKey) ?? null}
+        assetBase={assetBase}
+        onClose={() => update({ finding: null }, false)}
+      />
     </div>
   );
 }
