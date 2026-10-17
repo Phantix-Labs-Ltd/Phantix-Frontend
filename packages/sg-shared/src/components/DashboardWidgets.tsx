@@ -446,10 +446,20 @@ export function Donut({ slices, centerLabel }: { slices: Slice[]; centerLabel: s
 /** Ranked horizontal meters — one measure across categories, single hue. */
 export function RankedBars({
   rows,
+  scale = "max",
 }: {
   rows: { key: string; label: string; value: number; icon?: React.ReactNode; to?: string }[];
+  /**
+   * `max` (default): bars relative to the largest row, for a ranking.
+   * `share`: each bar is its share of the total, for a breakdown that adds up
+   * (one of two campaigns is half a bar, not a full one).
+   */
+  scale?: "max" | "share";
 }) {
-  const max = Math.max(1, ...rows.map((r) => r.value));
+  const max =
+    scale === "share"
+      ? Math.max(1, rows.reduce((n, r) => n + r.value, 0))
+      : Math.max(1, ...rows.map((r) => r.value));
   return (
     <ul className="space-y-3">
       {rows.map((r) => {

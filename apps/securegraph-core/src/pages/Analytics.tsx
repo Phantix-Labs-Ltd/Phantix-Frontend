@@ -82,7 +82,8 @@ export default function Analytics() {
       const s = (surfaces as Record<string, any>)[name] ?? {};
       return {
         surface: name,
-        score: Number(s.score ?? 100),
+        score: s.score == null ? null : Number(s.score),
+        assessed: typeof s.assessed === "boolean" ? s.assessed : Number(s.total ?? 0) > 0,
         total: Number(s.total ?? 0),
         reportable: Number(s.reportable ?? 0),
         critical: Number(s.critical ?? 0),
@@ -181,7 +182,10 @@ export default function Analytics() {
   );
 
   const totals = useMemo(() => {
-    const open = Number(tracker?.open ?? 0) + Number(tracker?.in_progress ?? 0);
+    // Open work everywhere means "not fixed or accepted" (the tracker's own tile).
+    const open =
+      Number(tracker?.open ?? 0) + Number(tracker?.in_progress ?? 0) +
+      Number(tracker?.regressed ?? 0) + Number(tracker?.retest_failed ?? 0);
     const fixed = Number(tracker?.fixed ?? 0);
     const total = Number(tracker?.total ?? 0);
     return {
@@ -229,11 +233,11 @@ export default function Analytics() {
               an axis between them. */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard label="Overall posture" value={posture?.overall_score ?? "Not set"} hint="0–100 across all surfaces" />
-            <StatCard label="Open findings" value={totals.open} hint="open + in progress" />
+            <StatCard label="Open findings" value={totals.open} hint="Verified, not fixed or accepted" />
             <StatCard
               label="Fix rate"
               value={totals.fixRate == null ? "Not set" : `${totals.fixRate}%`}
-              hint={`${totals.fixed} fixed of ${totals.tracked} tracked`}
+              hint={`${totals.fixed} fixed of ${totals.tracked} verified`}
             />
             <StatCard
               label="Regressions"
@@ -352,7 +356,7 @@ export default function Analytics() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <ComparativeBars
                 title="Exposure composition by surface"
-                subtitle="What the open findings of each surface contain"
+                subtitle="Posture snapshot: what scanners currently see on each surface, verified or not"
                 rows={severityBySurface}
                 series={[
                   { key: "critical", label: "Critical", color: SEVERITY_COLORS.critical },
@@ -363,7 +367,7 @@ export default function Analytics() {
               />
               <ComparativeBars
                 title="Tracked findings by surface"
-                subtitle="Where the remediation work actually sits"
+                subtitle="Verified findings: where the remediation work actually sits"
                 rows={workBySurface}
                 series={[{ key: "tracked", label: "Tracked findings", color: surfaceColor("code", mode) }]}
                 stacked={false}
@@ -371,7 +375,7 @@ export default function Analytics() {
             </div>
             <ComparativeBars
               title="Severity mix across the organization"
-              subtitle="Every tracked finding, by severity"
+              subtitle="Every verified finding, by severity"
               rows={SEVERITY_ORDER.filter((s) => Number((tracker?.bySeverity ?? {})[s]) > 0).map((s) => ({
                 name: s[0].toUpperCase() + s.slice(1),
                 count: Number((tracker?.bySeverity ?? {})[s]) || 0,

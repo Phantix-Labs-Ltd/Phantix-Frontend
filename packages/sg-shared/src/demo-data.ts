@@ -602,21 +602,22 @@ export const supportTickets: SupportTicket[] = [
 ];
 
 // Dashboard trend (last 14 days of posture)
+// Ends at the demo posture score (68), so the chart agrees with the card above it.
 export const postureTrend = [
-  { day: "Jul 8", score: 61, findings: 34 },
-  { day: "Jul 9", score: 62, findings: 33 },
-  { day: "Jul 10", score: 60, findings: 35 },
-  { day: "Jul 11", score: 63, findings: 32 },
-  { day: "Jul 12", score: 64, findings: 31 },
-  { day: "Jul 13", score: 64, findings: 30 },
-  { day: "Jul 14", score: 63, findings: 31 },
-  { day: "Jul 15", score: 65, findings: 29 },
-  { day: "Jul 16", score: 66, findings: 28 },
-  { day: "Jul 17", score: 66, findings: 27 },
-  { day: "Jul 18", score: 68, findings: 25 },
-  { day: "Jul 19", score: 67, findings: 26 },
-  { day: "Jul 20", score: 69, findings: 24 },
-  { day: "Jul 21", score: 71, findings: 22 },
+  { day: "Jul 8", score: 58, findings: 34 },
+  { day: "Jul 9", score: 59, findings: 33 },
+  { day: "Jul 10", score: 57, findings: 35 },
+  { day: "Jul 11", score: 60, findings: 32 },
+  { day: "Jul 12", score: 61, findings: 31 },
+  { day: "Jul 13", score: 61, findings: 30 },
+  { day: "Jul 14", score: 60, findings: 31 },
+  { day: "Jul 15", score: 62, findings: 29 },
+  { day: "Jul 16", score: 63, findings: 28 },
+  { day: "Jul 17", score: 63, findings: 27 },
+  { day: "Jul 18", score: 65, findings: 25 },
+  { day: "Jul 19", score: 64, findings: 26 },
+  { day: "Jul 20", score: 66, findings: 24 },
+  { day: "Jul 21", score: 68, findings: 22 },
 ];
 
 export const severityDistribution = [
@@ -2854,14 +2855,21 @@ export const autofixStatus: AutofixStatus = {
 
 export const postureSnapshot: PostureSnapshot = {
   organization_id: 11,
+  // Same formula and population as GET /posture: open verified tracker findings
+  // per surface, 100 * exp(-weighted_open / k), k for 17 active assets.
   surfaces: {
-    external: { score: 78, total: 42, reportable: 9, critical: 1, high: 3 },
-    internal: { score: 64, total: 18, reportable: 6, critical: 0, high: 2 },
-    cloud: { score: 71, total: 25, reportable: 5, critical: 1, high: 1 },
-    code: { score: 58, total: 12, reportable: 4, critical: 1, high: 2 },
+    design: { score: 84, assessed: true, open: 3, total: 3, reportable: 3, critical: 0, high: 1 },
+    code: { score: 48, assessed: true, open: 11, total: 11, reportable: 11, critical: 1, high: 3 },
+    test: { score: 83, assessed: true, open: 4, total: 4, reportable: 4, critical: 0, high: 1 },
+    cloud: { score: 55, assessed: true, open: 9, total: 9, reportable: 9, critical: 1, high: 2 },
+    mobile: { score: 68, assessed: true, open: 4, total: 4, reportable: 4, critical: 1, high: 1 },
   },
   overall_score: 68,
-  surfaces_covered: 4,
+  surfaces_covered: 5,
+  posture_source: "findings",
+  findings_adjusted_score: 68,
+  asset_posture_score: 71,
+  findings: { total: 48, open: 31, critical_open: 3, high_open: 8, bySurface: { design: 3, code: 11, test: 4, cloud: 9, mobile: 4 } },
   generated_at: "2026-09-11T06:00:00Z",
 };
 
