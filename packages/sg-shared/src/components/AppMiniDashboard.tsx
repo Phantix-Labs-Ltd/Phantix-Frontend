@@ -102,9 +102,22 @@ function AttackDashboard() {
   );
   const jobs = (data?.scans?.scanJobs ?? []) as Row[];
   const running = campaigns.filter((c) => ["running", "approved", "pending_approval"].includes(String(c.status))).length;
-  const verified = verifiedFindings.length;
   const doneJobs = jobs.filter((j) => j.status === "completed").length;
-  const testOpen = Number(data?.tracker?.open ?? 0);
+  // Every finding count on this page comes from one population: the verified
+  // findings board, which every Attack source writes to (campaigns, scans, the
+  // pentest agent). The cards used to mix it with the campaign-only list, so
+  // "2 verified" sat beside "18 open verified".
+  const board = data?.tracker ?? null;
+  const verified = Number(board?.total ?? verifiedFindings.length);
+  const fromCampaigns = verifiedFindings.length;
+  // Same definition as the tracker's "Open work": everything not fixed or accepted.
+  const testOpen = board
+    ? Number(board.open ?? 0) + Number(board.in_progress ?? 0) + Number(board.regressed ?? 0) + Number(board.retest_failed ?? 0)
+    : 0;
+  const severityCounts = board?.bySeverity && Object.keys(board.bySeverity).length
+    ? Object.fromEntries(Object.entries(board.bySeverity).map(([k, v]) => [k.toLowerCase(), Number(v)]))
+    : countBy(verifiedFindings, (f) => String(f.severity).toLowerCase());
+  const severityTotal = Object.values(severityCounts).reduce((n, v) => n + Number(v), 0);
   const byStatus = countBy(campaigns, (c) => String(c.status));
   const statusRows = Object.entries(byStatus)
     .map(([k, v]) => ({ key: k, label: titleCase(k.replace(/_/g, " ")), value: v }))
@@ -120,16 +133,16 @@ function AttackDashboard() {
     <div className="mb-6">
       <div className={KPI_GRID}>
         <KpiTile icon={<Crosshair size={22} />} label="VAPT campaigns" value={campaigns.length} hint={`${running} in flight`} to="/vapt" />
-        <KpiTile icon={<CheckCircle2 size={22} />} label="Verified findings" value={verified} hint={`of ${findings.length} campaign findings`} to="/vapt" delay={0.04} />
+        <KpiTile icon={<CheckCircle2 size={22} />} label="Verified findings" value={verified} hint={`${fromCampaigns} from campaigns · all sources`} to="/tracker" delay={0.04} />
         <KpiTile icon={<Radar size={22} />} label="Scan jobs" value={jobs.length} hint={`${doneJobs} completed`} to="/scans" delay={0.08} />
         <KpiTile icon={<Bug size={22} />} label="Open verified findings" value={testOpen} hint="Verified work awaiting a fix" to="/tracker" delay={0.12} />
       </div>
       <div className={PANEL_GRID}>
-        <Panel title="Campaign findings by severity" delay={0.1}>
-          {verifiedFindings.length ? <Donut slices={severitySlices(countBy(verifiedFindings, (f) => String(f.severity).toLowerCase()))} centerLabel="findings" /> : <PanelEmpty>No verified campaign findings yet.</PanelEmpty>}
+        <Panel title="Verified findings by severity" delay={0.1} action={<ViewAll to="/tracker" />}>
+          {severityTotal ? <Donut slices={severitySlices(severityCounts)} centerLabel="findings" /> : <PanelEmpty>No verified findings yet.</PanelEmpty>}
         </Panel>
         <Panel title="Campaigns by status" delay={0.14} action={<ViewAll to="/vapt" />}>
-          {statusRows.length ? <RankedBars rows={statusRows} /> : <PanelEmpty>No campaigns yet. Start one from Campaigns.</PanelEmpty>}
+          {statusRows.length ? <RankedBars rows={statusRows} scale="share" /> : <PanelEmpty>No campaigns yet. Start one from Campaigns.</PanelEmpty>}
         </Panel>
         <Panel title="Recent campaigns" delay={0.18} action={<ViewAll to="/vapt" />} className="lg:col-span-2 2xl:col-span-1">
           <MiniTable rows={campaigns.slice(0, 6)} columns={cols} rowKey={(c, i) => Number(c.id) || i} rowHref={() => "/vapt"} empty="No campaigns yet." />
@@ -159,7 +172,7 @@ function DefendDashboard() {
   const delta = trend.length > 1 ? trend[trend.length - 1].value - trend[0].value : null;
   const risks = (data?.risks ?? []) as Row[];
   const openRisks = risks.filter((r) => !["closed", "accepted"].includes(String(r.status)));
-  const critical = openRisks.filter((r) => r.level === "critical").length;
+  const critical = openRisks.filter((r) => String(r.level ?? "").toLowerCase() === "critical").length;
   const detections = (data?.detections ?? []).map((p) => ({ label: p.label, value: Number(p.value ?? 0) }));
   const detectionTotal = detections.reduce((s, p) => s + p.value, 0);
   const alerts = (data?.alerts ?? []) as Row[];
@@ -176,7 +189,9 @@ function DefendDashboard() {
         <KpiTile icon={<Gauge size={22} />} label="Posture score" value={score == null ? null : Math.round(score)} suffix="/100" delta={<Delta value={delta} unit=" pts" />} hint={delta != null ? "vs 14 days ago" : "Composite posture"} to="/posture" />
         <KpiTile icon={<ShieldAlert size={22} />} label="Open risks" value={openRisks.length} hint={`${critical} critical`} to="/risks" delay={0.04} />
         <KpiTile icon={<Siren size={22} />} label="SOC detections" value={detectionTotal} hint="Last 14 days" to="/soc" delay={0.08} />
-        <KpiTile icon={<AlertTriangle size={22} />} label="Incidents" value={alerts.length} hint={`${alerts.filter((a) => a.status === "failed").length} failed deliveries`} to="/alerts" delay={0.12} />
+        {/* Alert notifications (the delivery log), not incidents: the card was
+            labelled "Incidents" while it counted sent alerts. */}
+        <KpiTile icon={<AlertTriangle size={22} />} label="Alerts sent" value={alerts.length} hint={`${alerts.filter((a) => a.status === "failed").length} failed deliveries`} to="/alerts" delay={0.12} />
       </div>
       <div className={PANEL_GRID}>
         <Panel title="Posture over time" subtitle="Daily composite score" delay={0.1} action={<ViewAll to="/posture" />}>
@@ -195,7 +210,9 @@ function DefendDashboard() {
 
 // ── Code ──────────────────────────────────────────────────────────────────────
 async function loadCode() {
-  const [repos, findings] = await Promise.all([soft(loadGithubRepositories()), soft(loadCodeFindings({}))]);
+  // 200 is the API's page maximum (default 50): the per-repository counts are
+  // built from this page, so a bigger page covers more of the board.
+  const [repos, findings] = await Promise.all([soft(loadGithubRepositories()), soft(loadCodeFindings({ limit: 200 }))]);
   return { repos: repos?.items ?? [], findings: findings?.items ?? [], counts: findings?.counts ?? {}, total: findings?.total ?? 0 };
 }
 
@@ -209,6 +226,9 @@ function CodeDashboard() {
   const urgent = Number(counts.critical ?? 0) + Number(counts.high ?? 0);
   const analyzable = repos.filter((r) => r.can_analyze !== false).length;
   const byRepo = countBy(findings, (f) => String(f.repo ?? f.github_repository_id));
+  // When there are more findings than one page, say what the repository
+  // counts cover instead of implying they are the whole board.
+  const partial = findings.length < total;
   const repoRows = Object.entries(byRepo)
     .map(([k, v]) => ({ key: k, label: k.split("/").pop() || k, value: v, icon: <GitBranch size={14} /> }))
     .sort((a, b) => b.value - a.value)
@@ -237,13 +257,13 @@ function CodeDashboard() {
         <KpiTile icon={<GitBranch size={22} />} label="Repositories" value={repos.length} hint={`${analyzable} ready to review`} to="/code-review/repositories" />
         <KpiTile icon={<Bug size={22} />} label="Code findings" value={total} hint="Across reviewed repositories" to="/code-review" delay={0.04} />
         <KpiTile icon={<ShieldAlert size={22} />} label="Critical + high" value={urgent} hint={total ? `${Math.round((urgent / total) * 100)}% of findings` : "Nothing urgent"} to="/code-review" delay={0.08} />
-        <KpiTile icon={<GitPullRequest size={22} />} label="Repositories with findings" value={Object.keys(byRepo).length} hint="Open the pull-request queue" to="/code-review/pull-requests" delay={0.12} />
+        <KpiTile icon={<GitPullRequest size={22} />} label="Repositories with findings" value={Object.keys(byRepo).length} hint={partial ? `In the latest ${findings.length} findings` : "Open the pull-request queue"} to="/code-review/pull-requests" delay={0.12} />
       </div>
       <div className={PANEL_GRID}>
         <Panel title="Findings by severity" delay={0.1}>
           {total ? <Donut slices={severitySlices(counts)} centerLabel="findings" /> : <PanelEmpty>Review a repository to see findings.</PanelEmpty>}
         </Panel>
-        <Panel title="Findings by repository" delay={0.14} action={<ViewAll to="/code-review/repositories" />}>
+        <Panel title="Findings by repository" subtitle={partial ? `Latest ${findings.length} of ${total} findings` : undefined} delay={0.14} action={<ViewAll to="/code-review/repositories" />}>
           {repoRows.length ? <RankedBars rows={repoRows} /> : <PanelEmpty>No reviewed repositories yet.</PanelEmpty>}
         </Panel>
         <Panel title="Latest findings" delay={0.18} action={<ViewAll to="/code-review" />} className="lg:col-span-2 2xl:col-span-1">

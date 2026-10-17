@@ -21,7 +21,8 @@ import { SURFACE_LABELS, scoreTone, surfaceColor, type ChartTheme } from "./pale
 
 export interface SurfaceDatum {
   surface: string;
-  score: number;
+  /** null when the surface has not been assessed. */
+  score: number | null;
   total: number;
   reportable?: number;
   critical?: number;
@@ -58,7 +59,7 @@ export default function PostureDonut({
       title="Posture across all surfaces"
       subtitle={
         totalFindings
-          ? `${totalFindings} open findings · ring shows where they are`
+          ? `${totalFindings} open in the posture snapshot (verified or not) · ring shows where they are`
           : "No open findings recorded"
       }
       legend={slices.map((s) => ({ key: s.key, label: s.name, color: s.color, value: s.value }))}

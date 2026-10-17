@@ -13,7 +13,11 @@ import DocLink from "@sg/components/DocLink";
 // for re-review. This is the page the continuous reassessment loop reports into.
 
 interface SurfaceScore {
-  score?: number;
+  /** null when the surface has not been assessed. */
+  score?: number | null;
+  assessed?: boolean;
+  /** Open verified findings. */
+  open?: number;
   total?: number;
   reportable?: number;
   critical?: number;
@@ -141,7 +145,7 @@ export default function Posture() {
   const surfaces = Object.entries(snapshot?.surfaces ?? {});
   const postureSourceHint =
     snapshot?.posture_source === "findings"
-      ? "Tracked findings"
+      ? "Verified findings"
       : snapshot?.posture_source === "scan_evidence"
         ? "Reportable scan evidence"
         : "No evidence yet";
@@ -164,17 +168,14 @@ export default function Posture() {
       ) : (
         <div className="space-y-5">
           {/* Overall + surfaces */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {/* One posture score. "Findings-adjusted" is gone (it subtracted open
+              criticals a second time); the asset index is named for what it is. */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <StatCard label="Overall posture" value={snapshot?.overall_score != null ? `${snapshot.overall_score}` : "Not set"} hint={postureSourceHint} />
             <StatCard
-              label="Findings-adjusted"
-              value={snapshot?.findings_adjusted_score != null ? `${snapshot.findings_adjusted_score}` : "Not set"}
-              hint="Open criticals/highs deducted"
-            />
-            <StatCard
-              label="Asset posture"
+              label="Asset risk index"
               value={snapshot?.asset_posture_score != null ? `${snapshot.asset_posture_score}` : "Not set"}
-              hint="Dashboard asset-risk score"
+              hint="Asset exposure, not the posture score"
             />
             <StatCard
               label="Open findings"
@@ -186,7 +187,7 @@ export default function Posture() {
           </div>
 
           <Card>
-            <CardHeader title="Surfaces" subtitle={`Reportable, critical and high findings per surface (${postureSourceHint.toLowerCase()})`} action={<Layers size={16} className="text-gold-300" />} />
+            <CardHeader title="Surfaces" subtitle={`Open, critical and high verified findings per surface (${postureSourceHint.toLowerCase()})`} action={<Layers size={16} className="text-gold-300" />} />
             {surfaces.length === 0 ? (
               <EmptyState icon={<Activity size={22} />} title="No posture yet" body="Posture builds as scans, reviews and assessments land." />
             ) : (
@@ -196,7 +197,7 @@ export default function Posture() {
                     <tr className="border-b border-phantix-700/40">
                       <th className="th">Surface</th>
                       <th className="th">Score</th>
-                      <th className="th">Reportable</th>
+                      <th className="th">Open</th>
                       <th className="th">Critical</th>
                       <th className="th">High</th>
                     </tr>
@@ -205,8 +206,8 @@ export default function Posture() {
                     {surfaces.map(([name, s]) => (
                       <tr key={name} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
                         <td className="td text-sm capitalize text-slate-200">{name}</td>
-                        <td className={cx("td text-sm font-semibold", scoreTone(s.score))}>{s.score ?? "Not set"}</td>
-                        <td className="td text-sm text-slate-300">{s.reportable ?? 0}</td>
+                        <td className={cx("td text-sm font-semibold", scoreTone(s.score ?? undefined))}>{s.score ?? "Not assessed"}</td>
+                        <td className="td text-sm text-slate-300">{s.open ?? s.reportable ?? 0}</td>
                         <td className="td text-sm text-severity-critical">{s.critical ?? 0}</td>
                         <td className="td text-sm text-severity-high">{s.high ?? 0}</td>
                       </tr>

@@ -17,7 +17,10 @@ import { cx } from "../utils";
 
 export interface SurfaceScore {
   surface: string;
-  score: number;
+  /** null when the surface has not been assessed. */
+  score: number | null;
+  /** Evidence exists; an assessed surface with nothing open scores 100. */
+  assessed?: boolean;
   total: number;
   reportable?: number;
   critical?: number;
@@ -39,7 +42,7 @@ export default function SurfaceScoreRow({
   // Fixed surface order so a tile never moves when counts change.
   const byName = new Map(surfaces.map((s) => [String(s.surface).toLowerCase(), s]));
   const ordered = SURFACES.map(
-    (name) => byName.get(name) ?? { surface: name, score: 100, total: 0 },
+    (name) => byName.get(name) ?? { surface: name, score: null, total: 0, assessed: false },
   );
 
   return (
@@ -48,7 +51,9 @@ export default function SurfaceScoreRow({
         const score = Number(s.score ?? 0);
         const tone = scoreTone(score);
         const isSelected = selected === s.surface;
-        const untested = Number(s.total) === 0;
+        // Not assessed = no evidence at all. A surface tested with nothing open
+        // is assessed and scores 100 (older APIs send no flag: fall back to total).
+        const untested = s.score == null || (s.assessed ?? Number(s.total) > 0) === false;
         return (
           <button
             key={s.surface}

@@ -13,7 +13,7 @@ import LatestAssessmentPanel from "@sg/components/LatestAssessment";
 import CrossAppLink from "@sg/components/CrossAppLink";
 import AppSwitcher from "@sg/components/AppSwitcher";
 import { SEVERITY_ORDER, SURFACES, SURFACE_LABELS, severityColor } from "@sg/charts/palette";
-import { loadTrackerSummary } from "@sg/data";
+import { loadTrackerSummary, loadTrackerTimeline } from "@sg/data";
 import {
   loadAvailabilityIncidents,
   loadAvailabilitySummary,
@@ -21,6 +21,7 @@ import {
 import type { TrackerSummary } from "@sg/types";
 import type { AvailabilityIncident, AvailabilitySummary } from "@sg/types";
 import { loadCommandCenter, loadPostureTrend, type PosturePoint } from "@sg/data";
+import { loadPostureSnapshot, type PostureSnapshot } from "@sg/vaptOps";
 import { useResource } from "@sg/useResource";
 import { useSmartPoll } from "@sg/usePolling";
 import { useSseStream } from "@sg/useSse";
@@ -108,20 +109,15 @@ export default function Dashboard() {
   /* Posture and findings for the chart row. Loaded alongside the command centre
      rather than folded into it: either can be unavailable without blanking the
      page, and the charts are additive to what was already here. */
-  const [tracker, setTracker] = React.useState<TrackerSummary | null>(null);
-  React.useEffect(() => {
-    let cancelled = false;
-    void loadTrackerSummary()
-      .catch(() => null)
-      .then((t) => {
-        if (!cancelled) setTracker(t);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Through the shared resource hook so it refreshes like the rest of the page
+  // (it was loaded once and never updated).
+  const trackerRes = useResource<TrackerSummary | null>(() => loadTrackerSummary().catch(() => null), null, "tracker-summary-verified");
+  const tracker = trackerRes.data;
+  const timelineRes = useResource(() => loadTrackerTimeline(14).catch(() => null), null as Awaited<ReturnType<typeof loadTrackerTimeline>>, "tracker-timeline-14");
 
   const trendRes = useResource<PosturePoint[]>(() => loadPostureTrend(), [] as PosturePoint[], "posture-trend");
+  // The one posture score (GET /posture), the same number Defend and Analytics show.
+  const postureRes = useResource<PostureSnapshot | null>(() => loadPostureSnapshot().catch(() => null), null, "posture-snapshot");
   const [serverEvents, setServerEvents] = useState<ServerEvent[]>([]);
   const [availability, setAvailability] = useState<AvailabilitySummary | null>(null);
   const [lastHeartbeatAt, setLastHeartbeatAt] = useState<string | null>(null);
@@ -350,11 +346,20 @@ export default function Dashboard() {
   const orgName = cc?.org?.name || storeOrg.name;
   const firstName = (session?.userName || "").trim().split(/\s+/)[0] || "";
   const lab = cc?.lab;
-  const postureScore = num(cc?.posture?.postureScore, 0);
+  // Canonical posture first; the command centre's asset-risk index only until
+  // the API serves the canonical score.
+  const canonicalScore = postureRes.data?.overall_score;
+  const postureScore = num(canonicalScore ?? cc?.posture?.postureScore, 0);
   // Distinguish "no posture yet" from a genuine 0 so a transient/blocked load
   // does not read as a confident zero (the dashboard-shows-0 bug).
-  const postureKnown = cc?.posture?.postureScore != null;
-  const openFindings = num(cc?.posture?.totals?.openFindings ?? cc?.tracker?.summary?.open, 0);
+  const postureKnown = (canonicalScore ?? cc?.posture?.postureScore) != null;
+  // Every findings number on this page comes from the verified findings board
+  // (the same population as the severity chart, the tracker and the app
+  // overviews). "Open" means not fixed or accepted, as on the tracker. It used to
+  // come from the posture snapshot, so it read 0 beside "52 findings".
+  const openFindings = tracker
+    ? num(tracker.open, 0) + num(tracker.in_progress, 0) + num(tracker.regressed, 0) + num(tracker.retest_failed, 0)
+    : num(cc?.posture?.totals?.openFindings ?? cc?.tracker?.summary?.open, 0);
   const openRisks = num(cc?.risks?.open, 0);
   const socOpen = num(cc?.soc?.queue?.openTotal, 0);
   const activeAssets = num(cc?.posture?.totals?.activeAssets ?? cc?.assets?.totals?.active, 0);
@@ -368,17 +373,24 @@ export default function Dashboard() {
 
   const trend = trendRes.data ?? [];
   const scorePoints = trend.map((p) => ({ label: p.day, value: Math.round(Number(p.score ?? 0)) }));
-  const findingPoints = trend.map((p) => ({ label: p.day, value: Number(p.findings ?? 0) }));
   const hasTrend = trend.length > 1;
   const scoreDelta = hasTrend ? scorePoints[scorePoints.length - 1].value - scorePoints[0].value : null;
-  const findingsDelta = hasTrend
+  // Open-per-day comes from the tracker's own daily series (the posture trend
+  // counted raw scanner results, a different population). The series cannot be
+  // filtered by evidence, so the panel says it covers every tracked finding and
+  // carries no headline number of its own (the Open findings card is the count).
+  const timeline = timelineRes.data?.series ?? [];
+  const findingPoints = timeline.map((p) => ({ label: p.day.slice(5), value: Number(p.cumulative_open ?? 0) }));
+  const hasFindingTrend = findingPoints.length > 1;
+  const findingsDelta = hasFindingTrend
     ? pctChange(findingPoints[0].value, findingPoints[findingPoints.length - 1].value)
     : null;
   const rangeLabel = hasTrend ? `${trend[0].day} – ${trend[trend.length - 1].day}` : "Last 14 days";
 
-  const summary = cc?.tracker?.summary ?? tracker ?? {};
-  const trackedTotal = num(summary.total ?? tracker?.total, 0);
-  const fixed = num(summary.fixed ?? tracker?.fixed, 0);
+  // The verified board first; the command centre's own summary only as a fallback.
+  const summary = tracker ?? cc?.tracker?.summary ?? {};
+  const trackedTotal = num(summary.total, 0);
+  const fixed = num(summary.fixed, 0);
   const fixRate = trackedTotal > 0 ? Math.round((fixed / trackedTotal) * 1000) / 10 : null;
 
   const bySeverity = (tracker?.bySeverity ?? summary.bySeverity ?? {}) as Record<string, number>;
@@ -390,14 +402,21 @@ export default function Dashboard() {
   }));
 
   const bySurface = (tracker?.bySurface ?? summary.bySurface ?? {}) as Record<string, number>;
-  const surfaceRows = SURFACES.map((s) => ({
+  // Every surface the board reports, not only the five the palette names: a
+  // finding filed under web/api/network/other used to vanish, so 52 tracked
+  // findings showed "No findings tracked on any surface".
+  const surfaceKeys = [
+    ...SURFACES,
+    ...Object.keys(bySurface).filter((k) => !(SURFACES as readonly string[]).includes(k) && Number(bySurface[k]) > 0),
+  ];
+  const surfaceRows = surfaceKeys.map((s) => ({
     key: s,
-    label: SURFACE_LABELS[s] ?? titleCase(s),
+    label: SURFACE_LABELS[s as keyof typeof SURFACE_LABELS] ?? titleCase(s.replace(/_/g, " ")),
     // Tracked findings only. This panel is "tracked findings per attack surface",
     // so it must never fall back to the posture snapshot (which is built from raw
     // scan_results): doing so showed findings the tracker/Code app did not have.
     value: Number(bySurface[s] ?? 0),
-    icon: SURFACE_ICONS[s],
+    icon: (SURFACE_ICONS as Record<string, React.ReactNode>)[s],
     to: `/analytics?surface=${s}`,
   })).sort((a, b) => b.value - a.value);
 
@@ -537,8 +556,7 @@ export default function Dashboard() {
           label="Open findings"
           className="lg:col-span-2 xl:col-span-1"
           value={openFindings}
-          delta={<Delta value={findingsDelta} goodWhen="down" />}
-          hint={findingsDelta != null ? "vs 14 days ago" : "From intelligence and the tracker"}
+          hint="Verified, not fixed or accepted"
           to={href("tracker", "/tracker")}
           delay={0.04}
         />
@@ -565,7 +583,7 @@ export default function Dashboard() {
           className="lg:col-span-3 xl:col-span-1"
           value={fixRate}
           suffix="%"
-          hint={trackedTotal ? `${fixed} of ${trackedTotal} tracked findings fixed` : "No tracked findings yet"}
+          hint={trackedTotal ? `${fixed} of ${trackedTotal} verified findings fixed` : "No verified findings yet"}
           delay={0.16}
         />
       </div>
@@ -591,31 +609,27 @@ export default function Dashboard() {
           )}
         </Panel>
 
-        <Panel title="Findings by surface" subtitle="Tracked findings per attack surface" delay={0.14} action={<ViewAll to="/analytics" />}>
+        <Panel title="Findings by surface" subtitle="Verified findings per attack surface" delay={0.14} action={<ViewAll to="/analytics" />}>
           {surfaceRows.every((r) => r.value === 0) ? (
             <PanelEmpty>No findings tracked on any surface yet.</PanelEmpty>
           ) : (
-            <RankedBars rows={surfaceRows} />
+            <RankedBars rows={surfaceRows} scale="share" />
           )}
         </Panel>
 
-        <Panel title="Findings by severity" subtitle="Share of tracked findings" delay={0.18}>
+        <Panel title="Findings by severity" subtitle="Share of verified findings" delay={0.18}>
           <Donut slices={severitySlices} centerLabel="findings" />
         </Panel>
 
         <Panel
           title="Open findings per day"
-          subtitle="Findings still open at the end of each day"
+          subtitle="Every tracked finding still open at the end of each day, verified or not"
           delay={0.22}
           action={<Delta value={findingsDelta} goodWhen="down" />}
         >
-          <div className="mb-2 flex items-baseline gap-2">
-            <span className="font-mono text-[26px] font-semibold text-white">{openFindings.toLocaleString()}</span>
-            <span className="text-xs text-slate-500">open now</span>
-          </div>
-          {trendRes.loading && !hasTrend ? (
+          {timelineRes.loading && !hasFindingTrend ? (
             <div className="skeleton h-[170px] rounded-md" />
-          ) : hasTrend ? (
+          ) : hasFindingTrend ? (
             <ColumnTrend points={findingPoints} name="Open findings" />
           ) : (
             <PanelEmpty>Daily finding counts appear once history is recorded.</PanelEmpty>

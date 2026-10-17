@@ -330,7 +330,12 @@ export async function proposeContinuousReassessment(body: {
 // product-context drift. Backs src/pages/Posture.tsx.
 
 export interface PostureSurfaceScore {
-  score?: number;
+  /** 0–100; null when the surface has no evidence yet (not assessed). */
+  score?: number | null;
+  /** Evidence exists for the surface; an assessed surface with nothing open scores 100. */
+  assessed?: boolean;
+  /** Open verified findings on the surface. */
+  open?: number;
   total?: number;
   reportable?: number;
   critical?: number;
@@ -349,10 +354,14 @@ export interface PostureSnapshot {
    * (`scan_evidence`); a VAPT/code/AGI org with no raw scans still gets a score.
    */
   posture_source?: "findings" | "scan_evidence" | "none";
-  /** Asset-risk posture the Dashboard shows — same source, so the two agree. */
+  /** Asset exposure index from asset intelligence. Not the posture score. */
   asset_posture_score?: number | null;
-  /** `overall_score` after open criticals/highs are deducted. */
+  /** Deprecated: now equal to `overall_score` (it used to deduct criticals twice). */
   findings_adjusted_score?: number | null;
+  /** The posture score per day, same formula as `overall_score`. */
+  trend?: { day: string; score: number | null }[];
+  /** How the score is computed (population, formula, k). */
+  method?: Record<string, unknown>;
   /** Remediation-tracker load (platform DB), so a high score can't hide criticals. */
   findings?: {
     total?: number;

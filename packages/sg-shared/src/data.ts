@@ -1349,6 +1349,14 @@ export async function loadPostureTrend(): Promise<PosturePoint[]> {
     await delay(150);
     return demo.postureTrend as PosturePoint[];
   }
+  // The canonical posture score per day (GET /posture), the same formula as the
+  // score shown beside every trend chart. The asset-intelligence trend below is a
+  // different index; it only answers until the API serves the canonical trend.
+  const posture = await softOne<{ trend?: { day?: string; score?: number | null }[] }>("/posture?days=14");
+  const canonical = (posture?.trend ?? [])
+    .filter((p) => p.day && p.score != null)
+    .map((p) => ({ day: String(p.day), score: Number(p.score), findings: 0 }));
+  if (canonical.length) return canonical;
   const dash = await softOne<IntelligenceDashboard>("/assets/intelligence/dashboard");
   const raw = (dash?.posture_trend ?? dash?.postureTrend ?? []) as Array<{ day?: string; date?: string; label?: string; score?: number }>;
   if (raw.length) {
@@ -3639,7 +3647,9 @@ export async function loadTrackerAnalytics(): Promise<{
     return { rows: demo.trackerFindings as TrackerFinding[], summary: demo.trackerSummary };
   }
   // Aging and SLA need every row, so walk the pages instead of one 500-ing request.
-  const { items, envelope } = await softListAllEnvelope<any>("/reports/tracker");
+  // Verified findings only, like every dashboard and the tracker's default view:
+  // the whole board (candidates included) made Analytics disagree with them.
+  const { items, envelope } = await softListAllEnvelope<any>("/reports/tracker?verification=verified");
   return {
     rows: items.map((t) => normalizeTrackerFinding(t) as TrackerFinding),
     summary: trackerSummaryFrom(envelope),
