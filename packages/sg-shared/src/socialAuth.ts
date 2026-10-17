@@ -3,14 +3,13 @@
 // token; the API verifies it (no secret lives here). Config comes from Vite env
 // so a Google API key is never committed to the repo:
 //   VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID
-import { type FirebaseApp, getApps, initializeApp } from "firebase/app";
-import {
-  type Auth,
-  GithubAuthProvider,
-  GoogleAuthProvider,
-  getAuth,
-  signInWithPopup,
-} from "firebase/auth";
+//
+// The SDK is loaded on demand, never in the entry chunk: imported statically it
+// put ~90 KB on every first paint (the login page is in the entry bundle) and
+// broke the 600 KB entry budget. Login preloads it once the page has painted, so
+// a click still opens the popup immediately (a popup must open close to the
+// click, or the browser blocks it).
+import type { Auth } from "firebase/auth";
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,
@@ -23,17 +22,32 @@ export const firebaseConfigured = Boolean(config.apiKey && config.projectId);
 
 export type SocialProvider = "google" | "github";
 
-let _auth: Auth | null = null;
+type FirebaseAuthModule = typeof import("firebase/auth");
 
-function auth(): Auth {
-  if (!firebaseConfigured) throw new Error("Social sign-in is not configured on this deployment.");
-  if (!_auth) {
-    const app: FirebaseApp = getApps().length
-      ? (getApps()[0] as FirebaseApp)
-      : initializeApp(config as { apiKey: string; authDomain?: string; projectId: string });
-    _auth = getAuth(app);
+let _sdk: Promise<{ auth: Auth; mod: FirebaseAuthModule }> | null = null;
+
+/** Load and initialize the Firebase SDK once (also used to preload it). */
+function loadSdk(): Promise<{ auth: Auth; mod: FirebaseAuthModule }> {
+  if (!firebaseConfigured) return Promise.reject(new Error("Social sign-in is not configured on this deployment."));
+  if (!_sdk) {
+    _sdk = Promise.all([import("firebase/app"), import("firebase/auth")])
+      .then(([appMod, mod]) => {
+        const app = appMod.getApps().length
+          ? appMod.getApps()[0]
+          : appMod.initializeApp(config as { apiKey: string; authDomain?: string; projectId: string });
+        return { auth: mod.getAuth(app), mod };
+      })
+      .catch((err) => {
+        _sdk = null; // a failed download can be retried
+        throw err;
+      });
   }
-  return _auth;
+  return _sdk;
+}
+
+/** Fetch the SDK in the background so the first click opens the popup at once. */
+export function preloadSocialAuth(): void {
+  if (firebaseConfigured) void loadSdk().catch(() => {});
 }
 
 /**
@@ -53,8 +67,8 @@ export function socialAuthErrorMessage(err: unknown): string | null {
 
 /** Open the provider popup and return the Firebase ID token to POST to the API. */
 export async function socialIdToken(provider: SocialProvider): Promise<string> {
-  const providerObj =
-    provider === "github" ? new GithubAuthProvider() : new GoogleAuthProvider();
-  const credential = await signInWithPopup(auth(), providerObj);
+  const { auth, mod } = await loadSdk();
+  const providerObj = provider === "github" ? new mod.GithubAuthProvider() : new mod.GoogleAuthProvider();
+  const credential = await mod.signInWithPopup(auth, providerObj);
   return credential.user.getIdToken();
 }
