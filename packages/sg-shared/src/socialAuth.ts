@@ -36,6 +36,21 @@ function auth(): Auth {
   return _auth;
 }
 
+/**
+ * What to tell the user when the provider popup fails, or null when they simply
+ * closed it (cancelling is not an error worth a red message).
+ */
+export function socialAuthErrorMessage(err: unknown): string | null {
+  const code = (err as { code?: string } | null)?.code ?? "";
+  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") return null;
+  if (code === "auth/popup-blocked") return "Your browser blocked the sign-in window. Allow pop-ups for this site and try again.";
+  if (code === "auth/account-exists-with-different-credential")
+    return "This email already signs in with another provider. Use that one, or sign in with email.";
+  if (code === "auth/network-request-failed") return "Could not reach the sign-in service. Check your connection and try again.";
+  if (code === "auth/unauthorized-domain") return "Sign-in with this provider is not enabled for this site yet.";
+  return "Sign-in was not completed. Try again.";
+}
+
 /** Open the provider popup and return the Firebase ID token to POST to the API. */
 export async function socialIdToken(provider: SocialProvider): Promise<string> {
   const providerObj =
