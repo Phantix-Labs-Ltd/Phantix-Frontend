@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy, X } from "lucide-react";
 import { loadTrackerDetail } from "../data";
+import { CrossAppLink } from "./CrossAppLink";
 import { SeverityBadge, Spinner, VerificationBadge } from "../ui";
 import { humanize, normalizeTrackerVerification, timeAgo, titleCase } from "../utils";
 import type { TrackerFinding } from "../types";
@@ -119,7 +120,10 @@ export default function FindingDetailDrawer({
   }, [findingKey, onClose]);
 
   const d: Partial<TrackerDetail> = { ...(row ?? {}), ...(detail ?? {}) } as Partial<TrackerDetail>;
-  const assetValue = d.related?.asset?.value ?? d.asset?.value ?? (row?.asset_value || null);
+  const assetId = d.asset_id ?? row?.asset_id ?? null;
+  const assetValue =
+    d.related?.asset?.value ?? d.asset?.value ?? (row?.asset_value && row.asset_value !== "Not set" ? row.asset_value : null) ??
+    (assetId != null ? `Asset #${assetId}` : null);
   const assetHref = assetValue ? `${assetBase}?q=${encodeURIComponent(assetValue)}` : null;
   const owner = d.assigned_owner || (row?.owner ?? null);
   const cvss = cvssText(d.cvss_data);
@@ -198,7 +202,10 @@ export default function FindingDetailDrawer({
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-phantix-700/50 pt-4">
                 <Fact label="Asset">
                   {assetValue ? (
-                    /^https?:\/\//.test(assetBase)
+                    // The asset this finding was raised on: its record in Core's inventory.
+                    assetId != null
+                      ? <CrossAppLink app="core" to={`/assets?asset=${assetId}`} className="font-mono text-gold-300 hover:text-gold-200">{assetValue}</CrossAppLink>
+                      : /^https?:\/\//.test(assetBase)
                       ? <a href={assetHref!} className="font-mono text-gold-300 hover:text-gold-200">{assetValue}</a>
                       : <Link to={assetHref!} className="font-mono text-gold-300 hover:text-gold-200">{assetValue}</Link>
                   ) : null}

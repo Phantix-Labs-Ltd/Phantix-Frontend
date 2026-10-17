@@ -171,7 +171,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
   };
   // `?add=1` opens the add dialog straight away (the first-VAPT journey sends
   // people here), and `?return=/vapt` goes back there once the asset is saved.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const returnTo = safeAppPath(searchParams.get("return"));
   const autoAdd = useRef(false);
@@ -181,6 +181,32 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
     void openAdd();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // `?asset=ID` opens that asset's details: the findings tracker and threat
+  // intel link a finding to the asset it was raised on.
+  const deepAsset = searchParams.get("asset");
+  const clearDeepAsset = () =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("asset");
+        return next;
+      },
+      { replace: true },
+    );
+  useEffect(() => {
+    if (!deepAsset || selected || loading) return;
+    const hit = assets.find((a) => String(a.id) === deepAsset);
+    if (hit) setSelected(hit);
+    else {
+      toast("info", "Asset not found", "That asset is no longer in the inventory.");
+      clearDeepAsset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepAsset, assets, loading]);
+  const closeSelected = () => {
+    setSelected(null);
+    if (deepAsset) clearDeepAsset();
+  };
   const [addForm, setAddForm] = useState({ type: "domain", value: "", name: "", environment: "production", criticality: "medium" });
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubMethod, setGithubMethod] = useState<"pat" | "app">("pat");
@@ -1046,7 +1072,7 @@ export default function AssetInventory({ title = "Assets" }: AssetInventoryProps
       )}
 
       {/* Asset detail modal */}
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.value ?? ""} wide>
+      <Modal open={!!selected} onClose={closeSelected} title={selected?.value ?? ""} wide>
         {selected && (
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-2">

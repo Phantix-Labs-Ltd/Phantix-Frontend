@@ -359,6 +359,7 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
   priority?: string;
   asset_id?: number | null;
   assigned_owner?: string | null;
+  assigned_owner_email?: string | null;
   target_fix_date?: string | null;
   first_detected_at?: string | null;
   detection_count?: number;
@@ -404,6 +405,7 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
     verification_status,
     owner: owner != null ? String(owner) : null,
     assigned_owner: owner != null ? String(owner) : null,
+    assigned_owner_email: raw?.assigned_owner_email ? String(raw.assigned_owner_email) : null,
     campaign_name: String(raw?.campaign_name ?? raw?.campaign ?? fallbackCampaign ?? "Not set"),
     asset_value: String(
       raw?.asset_value ??
