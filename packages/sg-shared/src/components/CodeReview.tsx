@@ -74,15 +74,20 @@ const AUTOFIX_LABEL: Record<string, string> = {
 
 /** Reasons `/blob` can decline, in words a developer can act on. */
 const BLOB_REASON: Record<string, string> = {
-  repository_unknown: "The repository for the finding is no longer connected.",
+  repository_unknown: "This finding's repository is not in SecureGraph.",
+  repository_disconnected: "The SCM connection for this repository is no longer active.",
+  repository_unreachable: "The provider could not be reached right now, so the reviewed code cannot be loaded.",
+  repository_branch_missing: "The repository or its default branch is no longer available on the provider.",
   path_unknown: "This finding has no file path recorded.",
   sha_unknown: "No reviewed commit is recorded for this finding.",
   github_not_connected: "The GitHub App is not connected, so the file cannot be read.",
-  file_not_found_at_sha: "The file is gone at the reviewed commit. It was moved or renamed, or the branch was deleted.",
+  file_not_found_at_sha: "The file no longer exists at the reviewed commit.",
   not_a_file: "That path is not a file at the reviewed commit.",
   file_too_large: "The file is too large to render here.",
   binary_or_undecodable: "The file is binary, so there is no block to show.",
-  github_error: "GitHub could not be reached for this file.",
+  github_error: "GitHub returned an error for this file.",
+  gitea_error: "Gitea returned an error for this file.",
+  gitlab_error: "GitLab returned an error for this file.",
 };
 
 // ── The block ────────────────────────────────────────────────────────────────
@@ -130,6 +135,19 @@ function BlobView({ blob }: { blob: CodeBlob }) {
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {blob.block_source === "current_head" ? (
+            <span className="chip text-[12px] border-amber-400/30 bg-amber-400/10 text-amber-300">
+              current file
+            </span>
+          ) : blob.repo_changed ? (
+            <span className="chip text-[12px] border-amber-400/30 bg-amber-400/10 text-amber-300">
+              repo changed since review
+            </span>
+          ) : (
+            <span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
+              reviewed commit
+            </span>
+          )}
           {blob.redacted && (
             <span className="chip text-[12px] border-amber-400/30 bg-amber-400/10 text-amber-300">
               <Lock size={10} className="mr-1 inline" /> value masked
@@ -137,11 +155,26 @@ function BlobView({ blob }: { blob: CodeBlob }) {
           )}
           {blob.permalink && (
             <a href={blob.permalink} target="_blank" rel="noreferrer" className="btn-ghost !px-2 !py-1 !text-[13px]">
-              <ExternalLink size={11} /> GitHub
+              <ExternalLink size={11} /> Open
             </a>
           )}
         </div>
       </div>
+
+      {(blob.repo_changed || blob.block_source === "current_head") && blob.message && (
+        <div className="border-b border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[13px] leading-5 text-amber-200">
+          <span className="font-semibold">
+            {blob.block_source === "current_head" ? "Reviewed commit unavailable" : "Repository changed"}
+          </span>
+          {" — "}
+          {blob.message}
+          {blob.reviewed_sha && blob.current_sha && (
+            <span className="ml-1 font-mono text-[12px] text-amber-200/80">
+              ({blob.reviewed_sha.slice(0, 7)} → {blob.current_sha.slice(0, 7)})
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full border-collapse font-mono text-[13px] leading-[1.6]">
@@ -177,7 +210,7 @@ function BlobView({ blob }: { blob: CodeBlob }) {
 
       {!blob.anchored && (
         <p className="border-t border-phantix-700/50 px-3 py-2 text-[13px] text-slate-500">
-          This detector . The head of the file is shown.
+          This detector did not record a line number. The head of the file is shown.
         </p>
       )}
     </div>
@@ -389,11 +422,11 @@ function FindingDetail({
         ) : (
           <div className="rounded-md border border-phantix-700/50 bg-phantix-900/40 p-4">
             <p className="text-xs leading-5 text-slate-400">
-              {BLOB_REASON[blob?.reason || ""] || "The code block could not be read."}
+              {blob?.message || BLOB_REASON[blob?.reason || ""] || "The code block could not be read."}
             </p>
             {(blob?.permalink || finding.permalink) && (
               <a href={blob?.permalink || finding.permalink} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-gold-300 underline">
-                <ExternalLink size={11} /> Open the file on GitHub
+                <ExternalLink size={11} /> Open the reviewed file
               </a>
             )}
           </div>

@@ -258,9 +258,20 @@ export interface CodeBlob {
   ok: boolean;
   /** Why the block could not be read — branch gone, file moved, app disconnected. */
   reason?: string;
+  /** Human-readable explanation when the block is unavailable or the repo moved. */
+  message?: string;
   path?: string;
   language?: string;
+  /** Commit the displayed block was read from. */
   sha?: string | null;
+  /** Commit the review ran on. */
+  reviewed_sha?: string | null;
+  /** Current default-branch HEAD when it could be resolved. */
+  current_sha?: string | null;
+  /** True when the provider's HEAD no longer matches the reviewed commit. */
+  repo_changed?: boolean;
+  /** reviewed_sha = exact reviewed commit; current_head = fallback after it vanished. */
+  block_source?: "reviewed_sha" | "current_head";
   repo?: string;
   start_line?: number | null;
   end_line?: number | null;
