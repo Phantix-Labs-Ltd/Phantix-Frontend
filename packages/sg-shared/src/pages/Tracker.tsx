@@ -10,7 +10,7 @@ import { Pagination, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS as PAGE_SIZES } from "
 import DocLink from "../components/DocLink";
 import {
   generateTrackerRemediation,
-  loadOrgUsers,
+  loadTrackerAssignees,
   loadTrackerBundle,
   patchTrackerFinding,
   retestTrackerFinding,
@@ -22,10 +22,16 @@ import { CrossAppLink } from "../components/CrossAppLink";
 import FindingDetailDrawer from "../components/FindingDetailDrawer";
 import { useResource } from "../useResource";
 import { useStore } from "../store";
-import { cx, humanize, normalizeTrackerVerification, timeAgo, titleCase, TRACKER_STATUSES } from "../utils";
+import { cx, humanize, normalizeTrackerVerification, timeAgo, titleCase, trackerSlaDue, TRACKER_STATUSES } from "../utils";
 import type { OrgUser, TrackerFinding, TrackerRemediation, TrackerSummary, TrackerVerification } from "../types";
 
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+const SLA_HINT = "Due by severity unless set: critical 7 days, high 30, medium 90, low 180 from first detection";
+
+/** The due date a finding falls back to when nobody has set one. */
+function slaDue(f: TrackerFinding): string | null {
+  return trackerSlaDue(f.severity, f.status, f.first_detected_at);
+}
 const CLOSED = new Set(["fixed", "accepted"]);
 
 /**
@@ -163,7 +169,7 @@ function OwnerPicker({
             : "Assign an owner"
       }
       className={cx(
-        "input !h-7 !w-full max-w-[10rem] truncate !py-0 !pr-7 text-xs disabled:cursor-not-allowed disabled:opacity-50",
+        "input !h-7 !w-[10.5rem] truncate !py-0 !pr-8 text-xs disabled:cursor-not-allowed disabled:opacity-50",
         !finding.owner && "text-slate-500",
       )}
     >
@@ -332,9 +338,36 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
     }
   };
 
-  // Owners are org members; an inactive account cannot take new work.
-  const usersRes = useResource<OrgUser[]>(loadOrgUsers, [] as OrgUser[], "org-users");
+  // Owners are the active users of this application (Core lists every active user).
+  const usersRes = useResource<OrgUser[]>(loadTrackerAssignees, [] as OrgUser[], "tracker-assignees");
   const assignable = useMemo(() => usersRes.data.filter((u) => u.is_active !== false), [usersRes.data]);
+
+  // Due date: set by hand, or cleared back to the severity window.
+  const setDue = async (f: TrackerFinding, next: string) => {
+    if (!(await requireDualControl("Changing a due date requires a dual-control operate session."))) return;
+    const previous = data;
+    const fallback = slaDue(f);
+    setData((b) => ({
+      ...b,
+      trackerFindings: b.trackerFindings.map((tf) =>
+        tf.finding_key === f.finding_key
+          ? { ...tf, target_fix_date: next || fallback, due_source: next ? "manual" : fallback ? "sla" : null }
+          : tf,
+      ),
+    }));
+    try {
+      // An empty value clears the manual date; the API then derives it from severity.
+      await patchTrackerFinding(f.finding_key, { target_fix_date: next });
+      toast(
+        "success",
+        next ? "Due date set" : "Due date reset",
+        next ? `${f.finding_key} is due ${new Date(next).toLocaleDateString()}` : `${f.finding_key} is due by its severity again`,
+      );
+    } catch (err: any) {
+      setData(previous);
+      toast("error", err?.status === 403 ? "Dual-control required" : "Update failed", err?.message ?? "Could not change the due date");
+    }
+  };
 
   const assignOwner = async (f: TrackerFinding, user: OrgUser | null) => {
     if (!(await requireDualControl("Assigning an owner requires a dual-control operate session."))) return;
@@ -648,7 +681,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1120px]">
+              <table className="w-full min-w-[1360px]">
                 <thead>
                   <tr className="border-b border-phantix-700/40">
                     <SortHeader k="key" className="w-24">Key</SortHeader>
@@ -656,7 +689,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                     <SortHeader k="severity">Severity</SortHeader>
                     <th className="th">Asset</th>
                     <th className="th">Owner</th>
-                    <th className="th hidden 2xl:table-cell">Due</th>
+                    <th className="th" title={SLA_HINT}>Due</th>
                     <th className="th">Evidence</th>
                     <SortHeader k="status">Status</SortHeader>
                     <SortHeader k="age" className="hidden 2xl:table-cell">Age</SortHeader>
@@ -725,15 +758,36 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                             )}
                           </span>
                         </td>
-                        <td className="td max-w-[11rem]">
+                        <td className="td whitespace-nowrap">
                           <OwnerPicker finding={f} users={assignable} onAssign={(row, user) => void assignOwner(row, user)} />
                         </td>
-                        <td className="td hidden whitespace-nowrap 2xl:table-cell">
-                          {f.target_fix_date ? (
-                            <span className={cx("text-[13px]", overdue ? "font-medium text-severity-high" : "text-slate-400")}>
-                              {overdue ? "Overdue · " : ""}{new Date(f.target_fix_date).toLocaleDateString()}
-                            </span>
-                          ) : <span className="text-slate-600">Not set</span>}
+                        <td className="td whitespace-nowrap">
+                          {/* Due by severity unless someone sets a date; clearing it goes back to the severity window. */}
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="date"
+                              value={f.target_fix_date ? String(f.target_fix_date).slice(0, 10) : ""}
+                              onChange={(e) => void setDue(f, e.target.value)}
+                              aria-label={`Due date of ${f.finding_key}`}
+                              title={
+                                f.due_source === "manual"
+                                  ? "Set by hand. Clear it to go back to the severity window."
+                                  : f.due_source === "sla"
+                                    ? SLA_HINT
+                                    : "Set a due date"
+                              }
+                              className={cx(
+                                "input !h-7 !w-[8.5rem] !py-0 !pr-1.5 text-xs [color-scheme:dark]",
+                                overdue && "!border-severity-high/50 text-severity-high",
+                                !f.target_fix_date && "text-slate-500",
+                              )}
+                            />
+                            {overdue ? (
+                              <span className="chip border-severity-high/40 bg-severity-high/10 text-[11px] text-severity-high">Overdue</span>
+                            ) : f.due_source === "sla" ? (
+                              <span className="chip text-[11px] text-slate-400" title={SLA_HINT}>Auto</span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="td whitespace-nowrap"><VerificationBadge status={normalizeTrackerVerification(f.verification_status)} /></td>
                         <td className="td whitespace-nowrap">
