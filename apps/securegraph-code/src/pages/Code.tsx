@@ -16,6 +16,8 @@ import {
   loadBranchReviewEvents,
   loadAutofixStatus,
   loadGithubRepositories,
+  runRepositoryReview,
+  saveReviewSettings,
   syncRepositories,
 } from "@sg/codeOps";
 import {
@@ -135,11 +137,16 @@ export default function Code() {
   const [connectId, setConnectId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const autoSynced = useRef(false);
+  const [busyRepo, setBusyRepo] = useState<number | null>(null);
+  const [reviewRepoId, setReviewRepoId] = useState<number | null>(null);
+  const [aiSettings, setAiSettings] = useState<any>(null);
+  const [enablingCp, setEnablingCp] = useState(false);
+  const [autofixRepo, setAutofixRepo] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setReposError(null);
-    const [inst, walletRes, settingsRes, eventsRes, autofixRes, catalogRes, installsRes] = await Promise.all([
+    const [inst, walletRes, settingsRes, eventsRes, autofixRes, catalogRes, installsRes, aiSettingsRes] = await Promise.all([
       loadGithubInstallation().catch(() => null),
       loadBranchReviewWallet().catch(() => null),
       loadBranchReviewSettings().catch(() => null),
@@ -147,6 +154,7 @@ export default function Code() {
       loadAutofixStatus().catch(() => null),
       loadHubCatalog().catch(() => null),
       loadHubInstallations().catch(() => null),
+      api.get<any>("/ai/settings").catch(() => null),
     ]);
     setInstallation(inst);
     const catalog = asArray<IntegrationConnector & { display_name?: string }>(catalogRes)
@@ -158,6 +166,7 @@ export default function Code() {
         ["gitlab", "gitea", "github"].includes(i.connector_id),
       ),
     );
+    setAiSettings(aiSettingsRes);
     setWallet(walletRes);
     setEvents(Array.isArray(eventsRes?.items) ? eventsRes.items : []);
     setAutofix(autofixRes);
@@ -209,6 +218,75 @@ export default function Code() {
       void syncRepos({ silent: true });
     }
   }, [loading, scmInstalls, repos.length, reposError, syncRepos]);
+
+  const runReview = useCallback(
+    async (repo: Repo) => {
+      if (!(await requireDualControl(`Running a review on ${repo.full_name || repo.name} requires dual-control.`))) return;
+      setBusyRepo(repo.id);
+      try {
+        const res = await runRepositoryReview(repo.id, { ref: repo.default_branch || undefined });
+        if (isPendingApproval(res)) {
+          toast("info", "Sent for approval", "The review is parked for an authorizer.");
+          return;
+        }
+        setReviewRepoId(repo.id);
+        navigate("/code-review");
+        toast(
+          "success",
+          "Review queued",
+          `${repo.full_name || repo.name} is being reviewed. Findings appear under Security review.`,
+        );
+      } catch (e: unknown) {
+        toast("error", "Could not start review", publicErrorMessage(e, "The review could not be queued."));
+      } finally {
+        setBusyRepo(null);
+      }
+    },
+    [navigate, requireDualControl, toast],
+  );
+
+  const toggleReview = useCallback(
+    async (repo: Repo, enabled: boolean) => {
+      if (!(await requireDualControl(`${enabled ? "Enabling" : "Disabling"} review requires dual-control.`))) return;
+      setBusyRepo(repo.id);
+      try {
+        const res = await saveReviewSettings(repo.id, {
+          watched_branch: repo.default_branch || "main",
+          enabled,
+          post_github_comment: false,
+        });
+        if (isPendingApproval(res)) {
+          toast("info", "Sent for approval", "The review setting change is parked for an authorizer.");
+          return;
+        }
+        toast("success", enabled ? "Review enabled" : "Review disabled", repo.full_name || repo.name || "");
+        await load();
+      } catch (e: unknown) {
+        toast("error", "Could not update review", publicErrorMessage(e, "The setting was not saved."));
+      } finally {
+        setBusyRepo(null);
+      }
+    },
+    [load, requireDualControl, toast],
+  );
+
+  const enableContinuousPr = useCallback(async () => {
+    if (!(await requireDualControl("Enabling Continuous PR requires dual-control."))) return;
+    setEnablingCp(true);
+    try {
+      const res = await api.put("/ai/settings", { continuous_pr_enabled: true });
+      if (isPendingApproval(res)) {
+        toast("info", "Sent for approval", "The AI setting change is parked for an authorizer.");
+        return;
+      }
+      toast("success", "Continuous PR enabled", "Draft PRs can now be opened per repository.");
+      await load();
+    } catch (e: unknown) {
+      toast("error", "Could not enable Continuous PR", publicErrorMessage(e));
+    } finally {
+      setEnablingCp(false);
+    }
+  }, [load, requireDualControl, toast]);
 
   const connected = Boolean(installation?.connected || installation?.status === "active" || installation?.installation_id);
 
@@ -314,9 +392,16 @@ export default function Code() {
             Branch-review wallet · ₦{Number(wallet.balance_ngn).toLocaleString()}
           </span>
         )}
-        {autofix?.continuous_pr && (
-          <span className="chip text-xs border-gold-400/30 bg-gold-400/10 text-gold-200">
-            Continuous PR {autofix.continuous_pr.opens_pr ? "enabled" : "off"}
+        {aiSettings && (
+          <span
+            className={cx(
+              "chip text-xs",
+              aiSettings.continuous_pr_enabled
+                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                : "border-phantix-600/40 bg-phantix-800/50 text-slate-400",
+            )}
+          >
+            Continuous PR {aiSettings.continuous_pr_enabled ? "enabled" : "off"}
           </span>
         )}
         <button
@@ -348,7 +433,7 @@ export default function Code() {
       {tab === "review" && (
         // The GitHub-style review: the block that is wrong, why, how to fix it,
         // and the AutoFix draft PR that closes it.
-        <CodeReview repos={repos} />
+        <CodeReview repos={repos} initialRepoId={reviewRepoId ?? undefined} />
       )}
 
       {tab === "repositories" && (
@@ -416,21 +501,44 @@ export default function Code() {
                         </td>
                         <td className="td text-xs font-mono text-slate-400">{r.default_branch || s?.watched_branch || "Not set"}</td>
                         <td className="td">
-                          {s?.enabled ? (
-                            <span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
-                              {s.watched_branch || "watching"}
-                            </span>
-                          ) : (
-                            <span className="chip text-[12px] border-phantix-600/40 text-slate-500">off</span>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {s?.enabled ? (
+                              <span className="chip text-[12px] border-emerald-400/30 bg-emerald-400/10 text-emerald-300">
+                                {s.watched_branch || "watching"}
+                              </span>
+                            ) : (
+                              <span className="chip text-[12px] border-phantix-600/40 text-slate-500">off</span>
+                            )}
+                            <button
+                              className="btn-ghost !px-1.5 !py-0.5 !text-[11px]"
+                              disabled={busyRepo === r.id}
+                              onClick={() => void toggleReview(r, !s?.enabled)}
+                            >
+                              {s?.enabled ? "Disable" : "Enable"}
+                            </button>
+                          </div>
                         </td>
                         <td className="td text-xs text-slate-400">{r.private ? "Private" : "Public"}</td>
                         <td className="td text-right">
-                          {r.html_url && (
-                            <a href={r.html_url} target="_blank" rel="noreferrer" className="btn-ghost !px-2 !py-1 !text-xs">
-                              <ExternalLink size={12} /> Open
-                            </a>
-                          )}
+                          <div className="flex justify-end gap-1">
+                            <button
+                              className="btn-secondary !px-2 !py-1 !text-xs"
+                              disabled={busyRepo === r.id}
+                              onClick={() => void runReview(r)}
+                            >
+                              {busyRepo === r.id ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : (
+                                <ShieldCheck size={12} />
+                              )}{" "}
+                              Review
+                            </button>
+                            {r.html_url && (
+                              <a href={r.html_url} target="_blank" rel="noreferrer" className="btn-ghost !px-2 !py-1 !text-xs">
+                                <ExternalLink size={12} /> Open
+                              </a>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -502,6 +610,36 @@ export default function Code() {
               <span className="chip text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300">gates: scope · no-op · re-validation · credits</span>
               {autofix?.queue && <span className="chip text-xs border-phantix-600/40 bg-phantix-800/50 text-slate-300">queue: {autofix.queue}</span>}
             </div>
+
+            <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-phantix-700/40 pt-3">
+              <div>
+                <label className="label">Repository</label>
+                <select
+                  className="input !w-auto !py-1.5 !text-xs"
+                  value={autofixRepo}
+                  onChange={(e) => setAutofixRepo(e.target.value)}
+                >
+                  <option value="">Select a repository</option>
+                  {repos.map((r) => (
+                    <option key={r.id} value={String(r.id)}>{r.full_name || r.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                className="btn-primary !py-2 !text-xs"
+                disabled={!autofixRepo || busyRepo !== null}
+                onClick={() => {
+                  const repo = repos.find((r) => String(r.id) === autofixRepo);
+                  if (repo) void runReview(repo);
+                }}
+              >
+                {busyRepo !== null ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />}
+                Run review &amp; open findings
+              </button>
+            </div>
+            <p className="text-[13px] text-slate-500">
+              Reviews populate the findings list first; each verified finding then gets its own AutoFix action in Security review.
+            </p>
           </div>
         </Card>
         </motion.div>
@@ -509,6 +647,22 @@ export default function Code() {
 
       {tab === "continuous-pr" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          {aiSettings && !aiSettings.continuous_pr_enabled && (
+            <div className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
+              <p className="font-semibold">Continuous PR is off for this organization</p>
+              <p className="mt-1 text-[13px] text-amber-100/80">
+                Enable it once here; the repository form below can then open draft PRs with your connected SCM.
+              </p>
+              <button
+                className="btn-primary mt-2 !py-2 !text-xs"
+                disabled={enablingCp}
+                onClick={() => void enableContinuousPr()}
+              >
+                {enablingCp ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />}
+                Enable Continuous PR
+              </button>
+            </div>
+          )}
           <ContinuousPrForm repos={repos} onDone={() => void load()} />
         </motion.div>
       )}
