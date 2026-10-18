@@ -81,6 +81,12 @@ const STATUS_ORDER = ["regressed", "retest_failed", "open", "in_progress", "acce
 /** The Key column is a glance, not the identifier: the full key stays in the
  *  row's title/aria-label and in the deep link. */
 const KEY_DISPLAY_MAX = 10;
+/** The Asset column shows this many characters; the full value is on hover. */
+const ASSET_DISPLAY_MAX = 15;
+
+function clip(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
 
 const SORTERS: Record<SortKey, (a: TrackerFinding, b: TrackerFinding) => number> = {
   severity: (a, b) => (SEV_RANK[a.severity] ?? 0) - (SEV_RANK[b.severity] ?? 0),
@@ -681,7 +687,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1360px]">
+              <table className="w-full min-w-[1260px]">
                 <thead>
                   <tr className="border-b border-phantix-700/40">
                     <SortHeader k="key" className="w-24">Key</SortHeader>
@@ -741,20 +747,23 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                           </span>
                         </td>
                         <td className="td whitespace-nowrap"><SeverityBadge severity={f.severity} /></td>
-                        <td className="td max-w-[14rem]">
-                          {/* The asset the finding was raised on, opened in Core's inventory. */}
-                          <span className="block truncate font-mono text-[13px] text-slate-400" title={assetLabel(f) ?? undefined}>
+                        <td className="td whitespace-nowrap">
+                          {/* The asset the finding was raised on, opened in Core's inventory.
+                              The first characters are shown; the full value is on hover. */}
+                          <span className="font-mono text-[13px] text-slate-400" title={assetLabel(f) ?? undefined}>
                             {f.asset_id != null ? (
                               <CrossAppLink
                                 app="core"
                                 to={`/assets?asset=${f.asset_id}`}
-                                title={`Open ${assetLabel(f)} in Assets`}
+                                title={`${assetLabel(f)} · open in Assets`}
                                 className="text-gold-300/90 hover:text-gold-200 hover:underline"
                               >
-                                {assetLabel(f)}
+                                {clip(assetLabel(f) ?? "", ASSET_DISPLAY_MAX)}
                               </CrossAppLink>
+                            ) : assetLabel(f) ? (
+                              clip(assetLabel(f)!, ASSET_DISPLAY_MAX)
                             ) : (
-                              assetLabel(f) ?? <span className="font-sans text-slate-600">Not set</span>
+                              <span className="font-sans text-slate-600">Not set</span>
                             )}
                           </span>
                         </td>
