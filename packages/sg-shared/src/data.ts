@@ -3514,9 +3514,20 @@ export async function uninstallHubIntegration(id: number): Promise<Record<string
   return api.delete<Record<string, unknown>>(`/integrations/installations/${id}`);
 }
 
-export async function startHubOAuth(id: number): Promise<{ authorize_url: string; state: string } | null> {
-  if (isDemoMode()) { await delay(200); return { authorize_url: "https://example.com/oauth/authorize?demo=1", state: "demo-state" }; }
-  return api.post<{ authorize_url: string; state: string } | null>(`/integrations/installations/${id}/oauth/start`);
+export async function startHubOAuth(
+  id: number,
+): Promise<{ authorize_url: string; state: string; redirect_uri?: string } | null> {
+  if (isDemoMode()) {
+    await delay(200);
+    return {
+      authorize_url: "https://example.com/oauth/authorize?demo=1",
+      state: "demo-state",
+      redirect_uri: "/integrations/oauth/demo/callback",
+    };
+  }
+  return api.post<{ authorize_url: string; state: string; redirect_uri?: string } | null>(
+    `/integrations/installations/${id}/oauth/start`,
+  );
 }
 
 export async function testHubInstallation(id: number): Promise<Record<string, unknown> | null> {

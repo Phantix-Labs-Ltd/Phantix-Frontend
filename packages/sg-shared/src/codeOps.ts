@@ -51,6 +51,11 @@ export interface Repo {
   private?: boolean;
   default_branch?: string;
   html_url?: string;
+  /** github | gitlab | gitea — the shared repository table is provider-tagged. */
+  provider?: string;
+  /** Hub installation that imported this row (Gitea/GitLab connections). */
+  installation_id?: number;
+  repo_id?: number;
   can_analyze?: boolean;
   analyze_blocked_reason?: string | null;
   requires_premium?: boolean;

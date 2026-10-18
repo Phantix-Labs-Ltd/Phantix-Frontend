@@ -11,6 +11,7 @@ import { loadHubCatalog, loadHubInstallations, installHubIntegration, uninstallH
 import { timeAgo, cx, humanize } from "@sg/utils";
 import type { IntegrationConnector, IntegrationInstallation, IntegrationCatalogPage } from "@sg/types";
 import DocLink from "@sg/components/DocLink";
+import { HOSTS } from "../hosts";
 
 /** Statuses the backend can actually install today. */
 const INSTALLABLE = new Set(["ga", "beta", "preview", "active"]);
@@ -31,6 +32,15 @@ function connectorStatusLabel(status?: string): string {
     default:
       return humanize(status || "unknown");
   }
+}
+
+// SCM connections are configured on the Code app's provider page: it handles
+// self-managed base URLs, per-org OAuth apps and webhooks. Routing there avoids
+// a generic install that cannot complete an SCM flow.
+const CODE_SCM_CONNECTORS = new Set(["gitlab", "gitea"]);
+
+function isScmConnector(conn: IntegrationConnector): boolean {
+  return CODE_SCM_CONNECTORS.has(conn.connector_id);
 }
 
 function isInstallable(conn: IntegrationConnector): boolean {
@@ -154,7 +164,14 @@ export default function IntegrationsHub() {
                   <motion.div key={conn.connector_id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
                     <div
                       className={cx(installable ? "cursor-pointer" : "cursor-default opacity-80")}
-                      onClick={() => installable && setShowInstall(conn.connector_id)}
+                      onClick={() => {
+                        if (!installable) return;
+                        if (isScmConnector(conn)) {
+                          window.location.href = `${HOSTS.code}/code-review/providers/${conn.connector_id}`;
+                          return;
+                        }
+                        setShowInstall(conn.connector_id);
+                      }}
                     >
                       <Card hover={installable} className="!p-4">
                         <div className="flex items-start gap-3">
