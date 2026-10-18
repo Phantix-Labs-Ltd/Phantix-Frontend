@@ -49,15 +49,27 @@ export interface ScmProviderSetup {
   docsUrl: string;
   /** Where to mint a token (opened in a new tab). */
   tokenUrl?: string;
+  /** Path used to build the token page on a self-managed instance. */
+  tokenPath?: string;
   tokenLabel?: string;
   tokenHint?: string;
   scopes: string[];
   webhookSecretHeader: string;
-  /** Env var whose value is the webhook secret the provider must send. */
+  /** Default env var for the webhook secret; a connection may override it. */
   webhookSecretEnv?: string;
   /** Ordered setup steps. `{API_BASE}` is substituted at render time. */
   setup: string[];
   capabilities: string[];
+}
+
+/**
+ * Where the operator creates a token. Self-managed instances use their own URL;
+ * the SaaS default is only a fallback.
+ */
+export function scmTokenUrl(meta: ScmProviderSetup, baseUrl?: string): string | null {
+  const base = (baseUrl || "").trim().replace(/\/+$/, "");
+  if (base && meta.tokenPath) return `${base}${meta.tokenPath}`;
+  return meta.tokenUrl ?? null;
 }
 
 export const SCM_PROVIDER_SETUP: Record<string, ScmProviderSetup> = {
@@ -83,20 +95,22 @@ export const SCM_PROVIDER_SETUP: Record<string, ScmProviderSetup> = {
     id: "gitlab",
     name: "GitLab",
     kind: "connector",
-    tagline: "GitLab.com or self-managed (server-configured base URL)",
+    tagline: "GitLab.com or self-managed: one connection per GitLab instance",
     blurb:
       "Connect with OAuth2 or a personal/project access token. Merge-request events are reviewed before merge.",
     docsUrl: "https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html",
     tokenUrl: "https://gitlab.com/-/user_settings/personal_access_tokens",
+    tokenPath: "/-/user_settings/personal_access_tokens",
     tokenLabel: "Personal or project access token",
     tokenHint: "Copy a token with the api scope (or read_api + write_repository).",
     scopes: ["api", "read_api", "write_repository"],
     webhookSecretHeader: "X-Gitlab-Token",
     webhookSecretEnv: "GITLAB_WEBHOOK_SECRET",
     setup: [
+      "Set the GitLab URL in Advanced if you use a self-managed instance (each organization can use a different one).",
       "Create a GitLab personal (or project) access token with the api scope.",
-      "Connect below. Paste the token, or use OAuth2 to authorize SecureGraph.",
-      "Add a project webhook to {API_BASE}/gitlab/webhook and set Secret token to GITLAB_WEBHOOK_SECRET.",
+      "Connect below. Paste the token, or use OAuth2 to authorize SecureGraph (own OAuth app supported in Advanced).",
+      "Add a project webhook to {API_BASE}/gitlab/webhook and set Secret token to this connection's webhook secret.",
       "Enable the Merge request events trigger on that webhook.",
     ],
     capabilities: ["scm.import", "merge_request.review"],
@@ -105,20 +119,21 @@ export const SCM_PROVIDER_SETUP: Record<string, ScmProviderSetup> = {
     id: "gitea",
     name: "Gitea",
     kind: "connector",
-    tagline: "Self-hosted Gitea (server-configured base URL)",
+    tagline: "Self-hosted Gitea: one connection per instance",
     blurb:
       "Connect with OAuth2 or an access token. Pull-request events are reviewed before merge.",
     docsUrl: "https://docs.gitea.com/development/oauth2-provider",
-    tokenUrl: "/user/settings/applications",
+    tokenPath: "/user/settings/applications",
     tokenLabel: "Access token",
     tokenHint: "Create a token with read:repository and write:repository scopes.",
     scopes: ["read:repository", "write:repository", "read:issue"],
     webhookSecretHeader: "X-Gitea-Signature",
     webhookSecretEnv: "GITEA_WEBHOOK_SECRET",
     setup: [
+      "Enter your Gitea base URL in Advanced (e.g. https://git.yourcompany.com). Each organization can point at its own instance.",
       "Create a Gitea access token (Settings → Applications) with repository scopes.",
-      "Connect below. Paste the token, or use OAuth2 to authorize SecureGraph.",
-      "Add a repository webhook to {API_BASE}/gitea/webhook with a Secret matching GITEA_WEBHOOK_SECRET.",
+      "Connect below. Paste the token, or use OAuth2 to authorize SecureGraph (own OAuth app supported in Advanced).",
+      "Add a repository webhook to {API_BASE}/gitea/webhook with this connection's webhook secret.",
       "Enable the Pull request event on that webhook.",
     ],
     capabilities: ["scm.import", "merge_request.review"],

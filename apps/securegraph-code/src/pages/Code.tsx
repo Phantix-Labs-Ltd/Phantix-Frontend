@@ -3,10 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   GitBranch, GitPullRequest, Wrench, ShieldCheck, RefreshCw, ExternalLink, Loader2, Send, Github, AlertTriangle,
-  Gitlab, Plug, PlugZap, Key, Trash2, TestTube, Webhook, CheckCircle2,
+  Gitlab, Plug, PlugZap, Key, Trash2, TestTube, Webhook, CheckCircle2, ChevronDown, ChevronUp, Settings2, Copy,
 } from "lucide-react";
 import { PageHeader, Card, CardHeader, StatusBadge, EmptyState, Tabs, Modal, CardListSkeleton } from "@sg/ui";
-import { api, isPendingApproval, publicErrorMessage, publicDetailCopy } from "@sg/api";
+import { API_BASE, api, isPendingApproval, publicErrorMessage, publicDetailCopy } from "@sg/api";
+import { sameOriginApiUrl } from "@sg/apiOrigin";
 import CodeReview from "@sg/components/CodeReview";
 import {
   loadGithubInstallation,
@@ -37,6 +38,7 @@ import {
   providerTone,
   scmIcon,
   scmInstallable,
+  scmTokenUrl,
 } from "../scmProviders";
 
 // ── Code — AutoFix, Continuous PR, GitHub repositories & review runs ─────────
@@ -51,6 +53,11 @@ interface Repo {
   private?: boolean;
   default_branch?: string;
   html_url?: string;
+  /** github | gitlab | gitea — the shared repository table is provider-tagged. */
+  provider?: string;
+  /** Hub installation that imported this row (Gitea/GitLab connections). */
+  installation_id?: number;
+  repo_id?: number;
   can_analyze?: boolean;
   analyze_blocked_reason?: string | null;
   requires_premium?: boolean;
@@ -312,7 +319,7 @@ export default function Code() {
       {tab === "repositories" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
-          <CardHeader title="Connected repositories" subtitle="Repositories the GitHub App can read and review" action={<GitBranch size={16} className="text-gold-300" />} />
+          <CardHeader title="Connected repositories" subtitle="Repositories from GitHub, GitLab and Gitea connections" action={<GitBranch size={16} className="text-gold-300" />} />
           {loading ? (
             <CardListSkeleton rows={4} className="p-4" />
           ) : reposError ? (
@@ -321,7 +328,7 @@ export default function Code() {
             <EmptyState
               icon={<Github size={22} />}
               title="No repositories yet"
-              body="Install the GitHub App and choose which repos SecureGraph can see."
+              body="Install the GitHub App, or connect GitLab/Gitea from Providers, to import repositories SecureGraph can review."
               action={<PlatformSetupLink task={{ kind: "install_github" }} variant="primary"><Github size={15} /> Install the GitHub App</PlatformSetupLink>}
             />
           ) : (
@@ -343,8 +350,11 @@ export default function Code() {
                       <tr key={r.id} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
                         <td className="td">
                           <div className="flex items-center gap-2">
-                            <GitBranch size={13} className="text-slate-500" />
+                            <span className="text-slate-500">{scmIcon(r.provider || "github", 13)}</span>
                             <span className="text-sm text-slate-200">{r.full_name || r.name}</span>
+                            <span className="chip text-[11px] border-phantix-600/40 bg-phantix-800/50 text-slate-400">
+                              {r.provider || "github"}
+                            </span>
                           </div>
                         </td>
                         <td className="td text-xs font-mono text-slate-400">{r.default_branch || s?.watched_branch || "Not set"}</td>
@@ -539,9 +549,11 @@ export default function Code() {
                   </table>
                 </div>
                 <p className="p-3 text-[13px] leading-4 text-slate-500">
-                  Point the provider webhook at <code className="mx-1">&#123;API_BASE&#125;{SCM_WEBHOOK_PATH.gitlab}</code> for GitLab
-                  or <code className="mx-1">&#123;API_BASE&#125;{SCM_WEBHOOK_PATH.gitea}</code> for Gitea. Signatures are verified with the
-                  connector secret: <code>X-Gitlab-Token</code> or <code>X-Gitea-Signature</code>. GitHub uses the App's <code>X-Hub-Signature-256</code>.
+                  Point the provider webhook at{" "}
+                  <code className="mx-1">{sameOriginApiUrl(`${API_BASE}${SCM_WEBHOOK_PATH.gitlab}`)}</code> for GitLab or{" "}
+                  <code className="mx-1">{sameOriginApiUrl(`${API_BASE}${SCM_WEBHOOK_PATH.gitea}`)}</code> for Gitea. Signatures are
+                  verified with the connector secret: <code>X-Gitlab-Token</code> or <code>X-Gitea-Signature</code>. GitHub uses the App's{" "}
+                  <code>X-Hub-Signature-256</code>.
                 </p>
               </>
             )}
@@ -567,21 +579,52 @@ function ScmConnectModal({ connector, onClose, onDone }: { connector: Integratio
   const [label, setLabel] = useState("");
   const [mode, setMode] = useState(connector?.auth_modes?.[0] || "oauth2");
   const [token, setToken] = useState("");
+  // Per-connection settings: self-managed instance, own OAuth app, webhook secret.
+  const [baseUrl, setBaseUrl] = useState("");
+  const [callbackUrl, setCallbackUrl] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [resolvedCallback, setResolvedCallback] = useState("");
+  const [pendingAuthorizeUrl, setPendingAuthorizeUrl] = useState("");
   const [busy, setBusy] = useState(false);
   if (!connector) return null;
   const needsToken = mode === "api_key";
+  const ownOAuthApp = mode === "oauth2" && Boolean(clientId.trim() || clientSecret.trim());
+  const setup = SCM_PROVIDER_SETUP[connector.connector_id];
+  const tokenPage = setup ? scmTokenUrl(setup, baseUrl) : null;
 
   const submit = async () => {
     if (!label.trim()) { toast("error", "Label is required"); return; }
     if (needsToken && !token.trim()) { toast("error", "A personal access token is required"); return; }
+    if (ownOAuthApp && !(clientId.trim() && clientSecret.trim())) {
+      toast("error", "OAuth app needs both values", "Provide both the client ID and the client secret, or leave both blank.");
+      return;
+    }
     setBusy(true);
     try {
+      const config: Record<string, unknown> = {};
+      const secrets: Record<string, unknown> = {};
+      const base = baseUrl.trim().replace(/\/+$/, "");
+      if (base) config.base_url = base;
+      if (webhookSecret.trim()) config.webhook_secret = webhookSecret.trim();
+      if (mode === "oauth2") {
+        if (callbackUrl.trim()) config.callback_url = callbackUrl.trim();
+        if (clientId.trim()) config.client_id = clientId.trim();
+        if (clientSecret.trim()) secrets.client_secret = clientSecret.trim();
+      } else if (token.trim()) {
+        secrets.api_key = token.trim();
+      }
+
       const body: Record<string, unknown> = {
         connector_id: connector.connector_id,
         label: label.trim(),
         auth_mode: mode,
       };
-      if (needsToken) body.secrets = { api_key: token.trim() };
+      if (Object.keys(config).length) body.config = config;
+      if (Object.keys(secrets).length) body.secrets = secrets;
+
       const res = await installHubIntegration(body);
       if (isPendingApproval(res)) {
         // A parked call opens the approval overlay (it names the authorizer).
@@ -591,7 +634,18 @@ function ScmConnectModal({ connector, onClose, onDone }: { connector: Integratio
       const id = (res as { installation_id?: number; id?: number })?.installation_id ?? (res as { id?: number })?.id;
       if (mode === "oauth2" && id) {
         const start = await startHubOAuth(id);
-        if (start?.authorize_url) { window.location.href = start.authorize_url; return; }
+        if (start?.redirect_uri) setResolvedCallback(start.redirect_uri);
+        if (start?.authorize_url) {
+          // Own OAuth app: hold the redirect so the operator can register the
+          // exact callback URL first.
+          if (ownOAuthApp && !callbackUrl.trim()) {
+            setPendingAuthorizeUrl(start.authorize_url);
+            toast("info", "Register the callback URL", "Copy the callback shown, add it to your OAuth app, then continue.");
+            return;
+          }
+          window.location.href = start.authorize_url;
+          return;
+        }
       }
       toast("success", "Connected", `${connector.name} connected.`);
       onDone();
@@ -621,6 +675,111 @@ function ScmConnectModal({ connector, onClose, onDone }: { connector: Integratio
             </select>
           </div>
         )}
+
+        <button
+          type="button"
+          className="btn-ghost w-full !justify-between !py-2 !text-xs"
+          onClick={() => setShowAdvanced((v) => !v)}
+        >
+          <span className="flex items-center gap-1.5">
+            <Settings2 size={13} /> Advanced: self-hosted instance, own OAuth app, webhook secret
+          </span>
+          {showAdvanced ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+
+        {showAdvanced && (
+          <div className="space-y-3 rounded-lg border border-phantix-700/40 bg-phantix-950/50 p-3">
+            <div>
+              <label className="label">{connector.name} base URL</label>
+              <input
+                className="input font-mono !text-xs"
+                placeholder={connector.connector_id === "gitea" ? "https://git.yourcompany.com" : "https://gitlab.com"}
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+              />
+              <p className="mt-1 text-[13px] leading-4 text-slate-500">
+                Blank uses the server default. Each organization may point at its own instance.
+              </p>
+            </div>
+            {mode === "oauth2" && (
+              <>
+                <div>
+                  <label className="label">OAuth client ID <span className="text-slate-500">(optional)</span></label>
+                  <input
+                    className="input font-mono !text-xs"
+                    placeholder="Leave blank to use the platform's OAuth app"
+                    value={clientId}
+                    onChange={(e) => setClientId(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="label">OAuth client secret <span className="text-slate-500">(optional)</span></label>
+                  <input
+                    type="password"
+                    className="input font-mono !text-xs"
+                    placeholder="Stored encrypted, never shown again"
+                    value={clientSecret}
+                    onChange={(e) => setClientSecret(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="label">OAuth callback URL <span className="text-slate-500">(optional)</span></label>
+                  <input
+                    className="input font-mono !text-xs"
+                    placeholder={`https://platform.example/integrations/oauth/${connector.connector_id}/callback`}
+                    value={callbackUrl}
+                    onChange={(e) => setCallbackUrl(e.target.value)}
+                  />
+                  <p className="mt-1 text-[13px] leading-4 text-slate-500">
+                    Use <code>{"{connector_id}"}</code> where the provider id belongs. Blank uses the platform default.
+                  </p>
+                </div>
+              </>
+            )}
+            <div>
+              <label className="label">Webhook secret <span className="text-slate-500">(optional)</span></label>
+              <input
+                type="password"
+                className="input font-mono !text-xs"
+                placeholder="Secret your provider sends with webhooks"
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+              />
+              <p className="mt-1 text-[13px] leading-4 text-slate-500">
+                Blank uses the server default ({setup?.webhookSecretEnv ?? "provider env"}).
+              </p>
+            </div>
+          </div>
+        )}
+
+        {pendingAuthorizeUrl && (
+          <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
+            <p className="font-semibold">Register this callback URL on your OAuth app</p>
+            <p className="mt-1 text-[13px] text-amber-100/80">Copy it, add it to the app, then continue to {connector.name}.</p>
+            <div className="mt-2 flex items-center gap-2">
+              <code className="flex-1 break-all font-mono text-[12px]">{resolvedCallback || callbackUrl}</code>
+              <button
+                className="btn-ghost p-1"
+                title="Copy callback URL"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(resolvedCallback || callbackUrl);
+                  toast("success", "Callback URL copied");
+                }}
+              >
+                <Copy size={12} />
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button className="btn-primary !py-2 !text-xs" onClick={() => { window.location.href = pendingAuthorizeUrl; }}>
+                Continue to {connector.name}
+              </button>
+              <button className="btn-secondary !py-2 !text-xs" onClick={() => setPendingAuthorizeUrl("")}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {needsToken ? (
           <div>
             <label className="label">Personal access token</label>
@@ -633,6 +792,11 @@ function ScmConnectModal({ connector, onClose, onDone }: { connector: Integratio
             <p className="mt-1 text-[13px] text-slate-500">
               Stored encrypted and never shown again.
             </p>
+            {tokenPage && (
+              <a href={tokenPage} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-[13px] text-phantix-300 hover:underline">
+                <ExternalLink size={12} /> Where to create a token
+              </a>
+            )}
           </div>
         ) : (
           <p className="text-[13px] text-slate-500">You will be redirected to {connector.name} to authorise repository access.</p>

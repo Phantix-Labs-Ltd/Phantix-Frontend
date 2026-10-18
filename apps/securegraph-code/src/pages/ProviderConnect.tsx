@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, CheckCircle2, Copy, ExternalLink, GitBranch, KeyRound, Loader2, RefreshCw,
-  ShieldCheck, TestTube, Trash2, Webhook,
+  ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, Copy, ExternalLink, GitBranch, KeyRound, Loader2,
+  RefreshCw, Settings2, ShieldCheck, TestTube, Trash2, Webhook,
 } from "lucide-react";
 import { PageHeader, Card, CardHeader, EmptyState, Tabs, CardListSkeleton } from "@sg/ui";
 import { API_BASE, api, isPendingApproval, publicErrorMessage } from "@sg/api";
+import { sameOriginApiUrl } from "@sg/apiOrigin";
 import { loadGithubInstallation } from "@sg/codeOps";
 import {
   loadHubCatalog,
@@ -20,7 +21,7 @@ import type { IntegrationConnector, IntegrationInstallation } from "@sg/types";
 import { useStore } from "@sg/store";
 import { cx, timeAgo, humanize } from "@sg/utils";
 import DocLink from "@sg/components/DocLink";
-import { SCM_PROVIDER_SETUP, SCM_WEBHOOK_PATH, providerTone, scmIcon } from "../scmProviders";
+import { SCM_PROVIDER_SETUP, SCM_WEBHOOK_PATH, providerTone, scmIcon, scmTokenUrl } from "../scmProviders";
 
 // ── Per-provider source-control connection page ──────────────────────────────
 // GitHub, GitLab and Gitea each get their own page, reachable from Code →
@@ -47,6 +48,17 @@ export default function ProviderConnect() {
   const [mode, setMode] = useState("oauth2");
   const [label, setLabel] = useState("");
   const [token, setToken] = useState("");
+  // Per-connection provider settings: self-managed instance, own OAuth app, and
+  // the webhook secret. Blank values fall back to the deployment defaults.
+  const [baseUrl, setBaseUrl] = useState("");
+  const [callbackUrl, setCallbackUrl] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Resolved by the API on OAuth start; the operator registers it on their app.
+  const [resolvedCallback, setResolvedCallback] = useState("");
+  const [pendingAuthorizeUrl, setPendingAuthorizeUrl] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -99,10 +111,16 @@ export default function ProviderConnect() {
   );
   const activeCount = providerInstalls.filter((i) => i.status === "active").length;
   const connected = isGithub ? githubConnected : activeCount > 0;
-  const webhookUrl = `${API_BASE}${SCM_WEBHOOK_PATH[provider] ?? ""}`;
-  const steps = meta.setup.map((s) => s.replace("{API_BASE}", API_BASE));
+  const webhookUrl = SCM_WEBHOOK_PATH[provider]
+    ? sameOriginApiUrl(`${API_BASE}${SCM_WEBHOOK_PATH[provider]}`)
+    : "";
+  const absoluteApiBase = sameOriginApiUrl(API_BASE);
+  const steps = meta.setup.map((s) => s.replace("{API_BASE}", absoluteApiBase));
   const needsToken = mode === "api_key";
   const authModes = connector?.auth_modes ?? ["oauth2", "api_key"];
+  const isConnector = meta.kind === "connector";
+  const tokenPage = isConnector ? scmTokenUrl(meta, baseUrl) : null;
+  const ownOAuthApp = mode === "oauth2" && Boolean(clientId.trim() || clientSecret.trim());
 
   const copy = (text: string, what: string) =>
     navigator.clipboard
@@ -133,14 +151,33 @@ export default function ProviderConnect() {
       toast("error", "An access token is required");
       return;
     }
+    if (ownOAuthApp && !(clientId.trim() && clientSecret.trim())) {
+      toast("error", "OAuth app needs both values", "Provide both the client ID and the client secret, or leave both blank.");
+      return;
+    }
     setBusy(true);
     try {
+      const config: Record<string, unknown> = {};
+      const secrets: Record<string, unknown> = {};
+      const base = baseUrl.trim().replace(/\/+$/, "");
+      if (base) config.base_url = base;
+      if (webhookSecret.trim()) config.webhook_secret = webhookSecret.trim();
+      if (mode === "oauth2") {
+        if (callbackUrl.trim()) config.callback_url = callbackUrl.trim();
+        if (clientId.trim()) config.client_id = clientId.trim();
+        if (clientSecret.trim()) secrets.client_secret = clientSecret.trim();
+      } else if (token.trim()) {
+        secrets.api_key = token.trim();
+      }
+
       const body: Record<string, unknown> = {
         connector_id: connector.connector_id,
         label: label.trim(),
         auth_mode: mode,
       };
-      if (needsToken) body.secrets = { api_key: token.trim() };
+      if (Object.keys(config).length) body.config = config;
+      if (Object.keys(secrets).length) body.secrets = secrets;
+
       const res = await installHubIntegration(body);
       if (isPendingApproval(res)) {
         // A parked call opens the approval overlay (it names the authorizer).
@@ -152,7 +189,15 @@ export default function ProviderConnect() {
         (res as { installation_id?: number; id?: number })?.id;
       if (mode === "oauth2" && id) {
         const start = await startHubOAuth(id);
+        if (start?.redirect_uri) setResolvedCallback(start.redirect_uri);
         if (start?.authorize_url) {
+          // When the operator brought their own OAuth app they must register the
+          // exact callback first; hold the redirect so they can copy it.
+          if (ownOAuthApp && !callbackUrl.trim()) {
+            setPendingAuthorizeUrl(start.authorize_url);
+            toast("info", "Register the callback URL", "Copy the callback shown, add it to your OAuth app, then continue.");
+            return;
+          }
           window.location.href = start.authorize_url;
           return;
         }
@@ -169,12 +214,16 @@ export default function ProviderConnect() {
     } finally {
       setBusy(false);
     }
-  }, [connector, label, token, mode, needsToken, meta.name, toast, load]);
+  }, [
+    connector, label, token, mode, needsToken, meta.name, toast, load,
+    ownOAuthApp, clientId, clientSecret, baseUrl, webhookSecret, callbackUrl,
+  ]);
 
   const resumeOAuth = useCallback(
     async (installationId: number) => {
       try {
         const r = await startHubOAuth(installationId);
+        if (r?.redirect_uri) setResolvedCallback(r.redirect_uri);
         if (r?.authorize_url) window.location.href = r.authorize_url;
         // A parked start opens the approval overlay; anything else is a failure.
         else if (!isPendingApproval(r)) toast("error", "Could not start OAuth", "No authorization address came back. Try again.");
@@ -295,6 +344,120 @@ export default function ProviderConnect() {
                     onChange={(e) => setLabel(e.target.value)}
                   />
                 </div>
+
+                <button
+                  type="button"
+                  className="btn-ghost w-full !justify-between !py-2 !text-xs"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Settings2 size={13} /> Advanced: self-hosted instance, own OAuth app, webhook secret
+                  </span>
+                  {showAdvanced ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
+
+                {showAdvanced && (
+                  <div className="space-y-3 rounded-lg border border-phantix-700/40 bg-phantix-950/50 p-3">
+                    <div>
+                      <label className="label">{meta.name} base URL</label>
+                      <input
+                        className="input font-mono !text-xs"
+                        placeholder={provider === "gitea" ? "https://git.yourcompany.com" : "https://gitlab.com"}
+                        value={baseUrl}
+                        onChange={(e) => setBaseUrl(e.target.value)}
+                      />
+                      <p className="mt-1 text-[13px] leading-4 text-slate-500">
+                        Blank uses the server default. Each organization may point at its own instance, so
+                        two connections are never forced to share one GitLab/Gitea.
+                      </p>
+                    </div>
+
+                    {mode === "oauth2" && (
+                      <>
+                        <div>
+                          <label className="label">OAuth client ID <span className="text-slate-500">(optional)</span></label>
+                          <input
+                            className="input font-mono !text-xs"
+                            placeholder="Leave blank to use the platform's OAuth app"
+                            value={clientId}
+                            onChange={(e) => setClientId(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="label">OAuth client secret <span className="text-slate-500">(optional)</span></label>
+                          <input
+                            type="password"
+                            className="input font-mono !text-xs"
+                            placeholder="Stored encrypted, never shown again"
+                            value={clientSecret}
+                            onChange={(e) => setClientSecret(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="label">OAuth callback URL <span className="text-slate-500">(optional)</span></label>
+                          <input
+                            className="input font-mono !text-xs"
+                            placeholder={`https://platform.example/integrations/oauth/${provider}/callback`}
+                            value={callbackUrl}
+                            onChange={(e) => setCallbackUrl(e.target.value)}
+                          />
+                          <p className="mt-1 text-[13px] leading-4 text-slate-500">
+                            Register this on your OAuth app. Use <code>{"{connector_id}"}</code> where the provider id
+                            belongs. Blank uses the platform default (shown after you start).
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    <div>
+                      <label className="label">Webhook secret <span className="text-slate-500">(optional)</span></label>
+                      <input
+                        type="password"
+                        className="input font-mono !text-xs"
+                        placeholder="Secret your provider sends with webhooks"
+                        value={webhookSecret}
+                        onChange={(e) => setWebhookSecret(e.target.value)}
+                      />
+                      <p className="mt-1 text-[13px] leading-4 text-slate-500">
+                        Must match the secret on the provider webhook and arrives as{" "}
+                        <code>{meta.webhookSecretHeader}</code>. Blank uses {meta.webhookSecretEnv ?? "the server default"}.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {pendingAuthorizeUrl && (
+                  <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
+                    <p className="font-semibold">Register this callback URL on your OAuth app</p>
+                    <p className="mt-1 text-[13px] text-amber-100/80">
+                      Copy it, add it to the app, then continue to {meta.name}.
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <code className="flex-1 break-all font-mono text-[12px]">{resolvedCallback || callbackUrl}</code>
+                      <button
+                        className="btn-ghost p-1"
+                        title="Copy callback URL"
+                        onClick={() => copy(resolvedCallback || callbackUrl, "Callback URL")}
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        className="btn-primary !py-2 !text-xs"
+                        onClick={() => { window.location.href = pendingAuthorizeUrl; }}
+                      >
+                        Continue to {meta.name}
+                      </button>
+                      <button
+                        className="btn-secondary !py-2 !text-xs"
+                        onClick={() => { setPendingAuthorizeUrl(""); void load(); }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {needsToken && (
                   <div>
                     <label className="label">{meta.tokenLabel ?? "Access token"}</label>
@@ -309,20 +472,16 @@ export default function ProviderConnect() {
                 )}
                 {!needsToken && (
                   <p className="text-[13px] leading-5 text-slate-500">
-                    You will be redirected to {meta.name} to authorise SecureGraph, then returned here.
+                    You will be redirected to {meta.name} to authorise SecureGraph, then returned here. Using your
+                    own OAuth app? Set the client ID, secret and callback in Advanced.
                   </p>
                 )}
                 <button className="btn-primary w-full" disabled={busy || !connector} onClick={() => void connectConnector()}>
                   {busy ? <Loader2 size={14} className="animate-spin" /> : needsToken ? <KeyRound size={14} /> : <ShieldCheck size={14} />}
                   {needsToken ? "Connect with token" : "Connect with OAuth2"}
                 </button>
-                {meta.tokenUrl && (
-                  <a
-                    href={meta.tokenUrl.startsWith("http") ? meta.tokenUrl : `${window.location.origin}${meta.tokenUrl}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn-ghost w-full !text-xs"
-                  >
+                {needsToken && tokenPage && (
+                  <a href={tokenPage} target="_blank" rel="noreferrer" className="btn-ghost w-full !text-xs">
                     <ExternalLink size={13} /> Where to create a token
                   </a>
                 )}
@@ -363,7 +522,7 @@ export default function ProviderConnect() {
                 </span>
                 {meta.webhookSecretEnv && (
                   <span className="chip text-[12px] border-phantix-600/40 bg-phantix-800/50 text-slate-400">
-                    Secret env: {meta.webhookSecretEnv}
+                    Secret: per connection or {meta.webhookSecretEnv}
                   </span>
                 )}
               </div>
@@ -418,6 +577,7 @@ export default function ProviderConnect() {
                 <thead>
                   <tr className="border-b border-phantix-700/40">
                     <th className="th">Label</th>
+                    <th className="th">Instance</th>
                     <th className="th">Auth</th>
                     <th className="th">Status</th>
                     <th className="th">Last test</th>
@@ -428,6 +588,13 @@ export default function ProviderConnect() {
                   {providerInstalls.map((i) => (
                     <tr key={i.installation_id} className="border-b border-phantix-700/20 hover:bg-phantix-800/40">
                       <td className="td text-sm text-slate-200">{i.label}</td>
+                      <td className="td text-xs font-mono text-slate-400">
+                        {typeof i.config?.base_url === "string" && i.config.base_url
+                          ? i.config.base_url
+                          : provider === "gitea"
+                            ? "Server default"
+                            : "gitlab.com"}
+                      </td>
                       <td className="td text-xs text-slate-400">{humanize(i.auth_mode)}</td>
                       <td className="td"><span className={cx("chip text-[12px]", providerTone(i.status))}>{humanize(i.status)}</span></td>
                       <td className="td text-xs text-slate-500">
