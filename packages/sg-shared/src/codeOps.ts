@@ -118,6 +118,43 @@ export async function syncRepositories() {
   return api.post<{ items: Repo[]; total?: number; synced?: boolean }>("/github/repositories/sync", {});
 }
 
+export interface RepositoryReviewRun {
+  ok?: boolean;
+  job?: Record<string, unknown>;
+  provider?: string;
+  repository?: Record<string, unknown>;
+  sha?: string;
+  ref?: string;
+  [key: string]: unknown;
+}
+
+/** Queue an on-demand review at the repository's default branch HEAD. */
+export async function runRepositoryReview(
+  repositoryId: number,
+  body?: { ref?: string; sha?: string },
+): Promise<RepositoryReviewRun> {
+  if (isDemoMode()) {
+    await delay();
+    return { ok: true, job: { job_id: "demo-review", status: "queued" }, provider: "github" };
+  }
+  return api.post<RepositoryReviewRun>(`/github/repositories/${repositoryId}/review`, body ?? {});
+}
+
+/** Enable/disable branch review for one repository. */
+export async function saveReviewSettings(
+  repositoryId: number,
+  body: { watched_branch: string; enabled: boolean; post_github_comment?: boolean },
+): Promise<Record<string, unknown>> {
+  if (isDemoMode()) {
+    await delay();
+    return { ok: true, github_repository_id: repositoryId, ...body };
+  }
+  return api.put<Record<string, unknown>>(
+    `/github/repositories/${repositoryId}/review-settings`,
+    body,
+  );
+}
+
 // ── Code review — findings, the vulnerable block, why/fix, AutoFix PR ────────
 // The /github/code/* surface. A finding row carries *where* the weakness is and
 // what to do about it; the code itself is fetched per finding from GitHub at the

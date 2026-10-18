@@ -478,11 +478,11 @@ function FindingDetail({
 
 // ── The page surface ─────────────────────────────────────────────────────────
 
-export default function CodeReview({ repos }: { repos: Repo[] }) {
+export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; initialRepoId?: number }) {
   const { toast } = useStore();
   const [files, setFiles] = useState<CodeFindingFile[]>([]);
   const [counts, setCounts] = useState<CodeSeverityCounts>({});
-  const [repoFilter, setRepoFilter] = useState<string>("");
+  const [repoFilter, setRepoFilter] = useState<string>(initialRepoId ? String(initialRepoId) : "");
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -491,6 +491,10 @@ export default function CodeReview({ repos }: { repos: Repo[] }) {
   const [pathFindings, setPathFindings] = useState<CodeFinding[]>([]);
   const [pathLoading, setPathLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (initialRepoId) setRepoFilter(String(initialRepoId));
+  }, [initialRepoId]);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
