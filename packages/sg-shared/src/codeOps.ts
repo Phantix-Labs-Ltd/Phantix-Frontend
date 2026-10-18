@@ -109,6 +109,15 @@ export async function loadGithubRepositories() {
   return api.get<{ items: Repo[] }>("/github/repositories");
 }
 
+/** Pull repositories from every connected SCM (GitHub App, GitLab, Gitea). */
+export async function syncRepositories() {
+  if (isDemoMode()) {
+    await delay();
+    return { items: demo.githubRepositories, total: demo.githubRepositories.length, synced: true };
+  }
+  return api.post<{ items: Repo[]; total?: number; synced?: boolean }>("/github/repositories/sync", {});
+}
+
 // ── Code review — findings, the vulnerable block, why/fix, AutoFix PR ────────
 // The /github/code/* surface. A finding row carries *where* the weakness is and
 // what to do about it; the code itself is fetched per finding from GitHub at the

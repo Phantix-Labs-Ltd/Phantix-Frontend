@@ -8,7 +8,7 @@ import {
 import { PageHeader, Card, CardHeader, EmptyState, Tabs, CardListSkeleton } from "@sg/ui";
 import { API_BASE, api, isPendingApproval, publicErrorMessage } from "@sg/api";
 import { sameOriginApiUrl } from "@sg/apiOrigin";
-import { loadGithubInstallation } from "@sg/codeOps";
+import { loadGithubInstallation, syncRepositories } from "@sg/codeOps";
 import {
   loadHubCatalog,
   loadHubInstallations,
@@ -203,6 +203,8 @@ export default function ProviderConnect() {
         }
         toast("info", "Awaiting authorisation", "Continue the OAuth flow to finish connecting.");
       } else {
+        // PAT connect completes here; pull the repositories before the page reload.
+        await syncRepositories().catch(() => null);
         toast("success", "Connected", `${meta.name} connected.`);
       }
       setLabel("");

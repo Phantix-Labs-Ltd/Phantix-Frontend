@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -16,6 +16,7 @@ import {
   loadBranchReviewEvents,
   loadAutofixStatus,
   loadGithubRepositories,
+  syncRepositories,
 } from "@sg/codeOps";
 import {
   loadHubCatalog,
@@ -132,6 +133,8 @@ export default function Code() {
   const [scmCatalog, setScmCatalog] = useState<IntegrationConnector[]>([]);
   const [scmInstalls, setScmInstalls] = useState<IntegrationInstallation[]>([]);
   const [connectId, setConnectId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const autoSynced = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -174,6 +177,38 @@ export default function Code() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const syncRepos = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      setSyncing(true);
+      try {
+        await syncRepositories();
+        await load();
+        if (!opts?.silent) {
+          toast("success", "Repositories synced", "GitHub, GitLab and Gitea repositories are up to date.");
+        }
+      } catch (e: unknown) {
+        if (!opts?.silent) toast("error", "Sync failed", publicErrorMessage(e, "Could not sync repositories."));
+      } finally {
+        setSyncing(false);
+      }
+    },
+    [load, toast],
+  );
+
+  // Once per page visit: an active SCM connection with nothing cached yet means
+  // the connect succeeded but the repository import has not run. Pull it now so
+  // the user does not have to discover a separate sync action.
+  useEffect(() => {
+    if (loading || autoSynced.current) return;
+    const hasScm = scmInstalls.some(
+      (i) => ["gitlab", "gitea"].includes(i.connector_id) && i.status === "active",
+    );
+    if (hasScm && repos.length === 0 && !reposError) {
+      autoSynced.current = true;
+      void syncRepos({ silent: true });
+    }
+  }, [loading, scmInstalls, repos.length, reposError, syncRepos]);
 
   const connected = Boolean(installation?.connected || installation?.status === "active" || installation?.installation_id);
 
@@ -319,7 +354,22 @@ export default function Code() {
       {tab === "repositories" && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
-          <CardHeader title="Connected repositories" subtitle="Repositories from GitHub, GitLab and Gitea connections" action={<GitBranch size={16} className="text-gold-300" />} />
+          <CardHeader
+            title="Connected repositories"
+            subtitle="Repositories from GitHub, GitLab and Gitea connections"
+            action={
+              <div className="flex items-center gap-2">
+                <button
+                  className="btn-secondary !px-2 !py-1 !text-xs"
+                  disabled={syncing || loading}
+                  onClick={() => void syncRepos()}
+                >
+                  {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Sync repositories
+                </button>
+                <GitBranch size={16} className="text-gold-300" />
+              </div>
+            }
+          />
           {loading ? (
             <CardListSkeleton rows={4} className="p-4" />
           ) : reposError ? (
@@ -329,7 +379,14 @@ export default function Code() {
               icon={<Github size={22} />}
               title="No repositories yet"
               body="Install the GitHub App, or connect GitLab/Gitea from Providers, to import repositories SecureGraph can review."
-              action={<PlatformSetupLink task={{ kind: "install_github" }} variant="primary"><Github size={15} /> Install the GitHub App</PlatformSetupLink>}
+              action={
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button className="btn-secondary" disabled={syncing} onClick={() => void syncRepos()}>
+                    {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Sync repositories
+                  </button>
+                  <PlatformSetupLink task={{ kind: "install_github" }} variant="primary"><Github size={15} /> Install the GitHub App</PlatformSetupLink>
+                </div>
+              }
             />
           ) : (
             <div className="overflow-x-auto">
@@ -647,6 +704,8 @@ function ScmConnectModal({ connector, onClose, onDone }: { connector: Integratio
           return;
         }
       }
+      // PAT connect completes in this request: import its repos immediately.
+      await syncRepositories().catch(() => null);
       toast("success", "Connected", `${connector.name} connected.`);
       onDone();
     } catch (e: unknown) {
