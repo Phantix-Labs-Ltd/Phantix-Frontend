@@ -10,6 +10,7 @@ import { Pagination, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS as PAGE_SIZES } from "
 import DocLink from "../components/DocLink";
 import {
   generateTrackerRemediation,
+  loadOrgUsers,
   loadTrackerBundle,
   patchTrackerFinding,
   retestTrackerFinding,
@@ -22,7 +23,7 @@ import FindingDetailDrawer from "../components/FindingDetailDrawer";
 import { useResource } from "../useResource";
 import { useStore } from "../store";
 import { cx, humanize, normalizeTrackerVerification, timeAgo, titleCase, TRACKER_STATUSES } from "../utils";
-import type { TrackerFinding, TrackerRemediation, TrackerSummary, TrackerVerification } from "../types";
+import type { OrgUser, TrackerFinding, TrackerRemediation, TrackerSummary, TrackerVerification } from "../types";
 
 const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
 const CLOSED = new Set(["fixed", "accepted"]);
@@ -109,6 +110,73 @@ function summaryFrom(findings: TrackerFinding[], server: TrackerSummary | null) 
 }
 
 type VerifyDecision = "manually_verified" | "rejected" | "false_positive";
+
+/** The asset label a row shows; scanner rows may carry only the id. */
+function assetLabel(f: TrackerFinding): string | null {
+  if (f.asset_value && f.asset_value !== "Not set") return f.asset_value;
+  return f.asset_id != null ? `Asset #${f.asset_id}` : null;
+}
+
+/** The org member a row's owner refers to (stored as a name and an email). */
+function ownerMember(f: TrackerFinding, users: OrgUser[]): OrgUser | undefined {
+  const email = (f.assigned_owner_email || "").toLowerCase();
+  const name = (f.owner || "").toLowerCase();
+  return users.find(
+    (u) =>
+      (email && u.email?.toLowerCase() === email) ||
+      (name && (u.full_name?.toLowerCase() === name || u.email?.toLowerCase() === name)),
+  );
+}
+
+/**
+ * Assign a row to an org member. The backend only lets a verified finding
+ * carry an owner, so an unverified one can be unassigned but not assigned.
+ */
+function OwnerPicker({
+  finding,
+  users,
+  onAssign,
+}: {
+  finding: TrackerFinding;
+  users: OrgUser[];
+  onAssign: (f: TrackerFinding, user: OrgUser | null) => void;
+}) {
+  const verified = inEvidence(finding, "verified");
+  const member = ownerMember(finding, users);
+  const value = member ? String(member.id) : finding.owner ? "__current" : "";
+  const locked = !verified && !finding.owner;
+  return (
+    <select
+      value={value}
+      disabled={locked}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v === "__current") return;
+        onAssign(finding, v ? users.find((u) => String(u.id) === v) ?? null : null);
+      }}
+      aria-label={`Owner of ${finding.finding_key}`}
+      title={
+        locked
+          ? "Verify this finding before assigning an owner"
+          : finding.owner
+            ? `${finding.owner}${finding.assigned_owner_email ? ` · ${finding.assigned_owner_email}` : ""}`
+            : "Assign an owner"
+      }
+      className={cx(
+        "input !h-7 !w-full max-w-[10rem] truncate !py-0 !pr-7 text-xs disabled:cursor-not-allowed disabled:opacity-50",
+        !finding.owner && "text-slate-500",
+      )}
+    >
+      <option value="">Unassigned</option>
+      {!member && finding.owner && <option value="__current">{finding.owner}</option>}
+      {users.map((u) => (
+        <option key={u.id} value={String(u.id)} disabled={!verified}>
+          {u.full_name || u.email}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export default function Tracker({ reportHref = "/reports", assetBase = "/assets" }: TrackerProps = {}) {
   const { toast, requireDualControl } = useStore();
@@ -261,6 +329,36 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
     } catch (err: any) {
       setData(previous);
       toast("error", err?.status === 403 ? "Dual-control required" : "Update failed", err?.message ?? "Status update failed");
+    }
+  };
+
+  // Owners are org members; an inactive account cannot take new work.
+  const usersRes = useResource<OrgUser[]>(loadOrgUsers, [] as OrgUser[], "org-users");
+  const assignable = useMemo(() => usersRes.data.filter((u) => u.is_active !== false), [usersRes.data]);
+
+  const assignOwner = async (f: TrackerFinding, user: OrgUser | null) => {
+    if (!(await requireDualControl("Assigning an owner requires a dual-control operate session."))) return;
+    const name = user ? user.full_name || user.email : null;
+    const previous = data;
+    setData((b) => ({
+      ...b,
+      trackerFindings: b.trackerFindings.map((tf) =>
+        tf.finding_key === f.finding_key
+          ? { ...tf, owner: name, assigned_owner: name, assigned_owner_email: user?.email ?? null }
+          : tf,
+      ),
+    }));
+    try {
+      // Empty strings clear the owner; the API ignores nulls.
+      await patchTrackerFinding(f.finding_key, { assigned_owner: name ?? "", assigned_owner_email: user?.email ?? "" });
+      toast("success", user ? "Owner assigned" : "Owner removed", user ? `${f.finding_key} → ${name}` : `${f.finding_key} is unassigned`);
+    } catch (err: any) {
+      setData(previous);
+      toast(
+        "error",
+        err?.status === 403 ? "Dual-control required" : err?.status === 409 ? "Verify first" : "Assignment failed",
+        err?.message ?? "Could not assign the owner",
+      );
     }
   };
 
@@ -557,7 +655,7 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                     <th className="th">Finding</th>
                     <SortHeader k="severity">Severity</SortHeader>
                     <th className="th">Asset</th>
-                    <th className="th hidden 2xl:table-cell">Owner</th>
+                    <th className="th">Owner</th>
                     <th className="th hidden 2xl:table-cell">Due</th>
                     <th className="th">Evidence</th>
                     <SortHeader k="status">Status</SortHeader>
@@ -611,12 +709,24 @@ export default function Tracker({ reportHref = "/reports", assetBase = "/assets"
                         </td>
                         <td className="td whitespace-nowrap"><SeverityBadge severity={f.severity} /></td>
                         <td className="td max-w-[14rem]">
-                          <span className="block truncate font-mono text-[13px] text-slate-400" title={f.asset_value}>
-                            {f.asset_id != null ? <Link to={`${assetBase}?q=${encodeURIComponent(f.asset_value || "")}`} className="hover:text-gold-300">{f.asset_value}</Link> : f.asset_value}
+                          {/* The asset the finding was raised on, opened in Core's inventory. */}
+                          <span className="block truncate font-mono text-[13px] text-slate-400" title={assetLabel(f) ?? undefined}>
+                            {f.asset_id != null ? (
+                              <CrossAppLink
+                                app="core"
+                                to={`/assets?asset=${f.asset_id}`}
+                                title={`Open ${assetLabel(f)} in Assets`}
+                                className="text-gold-300/90 hover:text-gold-200 hover:underline"
+                              >
+                                {assetLabel(f)}
+                              </CrossAppLink>
+                            ) : (
+                              assetLabel(f) ?? <span className="font-sans text-slate-600">Not set</span>
+                            )}
                           </span>
                         </td>
-                        <td className="td hidden max-w-[10rem] 2xl:table-cell">
-                          {f.owner ? <span className="block truncate text-[13px] text-slate-300" title={f.owner}>{f.owner}</span> : <span className="text-[13px] text-slate-500">Unassigned</span>}
+                        <td className="td max-w-[11rem]">
+                          <OwnerPicker finding={f} users={assignable} onAssign={(row, user) => void assignOwner(row, user)} />
                         </td>
                         <td className="td hidden whitespace-nowrap 2xl:table-cell">
                           {f.target_fix_date ? (
