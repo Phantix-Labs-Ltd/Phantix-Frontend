@@ -346,6 +346,19 @@ export function normalizeTrackerVerification(value: unknown): TrackerVerificatio
 }
 
 /** Map engine tracker / AGI finding rows into FE TrackerFinding shape. */
+/** Remediation window per severity, in days from first detection (the API's SLA). */
+export const TRACKER_SLA_DAYS: Record<string, number> = { critical: 7, high: 30, medium: 90, low: 180 };
+
+/** The severity-based due date (YYYY-MM-DD), or null: info, closed, or no detection time. */
+export function trackerSlaDue(severity: unknown, status: unknown, detected: unknown): string | null {
+  const days = TRACKER_SLA_DAYS[String(severity ?? "").toLowerCase()];
+  if (days == null || !detected || ["fixed", "accepted"].includes(String(status ?? "").toLowerCase())) return null;
+  const d = new Date(String(detected));
+  if (Number.isNaN(d.getTime())) return null;
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
   finding_key: string;
   title: string;
@@ -361,6 +374,7 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
   assigned_owner?: string | null;
   assigned_owner_email?: string | null;
   target_fix_date?: string | null;
+  due_source?: "manual" | "sla" | null;
   first_detected_at?: string | null;
   detection_count?: number;
   retest_status?: string | null;
@@ -419,7 +433,21 @@ export function normalizeTrackerFinding(raw: any, fallbackCampaign = ""): {
     surface: raw?.surface != null ? String(raw.surface) : undefined,
     priority: raw?.priority != null ? String(raw.priority) : undefined,
     asset_id: raw?.asset_id != null ? Number(raw.asset_id) : assetObj?.id != null ? Number(assetObj.id) : null,
-    target_fix_date: raw?.target_fix_date ?? null,
+    // A date the API sent wins; with none (older API, demo), the severity window applies.
+    ...(() => {
+      if (raw?.target_fix_date) {
+        return {
+          target_fix_date: String(raw.target_fix_date),
+          due_source: (raw?.due_source === "sla" ? "sla" : "manual") as "manual" | "sla",
+        };
+      }
+      const sla = trackerSlaDue(
+        raw?.severity,
+        status,
+        raw?.first_detected_at ?? raw?.created_at ?? raw?.last_detected_at ?? raw?.updated_at,
+      );
+      return { target_fix_date: sla, due_source: (sla ? "sla" : null) as "sla" | null };
+    })(),
     first_detected_at: raw?.first_detected_at ?? raw?.created_at ?? null,
     detection_count: raw?.detection_count != null ? Number(raw.detection_count) : undefined,
     retest_status: raw?.retest_status ?? null,

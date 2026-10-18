@@ -884,7 +884,12 @@ export async function loadReportsBundle() {
 export async function loadTrackerBundle() {
   if (isDemoMode()) {
     const { trackerFindings, trackerSummary, trackerNote } = await loadReportsBundle();
-    return { trackerFindings, trackerSummary, trackerNote };
+    // Same normalizer as live rows, so demo rows get the severity due date too.
+    return {
+      trackerFindings: trackerFindings.map((t) => normalizeTrackerFinding(t) as TrackerFinding),
+      trackerSummary,
+      trackerNote,
+    };
   }
   // Paged at the backend ceiling — a single `?limit=1000` call is a hard 500.
   const { items, envelope } = await softListAllEnvelope<any>("/reports/tracker");
@@ -895,6 +900,31 @@ export async function loadTrackerBundle() {
   const trackerNote = envelope?.note != null ? String(envelope.note) : null;
   const trackerFindings = (items ?? []).map((t) => normalizeTrackerFinding(t) as TrackerFinding);
   return { trackerFindings, trackerSummary, trackerNote };
+}
+
+/** Who a tracked finding can be assigned to: active users of this application.
+ *  Falls back to the org directory while the API has no assignees route. */
+export async function loadTrackerAssignees(): Promise<OrgUser[]> {
+  if (isDemoMode()) {
+    await delay(200);
+    return demo.orgUsers.filter((u) => u.is_active !== false);
+  }
+  try {
+    const items = asList<Partial<OrgUser>>(await api.get<unknown>("/reports/tracker/assignees"));
+    return items.map((u) => ({
+      id: Number(u.id),
+      full_name: String(u.full_name ?? u.email ?? ""),
+      email: String(u.email ?? ""),
+      title: String(u.title ?? ""),
+      role: String(u.role ?? ""),
+      otp_only: false,
+      is_active: true,
+      last_login_at: null,
+    }));
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return loadOrgUsers();
+    return [];
+  }
 }
 
 /** PATCH tracker row — dual-control when org has DC configured. */

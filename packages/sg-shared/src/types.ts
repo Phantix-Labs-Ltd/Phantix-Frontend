@@ -753,6 +753,8 @@ export interface TrackerFinding {
   assigned_owner?: string | null;
   assigned_owner_email?: string | null;
   target_fix_date?: string | null;
+  /** `manual` (set by someone) | `sla` (from the severity window) | null. */
+  due_source?: "manual" | "sla" | null;
   /** When the finding was first seen — the clock aging measures from. */
   first_detected_at?: string | null;
   detection_count?: number;
