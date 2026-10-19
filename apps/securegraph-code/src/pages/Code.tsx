@@ -229,7 +229,8 @@ export default function Code() {
           toast("info", "Sent for approval", "The review is parked for an authorizer.");
           return;
         }
-        setReviewRepoId(repo.id);
+        // Findings filter on the provider repo id, not the local row id.
+        setReviewRepoId(repo.repo_id ?? repo.id);
         navigate("/code-review");
         toast(
           "success",
