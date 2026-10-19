@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   AlertTriangle, ChevronRight, ExternalLink, FileCode2, GitPullRequest, Loader2, RefreshCw,
@@ -513,6 +513,11 @@ function FindingDetail({
 
 export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; initialRepoId?: number }) {
   const { toast } = useStore();
+  // Findings carry the provider repo id (GithubRepository.repo_id), not the
+  // local PK. Use the same value in the dropdown that the findings API filters on.
+  const repoValue = (r: Repo) => String(r.repo_id ?? r.id);
+  const fileKey = (f: CodeFindingFile) => `${f.github_repository_id}:${f.path}`;
+
   const [files, setFiles] = useState<CodeFindingFile[]>([]);
   const [counts, setCounts] = useState<CodeSeverityCounts>({});
   const [repoFilter, setRepoFilter] = useState<string>(initialRepoId ? String(initialRepoId) : "");
@@ -520,7 +525,7 @@ export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; in
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [pathFindings, setPathFindings] = useState<CodeFinding[]>([]);
   const [pathLoading, setPathLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -528,6 +533,15 @@ export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; in
   useEffect(() => {
     if (initialRepoId) setRepoFilter(String(initialRepoId));
   }, [initialRepoId]);
+
+  // Start on one repository instead of a mixed "all" view; the operator can
+  // still choose "All repositories" explicitly.
+  const autoSelectedRepo = useRef(false);
+  useEffect(() => {
+    if (autoSelectedRepo.current || initialRepoId || repos.length === 0) return;
+    autoSelectedRepo.current = true;
+    if (!repoFilter) setRepoFilter(repoValue(repos[0]));
+  }, [initialRepoId, repoFilter, repos]);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -540,7 +554,13 @@ export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; in
       const items = Array.isArray(res?.items) ? res.items : [];
       setFiles(items);
       setCounts(res?.counts ?? {});
-      setSelectedPath((prev) => (prev && items.some((f) => f.path === prev) ? prev : items[0]?.path ?? null));
+      setSelectedKey((prev) =>
+        prev && items.some((f) => fileKey(f) === prev)
+          ? prev
+          : items[0]
+            ? fileKey(items[0])
+            : null,
+      );
     } catch (e: any) {
       setFiles([]);
       setError(publicErrorMessage(e, "Code findings unavailable."));
@@ -553,10 +573,13 @@ export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; in
     void loadFiles();
   }, [loadFiles]);
 
-  const selectedFile = useMemo(() => files.find((f) => f.path === selectedPath), [files, selectedPath]);
+  const selectedFile = useMemo(
+    () => files.find((f) => fileKey(f) === selectedKey),
+    [files, selectedKey],
+  );
 
   const loadPath = useCallback(async () => {
-    if (!selectedPath) {
+    if (!selectedFile) {
       setPathFindings([]);
       setSelectedId(null);
       return;
@@ -564,8 +587,8 @@ export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; in
     setPathLoading(true);
     try {
       const res = await loadCodeFindings({
-        path: selectedPath,
-        repository_id: selectedFile?.github_repository_id,
+        path: selectedFile.path,
+        repository_id: selectedFile.github_repository_id,
         status: statusFilter,
         limit: 100,
       });
@@ -578,7 +601,7 @@ export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; in
     } finally {
       setPathLoading(false);
     }
-  }, [selectedPath, selectedFile?.github_repository_id, statusFilter, toast]);
+  }, [selectedFile?.path, selectedFile?.github_repository_id, statusFilter, toast]);
 
   useEffect(() => {
     void loadPath();
@@ -595,7 +618,7 @@ export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; in
         <select className="input !w-auto !py-1.5 !text-xs" value={repoFilter} onChange={(e) => setRepoFilter(e.target.value)}>
           <option value="">All repositories</option>
           {repos.map((r) => (
-            <option key={r.id} value={String(r.id)}>{r.full_name || r.name}</option>
+            <option key={r.id} value={repoValue(r)}>{r.full_name || r.name}</option>
           ))}
         </select>
         <select className="input !w-auto !py-1.5 !text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -646,11 +669,11 @@ export default function CodeReview({ repos, initialRepoId }: { repos: Repo[]; in
               </div>
               <div className="max-h-[720px] overflow-y-auto">
                 {files.map((f) => {
-                  const active = f.path === selectedPath;
+                  const active = fileKey(f) === selectedKey;
                   return (
                     <div key={`${f.github_repository_id}-${f.path}`}>
                       <button
-                        onClick={() => setSelectedPath(f.path)}
+                        onClick={() => setSelectedKey(fileKey(f))}
                         className={cx(
                           "w-full border-b border-phantix-700/20 px-3 py-2.5 text-left transition-colors",
                           active ? "bg-phantix-800/70" : "hover:bg-phantix-800/40",
