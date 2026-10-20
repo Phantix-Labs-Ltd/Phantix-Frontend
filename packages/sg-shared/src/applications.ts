@@ -257,6 +257,26 @@ function demoSnapshot(): ApplicationsSnapshot {
   };
 }
 
+/**
+ * Clients a delegated MSSP user may enter (launcher picker).
+ *
+ * Additive by design: the endpoint is gated to organizations registered as an MSSP
+ * with an active delegation, so this returns `[]` for every normal organization and
+ * the launcher renders exactly as it does today. Any failure also returns `[]`.
+ */
+export async function loadDelegatedClients(application?: ApplicationKey): Promise<
+  { delegation_id: number; client_organization_id: number; client_name: string; client_slug: string; applications: string[]; expires_at?: string | null }[]
+> {
+  if (isDemoMode()) return [];
+  try {
+    const q = application ? `?application=${encodeURIComponent(application)}` : "";
+    const rows = await api.get<any[]>(`/mssp/delegated-clients${q}`);
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Load the applications the org + acting user may enter. Never throws: on
  *  error it degrades to Core-only so the operator is never locked out. */
 export async function loadApplications(): Promise<ApplicationsSnapshot> {

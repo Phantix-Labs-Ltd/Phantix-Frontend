@@ -10,6 +10,7 @@ import { BrandMark, BrandWordmark } from "../components/BrandLogo";
 import {
   applicationHandoffHref,
   applicationTarget,
+  loadDelegatedClients,
   loadApplications,
   lastApp,
   rememberApp,
@@ -138,12 +139,31 @@ export default function ChooseApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState<ApplicationKey | "">("");
+  /**
+   * Delegated MSSP use only. `clients` is empty for every normal organization, and
+   * then this page behaves exactly as before — no selector, no change in flow.
+   */
+  const [clients, setClients] = useState<
+    { delegation_id: number; client_organization_id: number; client_name: string; applications: string[] }[]
+  >([]);
+  const [clientId, setClientId] = useState<number | "">("");
   /** Why the automatic forward to an application did not happen. */
   const [handoffError, setHandoffError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session?.authenticated) navigate("/login", { replace: true });
   }, [session?.authenticated, navigate]);
+
+  useEffect(() => {
+    let alive = true;
+    // Purely additive: empty for non-MSSP callers (the endpoint is feature-gated).
+    void loadDelegatedClients().then((rows) => {
+      if (alive) setClients(rows);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -174,11 +194,26 @@ export default function ChooseApp() {
   const specialized = all.filter((a) => a.key !== "core");
   const last = lastApp();
 
+  /** The selected client (delegated MSSP use only). */
+  const chosenClient = useMemo(
+    () => clients.find((c) => c.client_organization_id === clientId) || null,
+    [clients, clientId],
+  );
+  /** Delegated MSSP users must pick a client first; everyone else is unaffected. */
+  const mustPickClient = clients.length > 0 && !chosenClient;
+
   const open = useCallback(
     async (app: ApplicationCard, path?: string, auto = false) => {
       if (!app.accessible || opening) return;
+      if (mustPickClient) return;
       rememberApp(app.key);
-      const target = applicationTarget(app.key, path);
+      // Carry the chosen client into the application. Ignored by the app until the
+      // delegated acting session exists; harmless when absent.
+      const withClient =
+        chosenClient && path != null
+          ? `${path}${path.includes("?") ? "&" : "?"}act_for=${chosenClient.client_organization_id}`
+          : path;
+      const target = applicationTarget(app.key, withClient);
       if (!target.external) {
         navigate(target.href, { replace: true });
         return;
@@ -189,7 +224,7 @@ export default function ChooseApp() {
       // The automatic forward is strict: a failed handoff stays on this page
       // with the reason, instead of degrading into the sign-in loop.
       try {
-        window.location.assign(await applicationHandoffHref(app.key, path, { strict: auto }));
+        window.location.assign(await applicationHandoffHref(app.key, withClient, { strict: auto }));
       } catch (err) {
         setOpening("");
         setHandoffError(
@@ -198,7 +233,7 @@ export default function ChooseApp() {
         );
       }
     },
-    [navigate, opening],
+    [navigate, opening, mustPickClient],
   );
 
   // Sent here to sign in on the way to an application (`?next=attack&path=/vapt`):
@@ -409,21 +444,54 @@ export default function ChooseApp() {
                 {handoffError}
               </div>
             )}
+            {/* Delegated MSSP use only: a client must be chosen before an app.
+                Rendered only when the backend returned delegations, so a normal
+                organization sees this page exactly as before. */}
+            {clients.length > 0 && (
+              <motion.div
+                variants={rise}
+                className="card mx-auto mb-5 w-full max-w-xl border-gold-400/30 p-4"
+              >
+                <label htmlFor="mssp-client" className="block text-[12px] font-semibold uppercase tracking-[0.14em] text-gold-300">
+                  Working on
+                </label>
+                <select
+                  id="mssp-client"
+                  value={clientId === "" ? "" : String(clientId)}
+                  onChange={(e) => setClientId(e.target.value ? Number(e.target.value) : "")}
+                  className="mt-2 w-full rounded-lg border border-phantix-700 bg-phantix-950 px-3 py-2 text-sm text-slate-200 outline-none focus:border-gold-400/50"
+                >
+                  <option value="">Select a client…</option>
+                  {clients.map((c) => (
+                    <option key={c.client_organization_id} value={c.client_organization_id}>
+                      {c.client_name}
+                      {c.applications.length ? ` — ${c.applications.join(", ")}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-[12px] leading-4 text-slate-500">
+                  {chosenClient
+                    ? `You are entering ${chosenClient.client_name}'s account under a delegation. Everything you do there is logged for the client.`
+                    : "Choose the client you are working on. Each application opens in that client's account, under the delegation they granted."}
+                </p>
+              </motion.div>
+            )}
+
             {/* The hub: Core is the graph the other three hang off. */}
             {core && (
               <motion.button
                 type="button"
                 variants={rise}
                 animate={opening ? leaving("core") : undefined}
-                whileHover={core.accessible && !opening ? "hover" : undefined}
+                whileHover={core.accessible && !mustPickClient && !opening ? "hover" : undefined}
                 whileTap={core.accessible && !opening ? { scale: 0.995 } : undefined}
                 onClick={() => void open(core)}
-                disabled={!core.accessible}
+                disabled={!core.accessible || mustPickClient}
                 className={cx(
                   "card group relative w-full overflow-hidden border bg-gradient-to-br to-transparent p-6 text-left",
                   ACCENT.core.ring,
                   ACCENT.core.glow,
-                  !core.accessible && "cursor-not-allowed opacity-60",
+                  (!core.accessible || mustPickClient) && "cursor-not-allowed opacity-60",
                 )}
               >
                 {/* Light sweep on hover */}
