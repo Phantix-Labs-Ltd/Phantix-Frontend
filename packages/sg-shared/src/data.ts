@@ -1780,6 +1780,8 @@ export async function streamAgentChat(
     thinking?: boolean;
     reasoning_effort?: "low" | "high" | "max";
     scope_grant?: string;
+    /** Answer to a clarify card: the chosen option_id (an intent id). */
+    intent?: string;
     /** Turn id. Reuse it when re-sending after an approval_required event. */
     analysis_id?: string;
   },
@@ -1922,18 +1924,21 @@ async function streamDemoResponse(
 ): Promise<void> {
   onEvent("connected", { type: "connected", protocol: "sse", demo: true });
   await delay(180);
-  onEvent("meta", { type: "meta", provider: "deepseek", model: "deepseek-v4-flash", stream: true, thinking: true });
+  onEvent("meta", { type: "meta", provider: "deepseek", model: "deepseek-v4-flash", stream: true, thinking: true, demo: true });
   await delay(stepMs);
-  onEvent("reasoning", { type: "reasoning", content: "I will summarize the request of the user and check the current posture signals in the security data of the organization." });
+  onEvent("reasoning", { type: "reasoning", content: "Demo mode: there is no organization session attached, so no security data is read." });
   await delay(stepMs);
-  const answer = `Here is what I can tell you about "${question}":\n\n• I can review open findings, risk posture, asset exposure and recent scan results.\n• In production this answer comes from your live security data. It uses verified findings only, and SecureGraph never invents a vulnerability without a finding ID.\n• The result shows the skills that were used, and every interaction is governed and audited.\n\nAsk me about assets, VAPT campaigns, critical risks, or compliance gaps for a concrete summary.`;
+  // Demo mode is a preview of the conversation, never a stand-in for a real
+  // answer. The old copy described what the agent *could* do, which read like a
+  // refusal after a real question — say plainly that this is a demo instead.
+  const answer = `You asked: "${question}".\n\nThis conversation is running in **demo mode**, so I am not connected to your organization's security data — there are no assets, findings or risks behind this reply, and I will not invent any.\n\nSign in to your organization and open the Assistant (or the AI panel on any page) to get a real answer: your request is routed to the agent that owns that surface — asset exposure, SOC triage, VAPT findings, compliance gaps, threat models or code review — and it reads only your organization's data, under your own permissions.`;
   const words = answer.split(" ");
   for (const w of words) {
     onEvent("delta", { type: "delta", content: w + " " });
     await delay(12);
   }
-  onEvent("usage", { type: "usage", tokens_used: 214, usage: { total_tokens: 214 } });
-  onEvent("done", { type: "done", finish_reason: "stop", model: "deepseek-v4-flash" });
+  onEvent("usage", { type: "usage", tokens_used: 124, usage: { total_tokens: 124 } });
+  onEvent("done", { type: "done", finish_reason: "stop", model: "deepseek-v4-flash", demo: true });
 }
 
 /** Demo investigation run stream: tool checklist → synthesis → run_completed. */
@@ -2007,7 +2012,8 @@ export async function sendAgentMessage(message: string): Promise<string> {
   }
   const out: string[] = [];
   await streamAgentChat(
-    { messages: [{ role: "user", content: message }], domain: "cross" },
+    // No domain: the backend routes the agent from the message itself.
+    { messages: [{ role: "user", content: message }] },
     (event, data) => {
       if (event === "delta" && typeof data?.content === "string") out.push(data.content);
       if (event === "done") { /* stream finished */ }

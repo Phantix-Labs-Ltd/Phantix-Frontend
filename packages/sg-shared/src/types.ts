@@ -1179,6 +1179,52 @@ export interface AgentScopeGrant {
   grant_ttl_seconds?: number;
 }
 
+/**
+ * One specialist the request could mean (securegraph.agent.clarify_card.v1).
+ *
+ * The backend raises a clarify card only when two different agents fit the ask,
+ * so the operator answers once and the conversation continues with that agent —
+ * it never asks the same thing twice. Send `option_id` back as `intent`.
+ */
+export interface AgentClarifyOption {
+  option_id: string;
+  intent: string;
+  intent_label: string;
+  domain: string;
+  agent_id?: string | null;
+  display_name?: string | null;
+  resource_kind?: string;
+  action_class?: string;
+  score?: number;
+}
+
+export interface AgentClarifyCard {
+  schema?: string;
+  status?: string;
+  confirm_required?: boolean;
+  prompt?: string;
+  question?: string;
+  options: AgentClarifyOption[];
+  /** Body field the answer goes back in — always "intent" today. */
+  answer_field?: string;
+  agent?: Record<string, unknown>;
+}
+
+/** The agent the application routed this turn to (from the `connected` frame). */
+export interface AgentRoutingInfo {
+  domain?: string;
+  agent_id?: string | null;
+  display_name?: string | null;
+  intent?: string;
+  intent_label?: string;
+  resource_kind?: string;
+  application?: string | null;
+  tools_enabled?: boolean;
+  routed_by?: string;
+  ambiguous?: boolean;
+  alternatives?: AgentClarifyOption[];
+}
+
 export interface SupportTicket {
   id: number;
   subject: string;

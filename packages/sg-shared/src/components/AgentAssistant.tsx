@@ -3,9 +3,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Send, Square, Sparkles, X, Trash2, ArrowRight, ArrowDown, BrainCircuit, BookOpen, Mail, Wrench, Check, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { applicationHandoffHref, applicationTarget } from "../applications";
-import { decideAgentApproval, streamAgentChat } from "../data";
+import { confirmAgentScope, decideAgentApproval, streamAgentChat } from "../data";
 import { useStore } from "../store";
 import { cx } from "../utils";
+import AgentScopeGate, { type AgentScopeSelection } from "./AgentScopeGate";
 import LottiePlayer from "./LottiePlayer";
 import MarkdownView from "./MarkdownView";
 import chatbotData from "../animations/chatbot.json";
@@ -13,6 +14,7 @@ import flowData from "../animations/ai-flow.json";
 import { tryNavigationAnswer, helpOverview } from "../navigationGuide";
 import { useChatSend } from "../useChatSend";
 import { useStickToBottom } from "../useStickToBottom";
+import type { AgentClarifyCard, AgentScopeCard, AgentScopeGrant } from "../types";
 import {
   ASSISTANT_OPEN_EVENT,
   ASSISTANT_TOGGLE_EVENT,
@@ -95,6 +97,14 @@ export default function AgentAssistant() {
   const [liveApproval, setLiveApproval] = useState<ApprovalReq | null>(null);
   const [approving, setApproving] = useState(false);
   const [connError, setConnError] = useState<string | null>(null);
+  // Decisions the backend may pause a turn on. Both are answered once and then
+  // remembered, so the operator is never asked twice for the same thing.
+  const [clarify, setClarify] = useState<AgentClarifyCard | null>(null);
+  const [scope, setScope] = useState<AgentScopeCard | null>(null);
+  const [scopeBusy, setScopeBusy] = useState(false);
+  const clarifyResolve = useRef<((intent: string | null) => void) | null>(null);
+  const scopeResolve = useRef<((grant: AgentScopeGrant | null) => void) | null>(null);
+  const scopeGrantRef = useRef("");
   const abortRef = useRef<AbortController | null>(null);
   const chatSend = useChatSend();
   const stick = useStickToBottom([messages, liveAnswer, busy]);
@@ -179,7 +189,62 @@ export default function AgentAssistant() {
 
   // One streamed turn. The backend may call read tools inline and pause on a
   // write for approval; we surface both and let the operator decide.
-  const runStream = async (opts: { text: string; analysisId?: string; includeText: boolean }) => {
+  const askClarify = (card: AgentClarifyCard) => {
+    setClarify(card);
+    return new Promise<string | null>((resolve) => { clarifyResolve.current = resolve; });
+  };
+  const chooseClarify = (intentId: string) => {
+    clarifyResolve.current?.(intentId);
+    clarifyResolve.current = null;
+    setClarify(null);
+  };
+  const dismissClarify = () => {
+    clarifyResolve.current?.(null);
+    clarifyResolve.current = null;
+    setClarify(null);
+  };
+  const askScope = (card: AgentScopeCard) =>
+    new Promise<AgentScopeGrant | null>((resolve) => {
+      setScope(card);
+      scopeResolve.current = resolve;
+    });
+  const submitScope = async (selection: AgentScopeSelection) => {
+    if (!scope?.selection_token) { scopeResolve.current?.(null); setScope(null); return; }
+    setScopeBusy(true);
+    try {
+      const grant = await confirmAgentScope({
+        selection_token: scope.selection_token,
+        asset_ids: selection.asset_ids,
+        resource_ids: selection.resource_ids,
+        purpose: scope.purpose,
+      });
+      scopeResolve.current?.(grant);
+    } catch (e) {
+      toast("error", "Scope confirmation failed", e instanceof Error ? e.message : "");
+      scopeResolve.current?.(null);
+    } finally {
+      scopeResolve.current = null;
+      setScopeBusy(false);
+      setScope(null);
+    }
+  };
+  const cancelScope = () => {
+    scopeResolve.current?.(null);
+    scopeResolve.current = null;
+    setScopeBusy(false);
+    setScope(null);
+  };
+
+  // One streamed turn. The backend chooses the agent from the ask and may pause
+  // on a decision (clarify or scope). Reads run inline; a write pauses for
+  // approval. A blocked turn is never shown as "No response from agent."
+  const runStream = async (opts: {
+    text: string;
+    analysisId?: string;
+    includeText: boolean;
+    intent?: string;
+    scopeGrant?: string;
+  }) => {
     if (busy) abortRef.current?.abort();
     setConnError(null);
     setBusy(true);
@@ -190,6 +255,9 @@ export default function AgentAssistant() {
     let answer = "";
     let thinking = "";
     let analysisId = opts.analysisId ?? "";
+    let pendingClarify: AgentClarifyCard | null = null;
+    let pendingScope: AgentScopeCard | null = null;
+    const scopeGrant = opts.scopeGrant ?? scopeGrantRef.current;
     const steps: ToolStep[] = [];
     let approval: ApprovalReq | null = null;
     try {
@@ -198,7 +266,9 @@ export default function AgentAssistant() {
           messages: buildHistory(opts.includeText ? opts.text : undefined),
           thinking: true,
           reasoning_effort: "high",
-          domain: "cross",
+          // The application routes the agent; no client-side default domain.
+          ...(opts.intent ? { intent: opts.intent } : {}),
+          ...(scopeGrant ? { scope_grant: scopeGrant } : {}),
           analysis_id: analysisId || undefined,
         },
         (event, data) => {
@@ -213,6 +283,10 @@ export default function AgentAssistant() {
           } else if (event === "delta") {
             answer += data?.content ?? "";
             setLiveAnswer(answer);
+          } else if (event === "clarify_card") {
+            pendingClarify = data as AgentClarifyCard;
+          } else if (event === "scope_card") {
+            pendingScope = data as AgentScopeCard;
           } else if (event === "tool_call") {
             steps.push({ tool: String(data?.tool ?? "tool"), status: "running" });
             setLiveSteps([...steps]);
@@ -234,6 +308,7 @@ export default function AgentAssistant() {
             };
             setLiveApproval(approval);
           } else if (event === "done") {
+            if (data?.blocked) return;
             const text = answer || (approval ? "I can do that once you approve it." : "No response from agent.");
             setMessages((prev) => [
               ...prev,
@@ -271,10 +346,30 @@ export default function AgentAssistant() {
           setMessages((m) => [...m, { role: "agent", text: "I could not process that request. Please try again." }]);
         }
       }
+      return;
     } finally {
       setBusy(false);
       setPhase("idle");
       abortRef.current = null;
+    }
+
+    if (pendingClarify) {
+      const chosen = await askClarify(pendingClarify);
+      if (!chosen) {
+        setMessages((m) => [...m, { role: "agent", text: "No problem — tell me which one you want and I will take it from there." }]);
+        return;
+      }
+      await runStream({ ...opts, intent: chosen });
+      return;
+    }
+    if (pendingScope) {
+      const grant = await askScope(pendingScope);
+      if (grant?.scope_grant) {
+        scopeGrantRef.current = grant.scope_grant;
+        await runStream({ ...opts, scopeGrant: grant.scope_grant });
+        return;
+      }
+      setMessages((m) => [...m, { role: "agent", text: "Scope selection cancelled. No organization data was shared with the agent." }]);
     }
   };
 
@@ -611,6 +706,25 @@ export default function AgentAssistant() {
                 </div>
               )}
 
+              {/* Backend asked which agent fits the ask: answer once. */}
+              {clarify && (
+                <div className="border-t border-gold-400/30 bg-gold-400/[0.06] px-3 py-2.5">
+                  <p className="text-[12px] font-semibold text-gold-200">{clarify.prompt}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {clarify.options.map((o) => (
+                      <button
+                        key={o.option_id}
+                        onClick={() => chooseClarify(o.option_id)}
+                        className="rounded-lg border border-gold-400/30 px-2 py-1 text-[12px] text-gold-200 transition-colors hover:bg-gold-400/10"
+                      >
+                        {o.display_name ?? o.agent_id ?? o.domain} · {o.intent_label}
+                      </button>
+                    ))}
+                    <button onClick={dismissClarify} className="rounded-lg px-2 py-1 text-[12px] text-slate-400 hover:text-slate-200">Cancel</button>
+                  </div>
+                </div>
+              )}
+
               {/* Composer */}
               <div className={cx("border-t border-phantix-700/40 p-3", mode === "support" && "hidden")}>
                 <div className="flex items-center gap-2 rounded-xl border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 focus-within:border-gold-400/40">
@@ -641,6 +755,15 @@ export default function AgentAssistant() {
             </motion.div>
         )}
       </AnimatePresence>
+
+      {scope && (
+        <AgentScopeGate
+          card={scope}
+          busy={scopeBusy}
+          onConfirm={(selection) => void submitScope(selection)}
+          onCancel={cancelScope}
+        />
+      )}
     </>
   );
 }
