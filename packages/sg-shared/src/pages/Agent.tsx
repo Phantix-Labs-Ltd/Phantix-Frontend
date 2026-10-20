@@ -53,7 +53,7 @@ import { useStore } from "../store";
 import { cx } from "../utils";
 import { useChatSend } from "../useChatSend";
 import { getActiveApplication } from "../api";
-import type { AiStatus, AgentSkill, AgentScopeCard, AgentScopeGrant } from "../types";
+import type { AiStatus, AgentSkill, AgentScopeCard, AgentScopeGrant, AgentClarifyCard } from "../types";
 
 type ChatMsg = {
   role: "user" | "agent";
@@ -84,111 +84,27 @@ const SUGGESTIONS = [
 
 const MODEL_BADGE = "deepseek-v4-flash";
 
-// ── Request clarification ────────────────────────────────────────────────────
-// Quick prompts and vague questions are answered locally by a lightweight
-// "assistant" that helps the user pin down a specific request before any backend
-// / LLM call is made. Only once a concrete ask is established do we stream to
-// the agent.
+// ── Local greeting only ─────────────────────────────────────────────────────
+// This used to guess a "topic" from the sentence and reply "which one did you
+// have in mind?" with suggested chips. That duplicated — and fought with — the
+// backend router: an operator who had just picked from a card was asked again.
+// Routing and clarification now belong to the backend, which knows the agents
+// this application runs and can execute the choice. The only local reply left is
+// a greeting, which needs no model call and no data.
 type ClarifyResult =
   | { clear: true }
   | { clear: false; reply: string; followUps: string[] };
 
 function clarifyRequest(raw: string): ClarifyResult {
   const q = raw.toLowerCase().trim();
-
-  // Direct, scoped asks already carry a concrete target → go to backend.
-  const directPatterns = [
-    /summarize.*(posture|security posture)/,
-    /how many.*(critical|open).*risk/,
-    /which.*(asset|host|server).*(risk|exposure|critical)/,
-    /what findings.*(report|next)/,
-    /highest risk/i,
-    /list.*(assets|risks|findings|campaigns)/,
-    /show.*(assets|risks|findings|campaigns|scans)/,
-    /explain.*(finding|cve|risk|treatment)/,
-    /status of.*(scan|campaign|job)/,
-  ];
-  if (directPatterns.some((re) => re.test(q))) return { clear: true };
-
-  // Greeting / thanks → generic reply, no backend.
-  if (/^(hi|hello|hey|thanks|thank you|ok|okay|bye)\b/.test(q)) {
+  if (/^(hi|hello|hey|yo|thanks|thank you|ok|okay|bye)\b/.test(q) && q.split(/\s+/).length <= 3) {
     return {
       clear: false,
-      reply: "I am SecureGraph Agent, your security operations assistant. I can summarize your posture and surface highest-risk assets. I can list open critical risks, preview report findings, and explain risks or findings. What would you like to look into?",
-      followUps: ["Summarize my current security posture", "Which assets are highest risk?", "How many critical risks are open right now?"],
+      reply: "I am SecureGraph Agent. Ask me about your assets, exposure, VAPT campaigns, findings, risks, compliance gaps, threat models or code review — I will work out which agent should answer and use only your organization's data.",
+      followUps: SUGGESTIONS,
     };
   }
-
-  // Ambiguous topic (mentions a domain but no concrete ask) → clarify.
-  const topic = q.match(/asset|server|host|endpoint|domain/)
-    ? "assets"
-    : q.match(/risk|threat|treatment|exposure/)
-      ? "risks"
-      : q.match(/scan|nmap|nuclei|vulnerabilit/)
-        ? "scans"
-        : q.match(/vapt|campaign|pen.?test/)
-          ? "vapt"
-          : q.match(/finding|cve|vuln/)
-            ? "findings"
-            : q.match(/complian|grc|framework|iso|evidence|gap/)
-              ? "compliance"
-              : q.match(/report|pdf|docx|executive summary/)
-                ? "reports"
-                : q.match(/soc|triage|detection|alert|incident/)
-                  ? "soc"
-                  : q.match(/posture|score/)
-                    ? "posture"
-                    : null;
-
-  if (topic) {
-    const byTopic: Record<string, { reply: string; followUps: string[] }> = {
-      assets: {
-        reply: "Happy to help with assets. To pull the right information, which one did you have in mind?",
-        followUps: ["Which of my assets are highest risk?", "List assets discovered recently", "Show assets that have not been scanned"],
-      },
-      risks: {
-        reply: "I can walk through your risk register. What would you like me to focus on?",
-        followUps: ["How many critical risks are open right now?", "List risks in P1", "Show the highest-scored risk and why"],
-      },
-      scans: {
-        reply: "I can summarize scan activity for you. What do you want to know?",
-        followUps: ["Status of my latest scan", "What findings came from my last scan?", "How many scans are running right now?"],
-      },
-      vapt: {
-        reply: "I can help with VAPT campaigns. What would you like me to check?",
-        followUps: ["List my active campaigns", "Status of campaign #12", "What findings would appear in my next report?"],
-      },
-      findings: {
-        reply: "I can explain findings or summarize them for reports. What is the specific question?",
-        followUps: ["What findings would appear in my next report?", "Explain the most critical open finding", "List verified findings"],
-      },
-      compliance: {
-        reply: "I can walk through compliance posture. What framework or question do you have?",
-        followUps: ["Summarize my compliance gaps", "How ready am I for ISO 27001?", "What evidence is missing?"],
-      },
-      reports: {
-        reply: "I can preview what would land in a report. Which report or finding set should I look at?",
-        followUps: ["What findings would appear in my next report?", "Preview my executive summary", "List generated reports"],
-      },
-      soc: {
-        reply: "I can help with SOC triage. Which part do you want to look at?",
-        followUps: ["How many open detections do I have?", "List critical detections", "Summarize the triage queue"],
-      },
-      posture: {
-        reply: "I can summarize your posture. What angle would help most?",
-        followUps: ["Summarize my current security posture", "Show my posture trend", "What is driving my posture score down?"],
-      },
-    };
-    const m = byTopic[topic];
-    return { clear: false, reply: m.reply, followUps: m.followUps };
-  }
-
-  // No recognizable topic → guide the user toward a concrete ask.
-  return {
-    clear: false,
-    reply: "I want to make sure I answer the right thing. Could you be more specific? For example, ask me about your assets, risks, scans, VAPT campaigns, findings, compliance, reports, or SOC queue?",
-    followUps: SUGGESTIONS,
-  };
+  return { clear: true };
 }
 
 /**
@@ -514,6 +430,13 @@ function AgentChat({
   const [scopeCard, setScopeCard] = useState<AgentScopeCard | null>(null);
   const [scopeBusy, setScopeBusy] = useState(false);
   const scopeResolver = useRef<((grant: AgentScopeGrant | null) => void) | null>(null);
+  // A clarify card is the backend asking which of two agents fits the ask. It is
+  // answered once and remembered for the thread, so the operator is never asked
+  // the same thing twice.
+  const [clarifyCard, setClarifyCard] = useState<AgentClarifyCard | null>(null);
+  const clarifyResolver = useRef<((intent: string | null) => void) | null>(null);
+  /** Scope grant for this conversation (bound to the agent the operator confirmed). */
+  const scopeGrantRef = useRef<string>("");
   const abortRef = useRef<AbortController | null>(null);
   const chatSend = useChatSend();
   const appLabel = APP_LABEL[getActiveApplication()] ?? "Core";
@@ -602,6 +525,28 @@ function AgentChat({
     scopeResolver.current = null;
     setScopeBusy(false);
     setScopeCard(null);
+  };
+
+  // ── Clarify: one question, answered once ──────────────────────────────────
+  // The backend asks only when two different agents fit the ask (e.g. "which
+  // assets are highest risk?" is an inventory ranking *and* a risk review).
+  // Whatever the operator picks is sent back as `intent`, which pins the agent
+  // for the rest of the turn — no second question.
+  const askClarify = (card: AgentClarifyCard) => {
+    setClarifyCard(card);
+    return new Promise<string | null>((resolve) => { clarifyResolver.current = resolve; });
+  };
+
+  const chooseClarify = (optionId: string) => {
+    clarifyResolver.current?.(optionId);
+    clarifyResolver.current = null;
+    setClarifyCard(null);
+  };
+
+  const dismissClarify = () => {
+    clarifyResolver.current?.(null);
+    clarifyResolver.current = null;
+    setClarifyCard(null);
   };
 
   // ── Pasting: text only, never an upload ──────────────────────────────────
@@ -710,9 +655,10 @@ function AgentChat({
       pastes: attached.length ? attached.map(({ name, lines, bytes }) => ({ name, lines, bytes })) : undefined,
     };
 
-    // Clarify first: quick prompts / vague asks to the chief are answered locally
-    // so the user pins down a specific request before any model call. A paste or
-    // a chosen specialist is already a concrete request.
+    // Only a greeting is answered locally. Everything else — including "which
+    // assets are highest risk?" — goes to the backend, which routes it to the
+    // agent this application runs and asks a *real* clarify question (with the
+    // options it can actually execute) only when two agents genuinely fit.
     if (!attached.length && !domain) {
       const clarified = clarifyRequest(ask);
       if (!clarified.clear) {
@@ -725,10 +671,29 @@ function AgentChat({
     setMessages((m) => [...m, shown]);
     const prompt = composePrompt(ask, attached);
     if (domain && prompt.length <= RUN_OBJECTIVE_MAX) await runSpecialist(domain, prompt);
-    else await streamChat(prompt, domain || "cross");
+    else await streamChat(prompt, domain);
   };
 
-  const streamChat = async (prompt: string, domain: string) => {
+  /**
+   * One streamed turn.
+   *
+   * The backend decides which agent answers (the client only says which page the
+   * operator is on), and it may pause the turn on a decision:
+   *
+   *  - `clarify_card`  → two agents fit; the operator picks one, we re-send with
+   *                      `intent` and never ask again;
+   *  - `scope_card`    → the agent needs the operator to confirm which org
+   *                      resources it may read; we mint a grant and re-send with
+   *                      it. The grant is kept for the conversation.
+   *
+   * A blocked turn is not an empty answer: it must never surface "No response
+   * from agent." — that is what made a confirmed selection look like a refusal.
+   */
+  const streamChat = async (
+    prompt: string,
+    domain: string,
+    opts?: { intent?: string; scopeGrant?: string },
+  ) => {
     setBusy(true);
     setPhase("connecting");
     resetLive();
@@ -736,17 +701,35 @@ function AgentChat({
     abortRef.current = controller;
     let answer = "";
     let thinking = "";
+    let pendingScope: AgentScopeCard | null = null;
+    let pendingClarify: AgentClarifyCard | null = null;
+    const scopeGrant = opts?.scopeGrant ?? scopeGrantRef.current;
     try {
       await streamAgentChat(
-        { messages: [{ role: "user", content: prompt }], thinking: true, reasoning_effort: "high", domain },
+        {
+          messages: [{ role: "user", content: prompt }],
+          thinking: true,
+          reasoning_effort: "high",
+          // No default "cross": omitting the field lets the backend route the
+          // agent from the ask. A specialist pick is only a page hint.
+          ...(domain ? { domain } : {}),
+          ...(opts?.intent ? { intent: opts.intent } : {}),
+          ...(scopeGrant ? { scope_grant: scopeGrant } : {}),
+        },
         (event, data) => {
           if (event === "connected") setPhase("streaming");
           else if (event === "meta") setPhase("streaming");
           else if (event === "reasoning") { thinking += data?.content ?? ""; setLiveThinking(thinking); setThinkingOpen(true); }
           else if (event === "delta") { answer += data?.content ?? ""; setLiveAnswer(answer); }
+          else if (event === "clarify_card") { pendingClarify = data as AgentClarifyCard; }
+          else if (event === "scope_card") { pendingScope = data as AgentScopeCard; }
           else if (event === "done") {
-            const m = { role: "agent" as const, text: answer || "No response from agent.", thinking: thinking || undefined };
-            setMessages((prev) => [...prev, m]);
+            // A blocked done means a decision is pending (a clarify or scope
+            // card), not that the agent finished. Resolve it below; never show
+            // "No response from agent." for it.
+            if (data?.blocked) return;
+            const text = answer || "No response from agent.";
+            setMessages((prev) => [...prev, { role: "agent" as const, text, thinking: thinking || undefined }]);
             resetLive();
           } else if (event === "scope_cancelled") {
             setMessages((prev) => [...prev, { role: "agent", text: "Scope selection cancelled. No organization data was shared with the agent." }]);
@@ -755,7 +738,6 @@ function AgentChat({
           }
         },
         controller.signal,
-        requestScope,
       );
     } catch (e) {
       if ((e as Error)?.name !== "AbortError") {
@@ -768,10 +750,31 @@ function AgentChat({
           setMessages((m) => [...m, { role: "agent", text: "I could not process that request. Please try again." }]);
         }
       }
+      return;
     } finally {
       setBusy(false);
       setPhase("idle");
       abortRef.current = null;
+    }
+
+    // The turn paused on a decision: resolve it, then continue the same ask.
+    if (pendingClarify) {
+      const chosen = await askClarify(pendingClarify);
+      if (!chosen) {
+        setMessages((m) => [...m, { role: "agent", text: "No problem — tell me which one you want and I will take it from there." }]);
+        return;
+      }
+      await streamChat(prompt, domain, { ...opts, intent: chosen });
+      return;
+    }
+    if (pendingScope) {
+      const grant = await requestScope(pendingScope);
+      if (grant?.scope_grant) {
+        scopeGrantRef.current = grant.scope_grant;
+        await streamChat(prompt, domain, { ...opts, scopeGrant: grant.scope_grant });
+        return;
+      }
+      setMessages((m) => [...m, { role: "agent", text: "Scope selection cancelled. No organization data was shared with the agent." }]);
     }
   };
 
@@ -1226,6 +1229,32 @@ function AgentChat({
               <ScrollButton className="pointer-events-auto border-phantix-700/50 bg-phantix-900/90 text-gold-300 hover:bg-phantix-800/90" />
             </div>
           </ChatContainerRoot>
+
+          {clarifyCard && (
+            <div className="mx-auto w-full max-w-3xl">
+              <div className="rounded-xl border border-gold-400/30 bg-gold-400/[0.06] px-3.5 py-3">
+                <p className="flex items-center gap-1.5 text-[12px] font-semibold text-gold-200">
+                  <Sparkles size={12} /> One question before I answer
+                </p>
+                <p className="mt-1 text-[13px] leading-5 text-slate-300">{clarifyCard.prompt}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {clarifyCard.options.map((o) => (
+                    <button
+                      key={o.option_id}
+                      onClick={() => chooseClarify(o.option_id)}
+                      className="chip border-gold-400/30 text-gold-200 transition-colors hover:bg-gold-400/10"
+                      title={o.intent_label}
+                    >
+                      {o.display_name ?? o.agent_id ?? o.domain} · {o.intent_label}
+                    </button>
+                  ))}
+                  <button onClick={dismissClarify} className="chip text-slate-400 transition-colors hover:text-slate-200">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mx-auto w-full max-w-3xl pt-2">{composer}</div>
         </>
