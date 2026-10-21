@@ -43,6 +43,7 @@ const Reports = React.lazy(() => import("./pages/Reports"));
 // Shared with the attack app so one live board serves both (SSE-backed).
 const Tracker = React.lazy(() => import("@sg/pages/Tracker"));
 const FindingsIntake = React.lazy(() => import("./pages/FindingsIntake"));
+const RiskPriorityPage = React.lazy(() => import("@sg/pages/RiskPriority"));
 const ReportViewer = React.lazy(() => import("./pages/ReportViewer"));
 const IntegrationsHub = React.lazy(() => import("./pages/IntegrationsHub"));
 const Audit = React.lazy(() => import("./pages/Audit"));
@@ -112,6 +113,8 @@ export default function App() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/tracker" element={<Tracker />} />
             <Route path="/findings" element={<FindingsIntake />} />
+            {/* Risk prioritisation: severity vs exploitability, asset ranking, KRI. */}
+            <Route path="/risk-priority" element={<RiskPriorityPage />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/reports/:id/view" element={<ReportViewer />} />
             <Route path="/integrations" element={<IntegrationsHub />} />
