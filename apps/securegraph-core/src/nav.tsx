@@ -60,6 +60,7 @@ export function coreNav({ isAuthorizer = false }: { isAuthorizer?: boolean } = {
       items: [
         { to: "/tracker", label: "Tracker", icon: <KanbanSquare size={17} /> },
         { to: "/findings", label: "Intake", icon: <Inbox size={17} /> },
+        { to: "/risk-priority", label: "Priority", icon: <AlertTriangle size={17} /> },
         { to: "/reports", label: "Reports", icon: <FileText size={17} /> },
       ],
     },

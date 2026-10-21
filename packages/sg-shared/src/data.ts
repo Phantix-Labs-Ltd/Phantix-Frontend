@@ -2022,6 +2022,30 @@ export async function sendAgentMessage(message: string): Promise<string> {
   return out.join("").trim() || "No response from agent.";
 }
 
+/**
+ * Risk prioritisation read model (`GET /reports/risk/priority`).
+ *
+ * One call for the three panels: the KRI with its drivers and exclusions, assets
+ * ranked by the backend score, and each finding's severity and exploitability as
+ * separate judgements. The frontend renders; it never re-derives a score.
+ */
+export async function loadRiskPriority(params?: { limit?: number; assets?: number }): Promise<{
+  kri: any;
+  assets: any[];
+  findings: any[];
+} | null> {
+  if (isDemoMode()) return null;
+  try {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.assets) q.set("assets", String(params.assets));
+    const suffix = q.toString() ? `?${q}` : "";
+    return await api.get(`/reports/risk/priority${suffix}`);
+  } catch {
+    return null;
+  }
+}
+
 export async function startAgentRun(domain: string, objective: string, campaignId?: number): Promise<any> {
   if (isDemoMode()) {
     await delay(700);
