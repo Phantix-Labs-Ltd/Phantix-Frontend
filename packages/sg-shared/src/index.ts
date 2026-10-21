@@ -68,3 +68,16 @@ export {
   formatTime,
   formatRelative,
 } from "./time";
+
+// Risk prioritisation (KRI, ranked assets, per-finding severity/exploitability).
+export { default as RiskPriorityPage } from "./pages/RiskPriority";
+export{
+  AssetPriorityList,
+  FindingAxesRow,
+  KriPanel,
+} from "./components/RiskPriority";
+export type {
+  AssetPriorityRow,
+  FindingAxes,
+  KriSummary,
+} from "./components/RiskPriority";
