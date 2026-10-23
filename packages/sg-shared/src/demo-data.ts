@@ -497,6 +497,18 @@ export const alertSettings: AlertSettings = {
 // demo trail mirrors the backend rule.
 const DUAL_CONTROL_AUDIT_KEYS = new Set(["risk.treatment.approve"]);
 
+/** Where each demo action happened and on which record, as the API records it. */
+const DEMO_AUDIT_CONTEXT: Record<number, Partial<AuditEvent>> = {
+  601: { application: "defend", app_route: "/risks", route: "/api/v1/risks/treatments/{treatment_id}/approve", resource_type: "treatment", resource_id: "3" },
+  600: { application: "attack", app_route: "/vapt", route: "/api/v1/vapt/campaigns/{campaign_id}/start", resource_type: "campaign", resource_id: "13" },
+  599: { application: "core", app_route: "/assets/intelligence", route: "/api/v1/assets/intelligence/dashboard" },
+  598: { application: "attack", app_route: "/scans", route: "/api/v1/scans/results" },
+  597: { application: "defend", app_route: "/compliance", route: "/api/v1/compliance/assessments/{assessment_id}/run", resource_type: "assessment", resource_id: "2" },
+  596: { application: "defend", app_route: "/risks", route: "/api/v1/risks/prioritized" },
+  595: { application: "core", app_route: "/reports", route: "/api/v1/reports", resource_type: "report", resource_id: "88" },
+  594: { application: "core", app_route: "/login", route: "/api/v1/auth/login" },
+};
+
 export const auditEvents: AuditEvent[] = ([
   { id: 601, action_key: "risk.treatment.approve", action_label: "Approve risk treatment", category: "risks", status: "completed", summary: "Approved treatment: TLS baseline remediation", details: { path: "/api/v1/risks/treatments/3/approve", method: "PATCH", actor_user_id: 2, actor_email: "ada@phantixlabs.com", token_type: "app_session", passive: false }, source: "api_middleware", ip_address: "102.89.34.12", initiator_name: "Ada Okonkwo", initiator_title: "IT Admin", authorizer_name: "Chidi Eze", authorizer_title: "CISO", created_at: "2026-07-20T08:05:00Z" },
   { id: 600, action_key: "vapt.campaign.start", action_label: "Start VAPT campaign", category: "vapt", status: "completed", summary: "Started campaign: Q3 External Assessment", details: { path: "/api/v1/vapt/campaigns/13/start", method: "POST", actor_user_id: 2, actor_email: "ada@phantixlabs.com", token_type: "app_session", passive: false }, source: "api_middleware", ip_address: "102.89.34.12", initiator_name: "Ada Okonkwo", initiator_title: "IT Admin", authorizer_name: "Chidi Eze", authorizer_title: "CISO", created_at: "2026-07-14T10:30:00Z" },
@@ -508,9 +520,18 @@ export const auditEvents: AuditEvent[] = ([
   { id: 594, action_key: "auth.org_user.login", action_label: "Operator sign-in", category: "auth", status: "completed", summary: "Org user login (dual_control)", details: { path: "/api/v1/auth/login", method: "POST", actor_user_id: 3, actor_email: "chidi@phantixlabs.com", token_type: "app_session", passive: false }, source: "api_middleware", ip_address: "102.89.34.13", initiator_name: "Chidi Eze", initiator_title: "CISO", authorizer_name: null, authorizer_title: null, created_at: "2026-07-10T07:02:00Z" },
 ]).map((e) => ({
   ...e,
+  ...DEMO_AUDIT_CONTEXT[e.id],
+  actor_type: "user" as const,
+  actor_email: e.details?.actor_email ?? null,
+  method: e.details?.method ?? null,
+  outcome: e.details?.passive ? ("viewed" as const) : ("succeeded" as const),
   authorizer_name: DUAL_CONTROL_AUDIT_KEYS.has(e.action_key) ? e.authorizer_name : null,
   authorizer_title: DUAL_CONTROL_AUDIT_KEYS.has(e.action_key) ? e.authorizer_title : null,
-}));
+}) as AuditEvent).concat([
+  // Agent activity: recorded by the agent, in Attack, chained to its session.
+  { id: 602, action_key: "agent.decision", action_label: "Requested approval to run an authenticated scan", category: "agent", status: "completed", summary: "The agent paused before a state-changing step on app.acme.ng and asked for approval.", details: { actor_type: "agent", session_id: 41 }, source: "agent", ip_address: null, initiator_name: "Autonomous Pentest Agent", initiator_title: "Agent", authorizer_name: null, authorizer_title: null, created_at: "2026-07-21T09:12:00Z", application: "attack", actor_type: "agent", session_id: 41, outcome: "succeeded", resource_type: "agi_decision", resource_id: "318" },
+  { id: 603, action_key: "agent.decision", action_label: "Approved the authenticated scan", category: "agent", status: "completed", summary: "Ada approved the step the agent proposed in session #41.", details: { actor_type: "user", session_id: 41 }, source: "api", ip_address: "102.89.34.12", initiator_name: "Ada Okonkwo", initiator_title: "IT Admin", authorizer_name: null, authorizer_title: null, created_at: "2026-07-21T09:14:00Z", application: "attack", app_route: "/agent", actor_type: "user", actor_email: "ada@phantixlabs.com", session_id: 41, outcome: "succeeded", resource_type: "agi_decision", resource_id: "318" },
+]).sort((a, b) => b.id - a.id);
 
 export const pendingActions: PendingAction[] = [
   { id: 41, action_key: "risk.treatment.approve", action_label: "Approve IDOR fix compensation plan", category: "risks", initiated_by: "Ada Okonkwo", status: "pending", created_at: "2026-07-21T05:40:00Z" },

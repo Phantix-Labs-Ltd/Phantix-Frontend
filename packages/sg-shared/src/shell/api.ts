@@ -14,6 +14,8 @@
 import type { ApplicationKey } from "./types";
 import {
   announcePendingApproval,
+  APP_ROUTE_HEADER,
+  currentAppRoute,
   deviceId as sharedDeviceId,
   isCookieSession,
   readSessionStoredToken,
@@ -171,7 +173,12 @@ function buildHeaders(anonymous: boolean): Record<string, string> {
     if (dual) headers["X-Dual-Control-Session"] = dual;
     headers["X-Device-Id"] = deviceId();
   }
-  if (currentApplication) headers["X-Application"] = currentApplication;
+  if (currentApplication) {
+    headers["X-Application"] = currentApplication;
+    // The page this call came from, for the audit trail (see currentAppRoute).
+    const page = currentAppRoute();
+    if (page) headers[APP_ROUTE_HEADER] = page;
+  }
   return headers;
 }
 
