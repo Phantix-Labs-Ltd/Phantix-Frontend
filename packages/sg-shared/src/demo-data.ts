@@ -3502,6 +3502,7 @@ export const trackerSummary: TrackerSummary = {
 
 /** 90 days of findings movement — a backlog that grows, then falls as fixes land. */
 export const trackerTimeline: TrackerTimeline = {
+  verification: "verified",
   days: 90,
   prior_open: 12,
   series: [
