@@ -18,6 +18,8 @@ import { useState } from "react"
 
 export type ToolPart = {
   type: string
+  /** The action in words; shown instead of the raw tool id when present. */
+  label?: string
   state:
     | "input-streaming"
     | "input-available"
@@ -141,8 +143,8 @@ const Tool = ({ toolPart, defaultOpen = false, className }: ToolProps) => {
           >
             <div className="flex items-center gap-2">
               {getStateIcon()}
-              <span className="font-mono text-sm font-medium">
-                {toolPart.type}
+              <span className={cn("text-sm font-medium", !toolPart.label && "font-mono")} title={toolPart.label ? toolPart.type : undefined}>
+                {toolPart.label ?? toolPart.type}
               </span>
               {getStateBadge()}
             </div>

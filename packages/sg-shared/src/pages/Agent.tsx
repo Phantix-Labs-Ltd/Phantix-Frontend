@@ -25,6 +25,7 @@ import {
   StepsContent,
 } from "../prompt-kit/steps";
 import { Tool } from "../prompt-kit/tool";
+import { humanizeIdentifier } from "../agentActivity";
 import {
   PromptInput,
   PromptInputTextarea,
@@ -422,7 +423,7 @@ function AgentChat({
   const [liveAnswer, setLiveAnswer] = useState("");
   const [liveThinking, setLiveThinking] = useState("");
   const [liveRunId, setLiveRunId] = useState("");
-  const [tools, setTools] = useState<{ tool: string; ok: boolean; error?: string }[]>([]);
+  const [tools, setTools] = useState<{ tool: string; label?: string; ok: boolean; error?: string }[]>([]);
   // Specialist roster from the backend catalog — never a hardcoded copy.
   const [domains, setDomains] = useState<AgentDomainInfo[]>([]);
   const [thinkingOpen, setThinkingOpen] = useState(false);
@@ -794,7 +795,7 @@ function AgentChat({
         (event, data) => {
           if (event === "connected") setPhase("connecting");
           else if (event === "run_started") { runId = String(data?.analysis_id ?? ""); setLiveRunId(runId); setPhase("streaming"); }
-          else if (event === "tool") { setTools((t) => [...t, { tool: String(data?.tool ?? "tool"), ok: Boolean(data?.ok), error: data?.error ? String(data.error) : undefined }]); }
+          else if (event === "tool") { setTools((t) => [...t, { tool: String(data?.tool ?? "tool"), label: data?.label ? String(data.label) : undefined, ok: Boolean(data?.ok), error: data?.error ? String(data.error) : undefined }]); }
           else if (event === "synthesis_start") setPhase("synthesizing");
           else if (event === "reasoning") { summary += data?.content ?? ""; setLiveThinking(summary); setThinkingOpen(true); }
           else if (event === "delta") { summary += data?.content ?? ""; setLiveAnswer(summary); }
@@ -1175,7 +1176,7 @@ function AgentChat({
                       {tools.map((t, idx) => (
                         <div key={`${t.tool}-${idx}`} className="space-y-1">
                           <Tool
-                            toolPart={{ type: t.tool, state: t.ok ? "output-available" : "output-error", toolCallId: `tool-${idx}` }}
+                            toolPart={{ type: t.tool, label: t.label || humanizeIdentifier(t.tool) || undefined, state: t.ok ? "output-available" : "output-error", toolCallId: `tool-${idx}` }}
                             className="!mt-0 border-phantix-700/40"
                           />
                           {!t.ok && t.error && (

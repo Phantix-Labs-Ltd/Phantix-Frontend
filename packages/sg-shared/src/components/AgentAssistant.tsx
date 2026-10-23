@@ -6,6 +6,7 @@ import { applicationHandoffHref, applicationTarget } from "../applications";
 import { confirmAgentScope, decideAgentApproval, streamAgentChat } from "../data";
 import { useStore } from "../store";
 import { cx } from "../utils";
+import { humanizeIdentifier } from "../agentActivity";
 import AgentScopeGate, { type AgentScopeSelection } from "./AgentScopeGate";
 import LottiePlayer from "./LottiePlayer";
 import MarkdownView from "./MarkdownView";
@@ -22,8 +23,8 @@ import {
   releaseAssistantPanel,
 } from "./assistantEvents";
 
-type ToolStep = { tool: string; status: "running" | "done" | "error"; error?: string };
-type ApprovalReq = { approval_id: string; tool: string; params: Record<string, unknown>; analysis_id: string; prompt: string };
+type ToolStep = { tool: string; label?: string; status: "running" | "done" | "error"; error?: string };
+type ApprovalReq = { approval_id: string; tool: string; label?: string; params: Record<string, unknown>; analysis_id: string; prompt: string };
 type Msg = {
   role: "user" | "agent";
   text: string;
@@ -33,10 +34,9 @@ type Msg = {
   nav?: { route: string; label: string; also?: { route: string; label: string }[] };
 };
 
-function stepLabel(tool: string): string {
-  return tool
-    .replace(/\./g, " › ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+/** A tool step in words: the backend's label ("List assets"), else the id made readable. */
+function stepLabel(tool: string, label?: string): string {
+  return label || humanizeIdentifier(tool) || "Agent step";
 }
 
 const DEFAULT_GREETING =
@@ -288,7 +288,7 @@ export default function AgentAssistant() {
           } else if (event === "scope_card") {
             pendingScope = data as AgentScopeCard;
           } else if (event === "tool_call") {
-            steps.push({ tool: String(data?.tool ?? "tool"), status: "running" });
+            steps.push({ tool: String(data?.tool ?? "tool"), label: data?.label ? String(data.label) : undefined, status: "running" });
             setLiveSteps([...steps]);
           } else if (event === "tool_result") {
             const tool = String(data?.tool ?? "");
@@ -302,6 +302,7 @@ export default function AgentAssistant() {
             approval = {
               approval_id: String(data?.approval_id ?? ""),
               tool: String(data?.tool ?? ""),
+              label: data?.label ? String(data.label) : undefined,
               params: (data?.params ?? {}) as Record<string, unknown>,
               analysis_id: String(data?.analysis_id ?? analysisId),
               prompt: opts.text,
@@ -567,7 +568,7 @@ export default function AgentAssistant() {
                                   ) : (
                                     <Check size={11} className="shrink-0 text-emerald-400" />
                                   )}
-                                  <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool)}</span>
+                                  <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool, s.label)}</span>
                                   {s.error && <span className="truncate text-slate-500">· {s.error}</span>}
                                 </div>
                               ))}
@@ -579,7 +580,7 @@ export default function AgentAssistant() {
                                 <ShieldCheck size={12} /> Approval needed
                               </p>
                               <p className="mt-1 text-[12px] leading-5 text-gold-100/80">
-                                Allow <strong>{stepLabel(m.approval.tool)}</strong>? It changes your data and runs once.
+                                Allow <strong>{stepLabel(m.approval.tool, m.approval.label)}</strong>? It changes your data and runs once.
                               </p>
                               <div className="mt-2 flex gap-2">
                                 <button
@@ -659,7 +660,7 @@ export default function AgentAssistant() {
                                 ) : (
                                   <Check size={11} className="shrink-0 text-emerald-400" />
                                 )}
-                                <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool)}</span>
+                                <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool, s.label)}</span>
                               </div>
                             ))}
                           </div>
@@ -670,7 +671,7 @@ export default function AgentAssistant() {
                               <ShieldCheck size={12} /> Approval needed
                             </p>
                             <p className="mt-1 text-[12px] leading-5 text-gold-100/80">
-                              Allow <strong>{stepLabel(liveApproval.tool)}</strong>? It changes your data and runs once.
+                              Allow <strong>{stepLabel(liveApproval.tool, liveApproval.label)}</strong>? It changes your data and runs once.
                             </p>
                           </div>
                         )}
