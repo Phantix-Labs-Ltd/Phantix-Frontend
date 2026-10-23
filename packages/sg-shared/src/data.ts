@@ -3677,17 +3677,23 @@ export interface TrackerTimeline {
   series: TrackerTimelinePoint[];
   totals: { detected: number; fixed: number; accepted: number; regressed: number };
   net_change: number;
+  /** Which findings the series covers. An API that predates the filter sends
+   *  none, and then the series covers every tracked finding. */
+  verification: "verified" | "all";
 }
 
 /**
  * Daily findings movement. Standing counts say how much is open; only dated
- * movement says whether it is getting better.
+ * movement says whether it is getting better. `verified` limits it to findings
+ * with evidence, the population the dashboard cards count.
  */
-export async function loadTrackerTimeline(days = 90): Promise<TrackerTimeline | null> {
+export async function loadTrackerTimeline(days = 90, opts: { verified?: boolean } = {}): Promise<TrackerTimeline | null> {
   if (isDemoMode()) { await delay(250); return demo.trackerTimeline; }
-  const raw = await softOne<any>(`/reports/tracker/analytics/timeline?days=${days}`);
+  const filter = opts.verified ? "&verification=verified" : "";
+  const raw = await softOne<any>(`/reports/tracker/analytics/timeline?days=${days}${filter}`);
   if (!raw || !Array.isArray(raw.series)) return null;
   return {
+    verification: raw.verification === "verified" ? "verified" : "all",
     days: Number(raw.days ?? days),
     prior_open: Number(raw.prior_open ?? 0),
     series: raw.series.map((p: any) => ({

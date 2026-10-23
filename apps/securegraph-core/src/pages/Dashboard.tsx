@@ -113,7 +113,7 @@ export default function Dashboard() {
   // (it was loaded once and never updated).
   const trackerRes = useResource<TrackerSummary | null>(() => loadTrackerSummary().catch(() => null), null, "tracker-summary-verified");
   const tracker = trackerRes.data;
-  const timelineRes = useResource(() => loadTrackerTimeline(14).catch(() => null), null as Awaited<ReturnType<typeof loadTrackerTimeline>>, "tracker-timeline-14");
+  const timelineRes = useResource(() => loadTrackerTimeline(14, { verified: true }).catch(() => null), null as Awaited<ReturnType<typeof loadTrackerTimeline>>, "tracker-timeline-14-verified");
 
   const trendRes = useResource<PosturePoint[]>(() => loadPostureTrend(), [] as PosturePoint[], "posture-trend");
   // The one posture score (GET /posture), the same number Defend and Analytics show.
@@ -376,10 +376,12 @@ export default function Dashboard() {
   const hasTrend = trend.length > 1;
   const scoreDelta = hasTrend ? scorePoints[scorePoints.length - 1].value - scorePoints[0].value : null;
   // Open-per-day comes from the tracker's own daily series (the posture trend
-  // counted raw scanner results, a different population). The series cannot be
-  // filtered by evidence, so the panel says it covers every tracked finding and
-  // carries no headline number of its own (the Open findings card is the count).
+  // counted raw scanner results, a different population). It is asked for
+  // verified findings only, so today's bar equals the Open findings card. An API
+  // that predates the filter answers with every tracked finding, and the subtitle
+  // then says so rather than implying the two should match.
   const timeline = timelineRes.data?.series ?? [];
+  const timelineVerified = timelineRes.data?.verification === "verified";
   const findingPoints = timeline.map((p) => ({ label: p.day.slice(5), value: Number(p.cumulative_open ?? 0) }));
   const hasFindingTrend = findingPoints.length > 1;
   const findingsDelta = hasFindingTrend
@@ -638,7 +640,11 @@ export default function Dashboard() {
 
         <Panel
           title="Open findings per day"
-          subtitle="Every tracked finding still open at the end of each day, verified or not"
+          subtitle={
+            timelineVerified
+              ? "Verified findings still open at the end of each day"
+              : "Every tracked finding still open at the end of each day, verified or not"
+          }
           delay={0.22}
           action={<Delta value={findingsDelta} goodWhen="down" />}
         >
