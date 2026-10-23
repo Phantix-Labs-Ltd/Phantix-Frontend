@@ -30,6 +30,14 @@ function chooseAppHref(): string {
   return `/choose-app?${q.toString()}`;
 }
 
+/** The MFA step answered "confirm this device" (a link was emailed) instead of
+ *  issuing a session. `token_type: "device_pending"` is checked as well as the
+ *  flag: the API's response model once dropped the flag, and then this read as a
+ *  finished sign-in with no session, which bounced the operator to sign-in. */
+function needsDeviceConfirm(res: { device_verification_required?: boolean; device_token?: string; token_type?: string }): boolean {
+  return Boolean(res.device_token) && (res.device_verification_required === true || res.token_type === "device_pending");
+}
+
 const NEXT_LABEL: Record<string, string> = { attack: "Attack", defend: "Defend", code: "Code" };
 
 /** Says where sign-in leads when the operator was sent here on the way to an
@@ -314,8 +322,10 @@ function ReturningLogin({
 
   type MfaResult = IssuedAppSession & {
     device_verification_required?: boolean;
+    token_type?: string;
     user?: { full_name?: string; email?: string };
     user_email?: string;
+    user_full_name?: string;
     effective_role?: string;
     role?: string;
     can_operate?: boolean;
@@ -358,17 +368,15 @@ function ReturningLogin({
       return;
     }
     try {
-      const res = await api.post<IssuedAppSession>(
+      const res = await api.post<MfaResult>(
         "/app/auth/firebase",
         { id_token: idToken, device_id: deviceId() },
       );
-      // The API answers with HttpOnly cookies (no token in the body) or a
-      // bearer pair; adopt it the way the email sign-in does. Reading
-      // access_token directly left an empty token with a cookie session, and
-      // the shell sent the user straight back to sign-in.
-      if (!adoptAppSession(res)) throw new Error("Sign-in did not return a session. Try again.");
       exitDemoMode();
-      navigate(chooseAppHref());
+      // Finish exactly as the email sign-in does. Adopting the session alone
+      // stored the cookie marker but left the store signed out, so the picker
+      // saw no session and sent the user straight back to sign-in.
+      finishLogin(res);
     } catch (e) {
       const detail = e instanceof ApiError ? (e.detail as Record<string, unknown> | undefined) : undefined;
       const msg =
@@ -381,11 +389,13 @@ function ReturningLogin({
   };
 
   const finishLogin = (res: MfaResult, rotated = false) => {
-    adoptAppSession(res);
+    // The API answers with HttpOnly cookies (no token in the body) or a bearer
+    // pair. Without either there is no session to continue with.
+    if (!adoptAppSession(res)) throw new Error("Sign-in did not return a session. Try again.");
     const dcSessionToken = res.dual_control_session_token ?? res.dual_control?.session_token;
     if (dcSessionToken) tokens.dualControl = dcSessionToken;
 
-    const name = res.user?.full_name ?? "";
+    const name = res.user?.full_name ?? res.user_full_name ?? "";
     const emailAddr = res.user_email ?? res.user?.email ?? "";
     const isInit = res.is_initiator === true || res.dual_control?.is_initiator === true;
     const isAuth = res.is_authorizer === true || res.dual_control?.is_authorizer === true;
@@ -406,7 +416,7 @@ function ReturningLogin({
         replace_primary: false,
       }, { realm: "application" });
 
-      if (res.device_verification_required && res.device_token) {
+      if (needsDeviceConfirm(res) && res.device_token) {
         // New browser → a confirmation link was emailed. Wait for the link, then poll.
         setDeviceToken(res.device_token);
         setStage("device");
@@ -772,6 +782,7 @@ function AppLoginFlow({
     try {
       const res = await api.post<IssuedAppSession & {
         device_verification_required?: boolean;
+        token_type?: string;
         user?: { full_name?: string; email?: string };
         user_email?: string;
         effective_role?: string;
@@ -796,13 +807,13 @@ function AppLoginFlow({
         device_id: deviceId(),
       }, { realm: "application" });
 
-      if (res.device_verification_required && res.device_token) {
+      if (needsDeviceConfirm(res) && res.device_token) {
         setDeviceToken(res.device_token);
         setStage("device");
         return;
       }
 
-      adoptAppSession(res);
+      if (!adoptAppSession(res)) throw new Error("Sign-in did not return a session. Try again.");
       const devId2 = localStorage.getItem("phantix_device_id") ?? crypto.randomUUID();
       localStorage.setItem("phantix_device_id", devId2);
 
