@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Activity, Bot, ChevronLeft, ChevronRight, KeyRound, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 import { PageHeader, Card, TableCardSkeleton, ErrorState, EmptyState } from "@sg/ui";
-import { isDenied, loadAgentActivity, type AgentAction } from "@sg/agentActivity";
+import { actionLabelOf, intentOf, isDenied, loadAgentActivity, type AgentAction } from "@sg/agentActivity";
 import { cx, timeAgo, formatDateTime, clickableRowProps } from "@sg/utils";
 import DocLink from "@sg/components/DocLink";
 import { useSseStream } from "@sg/useSse";
@@ -113,7 +113,7 @@ export default function AgentActivity() {
     <div>
       <PageHeader
         title="Agent activity"
-        description="Know what the agent did. {intent, tool, domain, run, outcome} for every action."
+        description="What the agent did, why it was asked to, who asked, and whether it was allowed."
         actions={<>
             <DocLink docId="howto-app-20" label="Agent activity how-to" />
           <button onClick={() => void load()} className="btn-ghost text-xs !py-2" title="Refresh">
@@ -205,13 +205,29 @@ export default function AgentActivity() {
                           </td>
                           <td className="td"><span className="chip border-phantix-700 text-slate-300">{domainLabel(row.domain)}</span></td>
                           <td className="td">
-                            <p className="flex items-center gap-1.5 font-mono text-[13px] text-slate-200">
-                              <Bot size={11} className="text-gold-400" />
-                              {row.tool ?? "Not set"}
+                            <p className="flex items-center gap-1.5 text-[13px] font-medium text-slate-100">
+                              <Bot size={11} className="shrink-0 text-gold-400" />
+                              {actionLabelOf(row)}
+                              {row.action_kind && (
+                                <span className={cx(
+                                  "rounded px-1 py-px text-[10px] font-semibold uppercase tracking-wide",
+                                  row.action_kind === "change" ? "bg-amber-400/10 text-amber-300" : "bg-phantix-800 text-slate-400",
+                                )}>
+                                  {row.action_kind === "change" ? "Change" : "Read"}
+                                </span>
+                              )}
                             </p>
+                            {/* The tool id stays visible for whoever needs to trace it, but
+                                small: the readable action above is the row's name. */}
+                            {row.tool && <p className="ml-[17px] font-mono text-[11px] text-slate-600">{row.tool}</p>}
                           </td>
                           <td className="td max-w-[320px] text-[13px] text-slate-400">
-                            <span className="block truncate" title={row.intent || undefined}>{row.intent || <span className="text-slate-600">Not set</span>}</span>
+                            {(() => {
+                              const why = intentOf(row);
+                              return why
+                                ? <span className="line-clamp-2" title={why}>{why}</span>
+                                : <span className="text-slate-600">No prompt recorded</span>;
+                            })()}
                           </td>
                           <td className="td">
                             {row.actor_name || row.actor_email || row.actor_user_id ? (

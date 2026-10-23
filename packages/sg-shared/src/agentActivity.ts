@@ -11,6 +11,13 @@ export interface AgentAction {
   run_id?: string | null;
   domain?: string | null;
   tool?: string | null;
+  /** The action in words ("List assets"), from the backend's tool registry. */
+  action_label?: string | null;
+  /** read | change, when the registry knows the tool. */
+  action_kind?: "read" | "change" | null;
+  /** Activity rows (turns, session events) carry a type instead of a tool. */
+  activity_type?: string | null;
+  summary?: string | null;
   intent?: string | null;
   params?: string | null;
   authorized?: boolean | null;
@@ -61,6 +68,28 @@ export async function loadAgentActivity(filter: AgentActivityFilter = {}) {
     return { items: [] as AgentAction[], total: 0, limit: filter.limit ?? 50, offset: filter.offset ?? 0 };
   }
   return api.get<AgentActivityResponse>(`/ai/agent/activity${buildAgentActivityQuery(filter)}`);
+}
+
+/** `asset.list` / `list_findings` / `session_started` → readable words. */
+export function humanizeIdentifier(name?: string | null): string | null {
+  const words = String(name ?? "").trim().split(/[._:\-\s]+/).filter(Boolean);
+  if (!words.length) return null;
+  const text = words.join(" ").toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** What the agent did, in words. The backend names it; an older API sends
+ *  only the tool id, which is made readable here rather than shown raw. */
+export function actionLabelOf(row: AgentAction): string {
+  return row.action_label || humanizeIdentifier(row.tool) || humanizeIdentifier(row.activity_type) || "Agent action";
+}
+
+/** Why: the operator's prompt or the run objective, never the "-" placeholder. */
+export function intentOf(row: AgentAction): string | null {
+  const intent = (row.intent ?? "").trim();
+  if (intent && intent !== "-") return intent;
+  const summary = (row.summary ?? "").trim();
+  return summary || null;
 }
 
 /** A denial reason is a control working, not a bug. */

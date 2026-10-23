@@ -973,12 +973,28 @@ export interface AuditEvent {
   action_label: string;
   /** Operator application the action happened in; null for control-plane work. */
   application?: string | null;
+  /** The page in the application the action came from (SPA route, e.g. `/reports`). */
+  app_route?: string | null;
+  /** API route template that ran, e.g. `/api/v1/reports/{report_id}`. */
+  route?: string | null;
+  method?: string | null;
+  status_code?: number | null;
+  outcome?: "viewed" | "succeeded" | "denied" | "failed" | null;
+  actor_type?: "user" | "agent" | "system" | null;
+  actor_email?: string | null;
+  /** Autonomous Pentest Agent session the activity belongs to. */
+  session_id?: number | null;
+  correlation_id?: string | null;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  completed_at?: string;
   category: string;
   status: string;
   summary: string;
   details: {
-    path: string;
-    method: string;
+    /** Absent on activity rows (agent steps, approvals), which no HTTP request wrote. */
+    path?: string;
+    method?: string;
     actor_user_id?: number;
     actor_email?: string;
     token_type?: string;

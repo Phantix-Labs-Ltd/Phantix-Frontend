@@ -529,6 +529,11 @@ const MODULE_FALLBACK: Record<string, EndpointDesc> = {
   },
 };
 
+/** The description of a known endpoint, or null (no module or generic fallback). */
+export function describeKnownEndpoint(method: string, path: string): EndpointDesc | null {
+  return EXACT[norm(method, path)] ?? null;
+}
+
 export function describeEndpoint(method: string, path: string): EndpointDesc | null {
   const key = norm(method, path);
   if (!key) return null;

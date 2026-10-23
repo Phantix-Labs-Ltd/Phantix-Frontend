@@ -700,6 +700,21 @@ export function setActiveApplication(app: ApplicationDeclaration): void {
   activeApplication = app;
 }
 
+/** Header naming the page a call was made from, so the audit trail can say where. */
+export const APP_ROUTE_HEADER = "X-App-Route";
+
+/**
+ * The page the operator is on, sent as `X-App-Route` on application calls so
+ * the audit trail can bind an action to the page it came from. The path only:
+ * query and fragment can carry secrets (the `#sg=` handoff code), so they are
+ * never sent.
+ */
+export function currentAppRoute(): string | null {
+  if (typeof window === "undefined") return null;
+  const path = window.location.pathname || "/";
+  return path.length <= 200 ? path : null;
+}
+
 /**
  * Whether a shell is mounted that can hold the page under its "session expired"
  * card. Set by `ApplicationShell`; with no shell (a public page) a dropped
@@ -786,7 +801,11 @@ async function request<T>(
     // Which of the four applications this call comes from (see the applications
     // contract §4). Only the application realm is app-gated; declaring it on a
     // platform/staff call would be noise.
-    if (realm === "application") headers["X-Application"] = activeApplication;
+    if (realm === "application") {
+      headers["X-Application"] = activeApplication;
+      const page = currentAppRoute();
+      if (page) headers[APP_ROUTE_HEADER] = page;
+    }
     // Dual-control operate session: attach on ALL mutations when a token exists so
     // the SecureGraph Agent, Pentest Agent, and platform mutations share ONE operate
     // session. Stale/expired tokens are handled separately (the backend rejects the
@@ -1049,6 +1068,8 @@ function buildAuthHeaders(method: string): Record<string, string> {
     if (device) headers["X-Device-Token"] = device;
     headers["X-Device-Id"] = deviceId();
     headers["X-Application"] = activeApplication;
+    const page = currentAppRoute();
+    if (page) headers[APP_ROUTE_HEADER] = page;
   }
   if (method !== "GET" && tokens.dualControl) {
     headers["X-Dual-Control-Session"] = tokens.dualControl;
