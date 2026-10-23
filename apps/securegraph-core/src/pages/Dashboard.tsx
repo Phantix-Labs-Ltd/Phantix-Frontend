@@ -419,6 +419,14 @@ export default function Dashboard() {
     icon: (SURFACE_ICONS as Record<string, React.ReactNode>)[s],
     to: `/analytics?surface=${s}`,
   })).sort((a, b) => b.value - a.value);
+  // The panel sits in a row of fixed-height charts, so it shows only the surfaces
+  // that have findings, top first, and points to Analytics for the rest. Listing
+  // every empty surface made it the tallest card in the row.
+  const SURFACE_PANEL_ROWS = 5;
+  const surfaceTotal = surfaceRows.reduce((n, r) => n + r.value, 0);
+  const surfaceWithFindings = surfaceRows.filter((r) => r.value > 0);
+  const surfaceTop = surfaceWithFindings.slice(0, SURFACE_PANEL_ROWS);
+  const surfaceMore = surfaceWithFindings.length - surfaceTop.length;
 
   const verified = num(cc?.posture?.totals?.verified, 0);
   const neverScanned = num(cc?.posture?.totals?.neverScanned, 0);
@@ -610,10 +618,17 @@ export default function Dashboard() {
         </Panel>
 
         <Panel title="Findings by surface" subtitle="Verified findings per attack surface" delay={0.14} action={<ViewAll to="/analytics" />}>
-          {surfaceRows.every((r) => r.value === 0) ? (
+          {surfaceTop.length === 0 ? (
             <PanelEmpty>No findings tracked on any surface yet.</PanelEmpty>
           ) : (
-            <RankedBars rows={surfaceRows} scale="share" />
+            <>
+              <RankedBars rows={surfaceTop} scale="share" total={surfaceTotal} />
+              {surfaceMore > 0 && (
+                <div className="mt-3">
+                  <ViewAll to="/analytics" label={`+${surfaceMore} more ${surfaceMore === 1 ? "surface" : "surfaces"}`} />
+                </div>
+              )}
+            </>
           )}
         </Panel>
 

@@ -447,6 +447,7 @@ export function Donut({ slices, centerLabel }: { slices: Slice[]; centerLabel: s
 export function RankedBars({
   rows,
   scale = "max",
+  total,
 }: {
   rows: { key: string; label: string; value: number; icon?: React.ReactNode; to?: string }[];
   /**
@@ -455,10 +456,12 @@ export function RankedBars({
    * (one of two campaigns is half a bar, not a full one).
    */
   scale?: "max" | "share";
+  /** For `share`: the whole the rows are a share of, when only the top rows are shown. */
+  total?: number;
 }) {
   const max =
     scale === "share"
-      ? Math.max(1, rows.reduce((n, r) => n + r.value, 0))
+      ? Math.max(1, total ?? rows.reduce((n, r) => n + r.value, 0))
       : Math.max(1, ...rows.map((r) => r.value));
   return (
     <ul className="space-y-3">
