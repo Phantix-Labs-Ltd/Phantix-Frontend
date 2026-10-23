@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, Square, Sparkles, X, Trash2, ArrowRight, ArrowDown, BrainCircuit, BookOpen, Mail, Wrench, Check, ShieldCheck } from "lucide-react";
+import { Send, Square, Sparkles, X, Trash2, ArrowRight, ArrowDown, BookOpen, Mail, Check, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { applicationHandoffHref, applicationTarget } from "../applications";
 import { confirmAgentScope, decideAgentApproval, streamAgentChat } from "../data";
@@ -37,6 +37,18 @@ type Msg = {
 /** A tool step in words: the backend's label ("List assets"), else the id made readable. */
 function stepLabel(tool: string, label?: string): string {
   return label || humanizeIdentifier(tool) || "Agent step";
+}
+
+/** The checks that worked, once each, in words. Failed attempts are left out:
+ *  the answer accounts for them, and listing them reads as noise. */
+function completedSteps(steps?: ToolStep[]): string[] {
+  const out: string[] = [];
+  for (const s of steps ?? []) {
+    if (s.status !== "done") continue;
+    const label = stepLabel(s.tool, s.label);
+    if (!out.includes(label)) out.push(label);
+  }
+  return out;
 }
 
 const DEFAULT_GREETING =
@@ -550,30 +562,26 @@ export default function AgentAssistant() {
                     {messages.map((m, i) => (
                       <motion.div key={`${i}-${m.role}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={cx("flex", m.role === "user" ? "justify-end" : "justify-start")}>
                         <div className={cx("max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-6", m.role === "user" ? "bg-gold-400/15 text-gold-100 border border-gold-400/20" : "bg-phantix-800/60 text-slate-200 border border-phantix-700/40")}>
-                          {m.role === "agent" && m.thinking && (
-                            <details className="mb-1.5">
-                              <summary className="flex cursor-pointer items-center gap-1.5 text-[13px] text-slate-500 hover:text-slate-300"><BrainCircuit size={11} /> Thinking</summary>
-                              <div className="mt-1 border-l-2 border-phantix-600/50 pl-2.5 text-[13px] leading-5 text-slate-500">{m.thinking}</div>
-                            </details>
-                          )}
+                          {/* The answer is the message. How the agent got there (its
+                              reasoning, every tool it tried, attempts that failed) is
+                              noise to the reader: only the checks that worked are kept,
+                              folded into one line. */}
                           {m.role === "agent" ? <MarkdownView source={m.text} /> : <p className="whitespace-pre-wrap">{m.text}</p>}
-                          {m.role === "agent" && m.steps && m.steps.length > 0 && (
-                            <div className="mt-2 space-y-1 border-t border-phantix-700/40 pt-2">
-                              {m.steps.map((s, si) => (
-                                <div key={`${s.tool}-${si}`} className="flex items-center gap-1.5 text-[12px] text-slate-400">
-                                  {s.status === "running" ? (
-                                    <Wrench size={11} className="shrink-0 animate-pulse text-gold-300" />
-                                  ) : s.status === "error" ? (
-                                    <X size={11} className="shrink-0 text-severity-critical" />
-                                  ) : (
-                                    <Check size={11} className="shrink-0 text-emerald-400" />
-                                  )}
-                                  <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool, s.label)}</span>
-                                  {s.error && <span className="truncate text-slate-500">· {s.error}</span>}
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          {m.role === "agent" && (() => {
+                            const checked = completedSteps(m.steps);
+                            if (!checked.length) return null;
+                            return (
+                              <details className="mt-1.5">
+                                <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12px] text-slate-500 hover:text-slate-300">
+                                  <Check size={11} className="text-emerald-400" />
+                                  Checked {checked.length} {checked.length === 1 ? "source" : "sources"}
+                                </summary>
+                                <ul className="mt-1 space-y-0.5 pl-[17px] text-[12px] text-slate-500">
+                                  {checked.map((label) => <li key={label}>{label}</li>)}
+                                </ul>
+                              </details>
+                            );
+                          })()}
                           {m.role === "agent" && m.approval && (
                             <div className="mt-2 rounded-xl border border-gold-400/30 bg-gold-400/[0.08] p-2.5">
                               <p className="flex items-center gap-1.5 text-[12px] font-semibold text-gold-200">
@@ -628,43 +636,37 @@ export default function AgentAssistant() {
                   {busy && (
                     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
                       <div className="max-w-[85%] min-w-[230px] rounded-2xl border border-phantix-700/40 bg-phantix-800/60 px-3.5 py-2.5 text-[13px] leading-6 text-slate-200">
-                        <AnimatePresence mode="wait" initial={false}>
-                          <motion.div
-                            key={phase + (liveThinking ? "-t" : "")}
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -6 }}
-                            transition={{ duration: 0.2 }}
-                            className="flex items-center gap-2 text-[13px] text-slate-400"
-                          >
-                            {phase === "connecting" && (<><LottiePlayer animationData={flowData} className="h-5 w-5" loop speed={1.2} /> Connecting to stream…</>)}
-                            {phase === "streaming" && !liveThinking && !liveAnswer && (<><LottiePlayer animationData={flowData} className="h-5 w-5" loop speed={1.2} /> Analysing…</>)}
-                            {liveThinking && (<><LottiePlayer animationData={flowData} className="h-5 w-5" loop speed={1.2} /> Thinking…</>)}
-                            {liveAnswer && (<><LottiePlayer animationData={flowData} className="h-5 w-5" loop speed={1.2} /> Responding…</>)}
-                          </motion.div>
-                        </AnimatePresence>
-                        {liveThinking && (
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden">
-                            <div className="mt-1.5 whitespace-pre-wrap border-l-2 border-phantix-600/50 pl-2.5 text-[13px] leading-5 text-slate-500">{liveThinking}</div>
-                          </motion.div>
-                        )}
+                        {/* One line of progress: what the agent is doing right now. Its
+                            reasoning and each tool attempt are not streamed into the
+                            bubble; a count of finished checks is enough. */}
+                        {(() => {
+                          const running = [...liveSteps].reverse().find((s) => s.status === "running");
+                          const status =
+                            phase === "connecting" ? "Connecting…"
+                              : liveAnswer ? "Writing the answer…"
+                              : running ? `${stepLabel(running.tool, running.label)}…`
+                              : liveThinking ? "Thinking…"
+                              : "Working on it…";
+                          const done = completedSteps(liveSteps).length;
+                          return (
+                            <AnimatePresence mode="wait" initial={false}>
+                              <motion.div
+                                key={status}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex items-center gap-2 text-[13px] text-slate-400"
+                                aria-live="polite"
+                              >
+                                <LottiePlayer animationData={flowData} className="h-5 w-5" loop speed={1.2} />
+                                <span>{status}</span>
+                                {done > 0 && <span className="text-[12px] text-slate-500">· {done} {done === 1 ? "check" : "checks"} done</span>}
+                              </motion.div>
+                            </AnimatePresence>
+                          );
+                        })()}
                         {liveAnswer && <p className="mt-1.5 whitespace-pre-wrap">{liveAnswer}<span className="ml-0.5 inline-block h-3.5 w-[7px] animate-pulse rounded-sm bg-gold-400/70 align-middle" /></p>}
-                        {liveSteps.length > 0 && (
-                          <div className="mt-1.5 space-y-1">
-                            {liveSteps.map((s, si) => (
-                              <div key={`${s.tool}-${si}`} className="flex items-center gap-1.5 text-[12px] text-slate-400">
-                                {s.status === "running" ? (
-                                  <Wrench size={11} className="shrink-0 animate-pulse text-gold-300" />
-                                ) : s.status === "error" ? (
-                                  <X size={11} className="shrink-0 text-severity-critical" />
-                                ) : (
-                                  <Check size={11} className="shrink-0 text-emerald-400" />
-                                )}
-                                <span className={s.status === "error" ? "text-red-300" : ""}>{stepLabel(s.tool, s.label)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                         {liveApproval && (
                           <div className="mt-2 rounded-xl border border-gold-400/30 bg-gold-400/[0.08] p-2.5">
                             <p className="flex items-center gap-1.5 text-[12px] font-semibold text-gold-200">
