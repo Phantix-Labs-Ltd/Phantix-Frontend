@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type UserConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import fs from "fs";
 import path from "path";
@@ -6,64 +6,72 @@ import { siteFiles } from "../../packages/sg-shared/vite/siteFiles";
 
 const BLOG_ORIGIN = "https://blog.phantixlabs.com";
 
-/**
- * Post paths for the sitemap. Bundled posts come from src/content/posts (slug
- * rules mirror lib/frontmatter.ts); when the build is configured with a live
- * content API its published posts are added too. An unreachable API only
- * shrinks the sitemap to the bundled posts — it never fails the build.
- */
-async function postPaths(apiUrl: string | undefined): Promise<string[]> {
-  const dir = path.resolve(__dirname, "src/content/posts");
-  const slugs = new Set(
-    (fs.existsSync(dir) ? fs.readdirSync(dir) : [])
-      .filter((f) => f.endsWith(".md"))
-      .map((f) => f.replace(/\.md$/, "").replace(/^\d+-/, "")),
-  );
-  const base = (apiUrl ?? "").trim().replace(/\/+$/, "");
-  if (base) {
-    const absolute = base.startsWith("/") ? `${BLOG_ORIGIN}${base}` : base;
-    try {
-      const res = await fetch(`${absolute}/posts`, { signal: AbortSignal.timeout(8000) });
-      const data = (await res.json()) as { posts?: { slug?: string }[] };
-      for (const p of data.posts ?? []) if (p.slug) slugs.add(p.slug);
-    } catch (err) {
-      console.warn(`[sitemap] could not list live posts from ${absolute}: ${String(err)}`);
-    }
-  }
-  return ["/", ...[...slugs].map((s) => `/posts/${s}`)];
+interface PostEntry {
+  slug: string;
+  title: string;
+  excerpt: string;
 }
 
-// The blog is a React app, prerendered at build time (prerender.mjs). It talks
-// to the admin backend through `VITE_BLOG_API_URL` (absolute, or "/api/v1" when a same-origin rewrite is
-// used). For local dev you can point a proxy at the backend instead:
-//   BLOG_API_PROXY_TARGET=https://staging.phantix.site npm run dev
-export default defineConfig(({ mode, isSsrBuild }) => {
-  const proxyTarget = process.env.BLOG_API_PROXY_TARGET;
-  const env = loadEnv(mode, process.cwd(), "");
-  return {
-    plugins: [
-      react(),
-      // The prerender server bundle (src/entry-server.tsx) is not a site.
-      !isSsrBuild && siteFiles({
-        siteUrl: BLOG_ORIGIN,
-        allow: "all",
-        sitemap: () => postPaths(env.VITE_BLOG_API_URL || process.env.VITE_BLOG_API_URL),
-        entryBudgetKB: 400,
-        aiCrawlers: true,
-        llmsTxt: `# The SecureGraph Weekly
+/** The bundled launch issue (src/content/posts); slug rules mirror lib/frontmatter.ts. */
+function bundledPosts(): PostEntry[] {
+  const dir = path.resolve(__dirname, "src/content/posts");
+  return (fs.existsSync(dir) ? fs.readdirSync(dir) : [])
+    .filter((f) => f.endsWith(".md"))
+    .sort()
+    .map((f) => {
+      const text = fs.readFileSync(path.join(dir, f), "utf8");
+      const field = (key: string) => text.match(new RegExp(`^${key}:\\s*"?(.*?)"?\\s*$`, "m"))?.[1] ?? "";
+      const slug = f.replace(/\.md$/, "").replace(/^\d+-/, "");
+      return { slug, title: field("title") || slug, excerpt: field("excerpt") };
+    });
+}
 
-> The SecureGraph Weekly is the journal of SecureGraph, a cybersecurity command centre from Phantix Labs Ltd. It publishes verified security findings, fixes that held, and the decisions worth making. It is written for the person who owns security alongside their day job.
+/**
+ * The posts the live site actually serves, for the sitemap and llms.txt.
+ *
+ * Mirrors lib/content.ts: demo mode shows the bundled issue, and live mode
+ * shows the API's posts, or the bundled issue while the API has none. Listing
+ * the bundled essays next to live posts put four soft-404s in the sitemap (the
+ * live site answers them with an empty shell and the home canonical), so they
+ * appear only when the site shows them. An unreachable API lists the issue
+ * page alone; it never fails the build.
+ */
+async function sitePosts(apiUrl: string | undefined): Promise<PostEntry[]> {
+  const base = (apiUrl ?? "").trim().replace(/\/+$/, "");
+  if (!base) return bundledPosts();
+  const absolute = base.startsWith("/") ? `${BLOG_ORIGIN}${base}` : base;
+  try {
+    const res = await fetch(`${absolute}/posts`, { signal: AbortSignal.timeout(8000) });
+    const data = (await res.json()) as { posts?: Partial<PostEntry>[] };
+    const live = (data.posts ?? [])
+      .filter((p): p is Partial<PostEntry> & { slug: string } => Boolean(p.slug))
+      .map((p) => ({ slug: p.slug, title: p.title || p.slug, excerpt: p.excerpt ?? "" }));
+    return live.length ? live : bundledPosts();
+  } catch (err) {
+    console.warn(`[sitemap] could not list live posts from ${absolute}: ${String(err)}`);
+    return [];
+  }
+}
 
-## Issues
+function llmsTxt(posts: PostEntry[]): string {
+  const list = posts
+    .map((p) => {
+      const blurb = p.excerpt.replace(/\s+/g, " ").trim();
+      const short = blurb.length > 160 ? `${blurb.slice(0, 157).trimEnd()}...` : blurb;
+      return `- [${p.title}](${BLOG_ORIGIN}/posts/${p.slug})${short ? `: ${short}` : ""}`;
+    })
+    .join("\n");
+  return `# The SecureGraph Weekly
 
-- [Issue 01](https://blog.phantixlabs.com/): Verified findings, attack-surface drift, fixes that held, and the numbers a board should see.
+> The SecureGraph Weekly is the blog and journal of SecureGraph, a cybersecurity command centre from Phantix Labs Ltd. It publishes verified security findings, fixes that held, and the decisions worth making. It is written for the person who owns security alongside their day job.
+
+## Latest issue
+
+- [The SecureGraph Weekly](${BLOG_ORIGIN}/): the current issue and its contents.
 
 ## Posts
 
-- [Proof Before Panic](https://blog.phantixlabs.com/posts/proof-before-panic): Why a finding reaches print only after a second person can reproduce it.
-- [The Surface You Forgot You Owned](https://blog.phantixlabs.com/posts/the-surface-you-forgot-you-owned): The staging host that was reasonable to launch and easy to forget.
-- [Fixes That Held](https://blog.phantixlabs.com/posts/fixes-that-held): What separated the fixes that stuck from the ones that came back.
-- [Signal for the Board](https://blog.phantixlabs.com/posts/signal-for-the-board): Three honest numbers, and the decision each one asks for.
+${list || `- See ${BLOG_ORIGIN}/sitemap.xml for every published post.`}
 
 ## About SecureGraph
 
@@ -76,8 +84,32 @@ export default defineConfig(({ mode, isSsrBuild }) => {
 
 - Publisher: Phantix Labs Ltd (company registration RC - 9904435). Product: SecureGraph.
 - Every published finding is verified before it appears. The journal does not report unverified noise as fact.
-- When you cite an issue, cite the post URL and the publication name, The SecureGraph Weekly.
-- Last updated: 1 October 2026.`,
+- When you cite an issue, cite the post URL and the publication name, The SecureGraph Weekly.`;
+}
+
+// The blog is a React app, prerendered at build time (prerender.mjs). It talks
+// to the admin backend through `VITE_BLOG_API_URL` (absolute, or "/api/v1" when a same-origin rewrite is
+// used). For local dev you can point a proxy at the backend instead:
+//   BLOG_API_PROXY_TARGET=https://staging.phantix.site npm run dev
+export default defineConfig(async ({ mode, isSsrBuild }): Promise<UserConfig> => {
+  const proxyTarget = process.env.BLOG_API_PROXY_TARGET;
+  const env = loadEnv(mode, process.cwd(), "");
+  // Fetched once, and only for the site build: dev and the prerender bundle
+  // emit neither file.
+  const posts = mode === "production" && !isSsrBuild
+    ? await sitePosts(env.VITE_BLOG_API_URL || process.env.VITE_BLOG_API_URL)
+    : [];
+  return {
+    plugins: [
+      react(),
+      // The prerender server bundle (src/entry-server.tsx) is not a site.
+      !isSsrBuild && siteFiles({
+        siteUrl: BLOG_ORIGIN,
+        allow: "all",
+        sitemap: () => ["/", ...posts.map((p) => `/posts/${p.slug}`)],
+        entryBudgetKB: 400,
+        aiCrawlers: true,
+        llmsTxt: llmsTxt(posts),
       }),
     ],
     // Shared brand assets (favicons, webmanifest, logos) live at the repo root,
