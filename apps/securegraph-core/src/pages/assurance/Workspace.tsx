@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, ChevronDown, ClipboardList, ExternalLink, FileText, FlaskConical, ListChecks, MessageSquare, NotebookPen,
-  Plus, RefreshCw, ShieldAlert, Trash2,
+  ArrowLeft, CheckCheck, ChevronDown, ClipboardList, ExternalLink, FileText, FlaskConical, ListChecks, MessageSquare, NotebookPen,
+  Plus, RefreshCw, ShieldAlert, Sparkles, Trash2, Wand2,
 } from "lucide-react";
 import { Card, CardHeader, EmptyState, ErrorState, Modal, PageHeader, PageSkeleton, SeverityBadge, Tabs } from "@sg/ui";
 import { useResource } from "@sg/useResource";
@@ -15,24 +15,31 @@ import {
   SCOPE_TYPE_LABEL, SIGNIFICANCE_LABEL, SIGN_OFF_LABEL, STATUS_LABEL,
   addScopeItem, addTeamMember, generateEvidenceRequests, generateReport, loadEngagement, loadEvidenceRequests,
   loadFindings, loadIntelligence, loadReadiness, loadReports, loadScope, loadTeam, loadTests, loadWorkpapers,
-  createWorkpaper, raiseFinding, recordTest, removeScopeItem, removeTeamMember, retestFinding, updateEngagement,
+  createWorkpaper, raiseFinding, removeScopeItem, removeTeamMember, retestFinding, updateEngagement,
   updateEvidenceRequest, updateFinding, updateScopeItem, updateTest, updateWorkpaper,
   EVIDENCE_TYPE_LABEL, loadEvidence, loadMe, registerEvidence, type AssuranceMe, type EvidenceType,
   type AuditFinding, type AuditReport, type ControlTest, type EngagementStatus, type EngagementSummary,
   type EvidenceRequest, type EvidenceRequestStatus, type FindingSeverity, type FindingSignificance, type ReportType,
-  type ScopeItem, type ScopeItemType, type TestResult, type Workpaper,
+  type ScopeItem, type ScopeItemInput, type ScopeItemType, type TestResult, type Workpaper,
+  addScopeItems, bulkRecordTests, bulkSignOff, bulkUpdateEvidenceRequests, loadControls, loadEvidenceLibrary, loadScopeSuggestions,
+  prepareEngagement, type ControlTestInput, type EngagementControl, type EngagementControls,
 } from "@sg/assurance";
 import { loadOrgUsers } from "@sg/data";
 import {
   EffectivenessBar, InlineError, OpinionBadge, ReadinessRing, ResultChip, SourceChips, StageStrip, errMsg, fmtDate, isOverdue,
 } from "./parts";
+import { SCOPE_HINT, ScopePicker, chosenScope, defaultSelection } from "./ScopePicker";
 
-const TABS = ["overview", "scope", "evidence", "testing", "findings", "readiness", "workpapers", "reports"] as const;
+const TABS = ["overview", "scope", "controls", "evidence", "findings", "readiness", "workpapers", "reports"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_LABEL: Record<Tab, string> = {
-  overview: "Overview", scope: "Scope", evidence: "Evidence", testing: "Testing", findings: "Findings",
+  overview: "Overview", scope: "Scope", controls: "Controls", evidence: "Evidence", findings: "Findings",
   readiness: "Readiness", workpapers: "Workpapers", reports: "Reports",
 };
+/** Old links used ?tab=testing; that work now lives on the Controls tab. */
+const TAB_ALIAS: Record<string, Tab> = { testing: "controls" };
+
+const emptyControls = (id: number): EngagementControls => ({ engagement_id: id, assurance_mode: "independent", controls: [], total: 0, tested: 0, with_proposal: 0, needs_judgement: 0 });
 
 /** What the caller's role allows (from `_meta/me`); actions they can't take are hidden. */
 const ALL: AssuranceMe = { role: "unknown", can_read: true, can_audit: true, can_manage: true };
@@ -52,7 +59,8 @@ function useMe() {
 export default function AssuranceWorkspace() {
   const id = Number(useParams().id);
   const [params, setParams] = useSearchParams();
-  const tab: Tab = (TABS as readonly string[]).includes(params.get("tab") || "") ? (params.get("tab") as Tab) : "overview";
+  const rawTab = TAB_ALIAS[params.get("tab") || ""] ?? params.get("tab") ?? "";
+  const tab: Tab = (TABS as readonly string[]).includes(rawTab) ? (rawTab as Tab) : "overview";
   const setTab = (t: string) => setParams((p) => { p.set("tab", t); return p; }, { replace: true });
 
   const loader = useCallback(() => loadEngagement(id), [id]);
@@ -80,15 +88,23 @@ export default function AssuranceWorkspace() {
           <div className="mt-1"><OpinionBadge opinion={e.opinion} withRule /></div>
           <div className="mt-4"><StageStrip status={e.status} /></div>
         </div>
-        <AdvanceStatus e={e} onChanged={(next) => setData(next)} />
+        <div className="flex flex-col items-end gap-2">
+          {(e.status === "planned" || e.status === "scoping") && <PrepareButton id={e.id} onDone={() => { reload(); setTab("controls"); }} />}
+          <AdvanceStatus e={e} onChanged={(next) => setData(next)} />
+        </div>
       </Card>
+      {e.assurance_mode === "self_assessment" && (
+        <p className="mb-4 rounded-md border border-phantix-700 bg-phantix-900 px-3 py-2 text-xs text-slate-400">
+          Self-assessment: your team audits itself, so results aren't signed off by a second reviewer. Use a third-party auditor for an independent opinion.
+        </p>
+      )}
 
       <Tabs tabs={TABS.map((t) => ({ id: t, label: TAB_LABEL[t] }))} active={tab} onChange={setTab} />
       <div className="mt-5">
         {tab === "overview" && <Overview e={e} />}
         {tab === "scope" && <Scope id={e.id} />}
         {tab === "evidence" && <Evidence id={e.id} />}
-        {tab === "testing" && <Testing e={e} />}
+        {tab === "controls" && <Controls e={e} />}
         {tab === "findings" && <Findings e={e} />}
         {tab === "readiness" && <ReadinessTab id={e.id} />}
         {tab === "workpapers" && <Workpapers id={e.id} />}
@@ -137,6 +153,35 @@ function AdvanceStatus({ e, onChanged }: { e: EngagementSummary; onChanged: (nex
       </div>
       {err && <p className="max-w-xs text-right text-xs text-severity-critical">{err}</p>}
     </div>
+  );
+}
+
+/** One step instead of three: request evidence per control, attach what the library holds, start fieldwork. */
+function PrepareButton({ id, onDone, label = "Prepare audit" }: { id: number; onDone: () => void; label?: string }) {
+  const { toast, requireDualControl } = useStore();
+  const [busy, setBusy] = useState(false);
+  const can = useCan();
+  if (!can.can_audit && !can.can_manage) return null;
+
+  const run = async () => {
+    if (!(await requireDualControl("Preparing an audit creates evidence requests and starts fieldwork."))) return;
+    setBusy(true);
+    try {
+      const r = await prepareEngagement(id);
+      const parts = [
+        r.requests_created ? `${r.requests_created} evidence requests created` : "Every control already had a request",
+        r.requests_with_evidence ? `${r.requests_with_evidence} already have evidence attached` : null,
+        r.proposals ? `${r.proposals} controls have a suggested result` : null,
+      ].filter(Boolean);
+      toast("success", "Audit prepared", `${parts.join(". ")}.`);
+      onDone();
+    } catch (ex) { toast("error", "Couldn't prepare the audit", errMsg(ex, "")); } finally { setBusy(false); }
+  };
+
+  return (
+    <button className="btn-primary" disabled={busy} onClick={() => void run()} title="Request evidence for every control and attach what your evidence library already holds.">
+      <Wand2 size={14} /> {busy ? "Preparing..." : label}
+    </button>
   );
 }
 
@@ -227,6 +272,24 @@ function Scope({ id }: { id: number }) {
   const { toast, requireDualControl } = useStore();
   const [draft, setDraft] = useState<{ item_type: ScopeItemType; ref: string; description: string; in_scope: boolean; rationale: string } | null>(null);
   const can = useCan();
+  const { data: suggestions, reload: reloadSuggestions } = useResource(() => loadScopeSuggestions(id).catch(() => null), null, `assurance-${id}-scope-suggest`);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [custom, setCustom] = useState<ScopeItemInput[]>([]);
+  const [adding, setAdding] = useState(false);
+  React.useEffect(() => { setPicked(defaultSelection(suggestions)); }, [suggestions]);
+  const toAdd = chosenScope(suggestions, picked, custom);
+
+  const addChosen = async () => {
+    if (!toAdd.length || !(await guard())) return;
+    setAdding(true);
+    try {
+      await addScopeItems(id, toAdd);
+      toast("success", `${toAdd.length} item${toAdd.length === 1 ? "" : "s"} added to scope`);
+      setCustom([]);
+      reload();
+      reloadSuggestions();
+    } catch (ex) { toast("error", "Couldn't add them", errMsg(ex, "")); } finally { setAdding(false); }
+  };
 
   const guard = () => requireDualControl("Changing an audit's scope is a recorded change.");
   const toggle = async (s: ScopeItem) => {
@@ -251,6 +314,19 @@ function Scope({ id }: { id: number }) {
   };
 
   return (
+    <div className="space-y-4">
+    {can.can_manage && suggestions && (suggestions.total > 0 || items.length === 0) && (
+      <Card>
+        <CardHeader title="Suggested for this audit" subtitle="From your asset inventory, connected evidence sources, business profile and what this programme audits." />
+        <div className="mt-3">
+          <ScopePicker suggestions={suggestions} selected={picked} custom={custom} onCustom={setCustom}
+            onToggle={(keys, on) => setPicked((cur) => { const next = new Set(cur); keys.forEach((k) => (on ? next.add(k) : next.delete(k))); return next; })} />
+        </div>
+        <button className="btn-primary mt-4" disabled={!toAdd.length || adding} onClick={() => void addChosen()}>
+          <Plus size={14} /> {adding ? "Adding..." : toAdd.length ? `Add ${toAdd.length} to scope` : "Add to scope"}
+        </button>
+      </Card>
+    )}
     <Card>
       <CardHeader title="What's being audited" action={can.can_manage ? <button className="btn-secondary !py-1.5 text-xs" onClick={() => setDraft({ item_type: "system", ref: "", description: "", in_scope: true, rationale: "" })}><Plus size={13} /> Add item</button> : undefined} />
       {items.length === 0 && !draft && <p className="mt-3 text-sm text-slate-500">Nothing in scope yet.</p>}
@@ -280,10 +356,10 @@ function Scope({ id }: { id: number }) {
           <select aria-label="Type" className="input" value={draft.item_type} onChange={(ev) => setDraft({ ...draft, item_type: ev.target.value as ScopeItemType })}>
             {(Object.keys(SCOPE_TYPE_LABEL) as ScopeItemType[]).map((t) => <option key={t} value={t}>{SCOPE_TYPE_LABEL[t]}</option>)}
           </select>
-          <input aria-label="Description" className="input" placeholder="Customer API" value={draft.description} onChange={(ev) => setDraft({ ...draft, description: ev.target.value })} />
-          <input aria-label="Reference" className="input font-mono" placeholder="api.acme.com" value={draft.ref} onChange={(ev) => setDraft({ ...draft, ref: ev.target.value })} />
-          <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" checked={draft.in_scope} onChange={(ev) => setDraft({ ...draft, in_scope: ev.target.checked })} /> In scope</label>
-          <input aria-label="Rationale" className="input sm:col-span-2" placeholder="Why" value={draft.rationale} onChange={(ev) => setDraft({ ...draft, rationale: ev.target.value })} />
+          <input aria-label="What it is" className="input" placeholder={SCOPE_HINT[draft.item_type].description} value={draft.description} onChange={(ev) => setDraft({ ...draft, description: ev.target.value })} />
+          <input aria-label="Reference" className="input" placeholder={SCOPE_HINT[draft.item_type].ref} value={draft.ref} onChange={(ev) => setDraft({ ...draft, ref: ev.target.value })} />
+          <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" checked={!draft.in_scope} onChange={(ev) => setDraft({ ...draft, in_scope: !ev.target.checked })} /> Leave out</label>
+          <input aria-label="Why" className="input sm:col-span-2" placeholder={draft.in_scope ? "Why it's in scope (optional)" : "Why it's left out, e.g. retired in Q2"} value={draft.rationale} onChange={(ev) => setDraft({ ...draft, rationale: ev.target.value })} />
           <div className="flex gap-2 sm:col-span-3">
             <button className="btn-primary !py-1.5 text-xs" onClick={() => void save()}>Add</button>
             <button className="btn-ghost !py-1.5 text-xs" onClick={() => setDraft(null)}>Cancel</button>
@@ -291,6 +367,7 @@ function Scope({ id }: { id: number }) {
         </div>
       )}
     </Card>
+    </div>
   );
 }
 
@@ -309,6 +386,8 @@ function Evidence({ id }: { id: number }) {
   const [submitting, setSubmitting] = useState<EvidenceRequest | null>(null);
   const [reviewing, setReviewing] = useState<EvidenceRequest | null>(null);
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const toggle = (rid: number, on: boolean) => setSelected((cur) => { const next = new Set(cur); if (on) next.add(rid); else next.delete(rid); return next; });
 
   const generate = async () => {
     if (!(await requireDualControl("Creating evidence requests is a recorded change."))) return;
@@ -320,15 +399,44 @@ function Evidence({ id }: { id: number }) {
     } catch (ex) { toast("error", "Couldn't create requests", errMsg(ex, "")); } finally { setBusy(false); }
   };
 
+  /** Accept or waive many requests behind one unlock. */
+  const bulk = async (ids: number[], status: "accepted" | "waived") => {
+    if (!ids.length) return;
+    if (!(await requireDualControl(status === "accepted" ? "Accepting audit evidence is a recorded change." : "Waiving evidence requests is a recorded change."))) return;
+    setBusy(true);
+    try {
+      const r = await bulkUpdateEvidenceRequests(id, ids, status, status === "waived" ? "Waived in bulk review." : null);
+      toast("success", `${r.updated} request${r.updated === 1 ? "" : "s"} ${status === "accepted" ? "accepted" : "waived"}`, r.skipped ? `${r.skipped} had no evidence attached, so they were left open.` : undefined);
+      setSelected(new Set());
+      reload();
+    } catch (ex) { toast("error", "Couldn't update the requests", errMsg(ex, "")); } finally { setBusy(false); }
+  };
+
   const waived = items.filter((r) => r.status === "waived").length;
+  const submittedIds = items.filter((r) => r.status === "submitted").map((r) => r.id);
+  const chosen = items.filter((r) => selected.has(r.id));
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <p className="min-w-[12rem] flex-1 text-sm text-slate-400">Evidence requested from the organization, one per control. {waived ? `${waived} waived.` : ""}</p>
-        {can.can_audit && <button className="btn-secondary !py-1.5 text-xs" disabled={busy} onClick={() => void generate()}><ListChecks size={13} /> Generate from controls</button>}
+        <p className="min-w-[12rem] flex-1 text-sm text-slate-400">One request per control. Evidence your connectors or earlier audits collected is attached for you. {waived ? `${waived} waived.` : ""}</p>
+        {can.can_audit && submittedIds.length > 1 && (
+          <button className="btn-primary !py-1.5 text-xs" disabled={busy} onClick={() => void bulk(submittedIds, "accepted")}><CheckCheck size={13} /> Accept all {submittedIds.length} submitted</button>
+        )}
+        {can.can_audit && items.length > 0 && <button className="btn-secondary !py-1.5 text-xs" disabled={busy} onClick={() => void generate()}><ListChecks size={13} /> Request any missing evidence</button>}
       </div>
+      {chosen.length > 0 && can.can_audit && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-gold-400/30 bg-gold-400/5 px-3 py-2 text-sm">
+          <span className="flex-1 text-slate-200">{chosen.length} selected</span>
+          <button className="btn-primary !py-1 text-xs" disabled={busy || !chosen.some((r) => r.status === "submitted")} onClick={() => void bulk(chosen.filter((r) => r.status === "submitted").map((r) => r.id), "accepted")}>Accept</button>
+          <button className="btn-secondary !py-1 text-xs" disabled={busy} onClick={() => void bulk(chosen.map((r) => r.id), "waived")}>Waive (not applicable)</button>
+          <button className="btn-ghost !py-1 text-xs" onClick={() => setSelected(new Set())}>Clear</button>
+        </div>
+      )}
       {items.length === 0 ? (
-        <Card><EmptyState icon={<ClipboardList size={20} />} title="No evidence requests yet" body="Generate one request per in-scope control, or wait for your auditor to send them." /></Card>
+        <Card>
+          <EmptyState icon={<ClipboardList size={20} />} title="No evidence requests yet" body="Prepare the audit to request evidence for every control and attach what your evidence library already holds." />
+          <div className="mt-3 flex justify-center"><PrepareButton id={id} onDone={reload} label="Request evidence for every control" /></div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {BOARD.map((col) => {
@@ -342,8 +450,13 @@ function Evidence({ id }: { id: number }) {
                   {cards.map((r) => {
                     const overdue = (r.status === "open" || r.status === "rejected") && isOverdue(r.due_at);
                     return (
-                      <li key={r.id} className="rounded-md border border-phantix-700 bg-phantix-900 p-3">
-                        <p className="text-sm text-white">{r.request}</p>
+                      <li key={r.id} className={cx("rounded-md border bg-phantix-900 p-3", selected.has(r.id) ? "border-gold-400/50" : "border-phantix-700")}>
+                        <div className="flex items-start gap-2">
+                          {can.can_audit && (r.status === "open" || r.status === "submitted" || r.status === "rejected") && (
+                            <input type="checkbox" className="mt-1" aria-label="Select request" checked={selected.has(r.id)} onChange={(ev) => toggle(r.id, ev.target.checked)} />
+                          )}
+                          <p className="text-sm text-white">{r.request}</p>
+                        </div>
                         <p className="mt-0.5 font-mono text-[11px] text-slate-500">{r.framework_id} · {r.control_id}</p>
                         <p className={cx("mt-1 text-[12px]", overdue ? "font-semibold text-severity-critical" : "text-slate-500")}>
                           {r.owner_name ? `${r.owner_name} · ` : ""}{r.due_at ? `due ${fmtDate(r.due_at)}` : "no due date"}{overdue ? " · overdue" : ""}
@@ -380,25 +493,31 @@ function Evidence({ id }: { id: number }) {
   );
 }
 
-const parseIds = (v: string) => v.split(/[\s,]+/).map((x) => Number(x.replace(/^#/, ""))).filter((n) => Number.isInteger(n) && n > 0);
 
 function SubmitEvidenceModal({ id, request, onClose, onDone }: { id: number; request: EvidenceRequest | null; onClose: () => void; onDone: () => void }) {
   const { requireDualControl } = useStore();
   const [f, setF] = useState({ title: "", evidence_type: "document" as EvidenceType, source_ref: "", description: "" });
   const [byIds, setByIds] = useState(false);
-  const [ids, setIds] = useState("");
+  const [ids, setIds] = useState<Set<number>>(new Set());
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const libKey = request ? `${request.framework_id}:${request.control_id}` : "";
+  const { data: library, loading: libLoading } = useResource(
+    () => (request ? loadEvidenceLibrary({ framework: request.framework_id, control_id: request.control_id }) : Promise.resolve([])),
+    [], `assurance-lib-${libKey}`,
+  );
   React.useEffect(() => {
-    if (request) { setF({ title: request.request, evidence_type: "document", source_ref: "", description: "" }); setIds(request.evidence_ids.join(", ")); setByIds(false); setErr(null); }
+    if (request) { setF({ title: request.request, evidence_type: "document", source_ref: "", description: "" }); setIds(new Set(request.evidence_ids.map(Number))); setByIds(false); setErr(null); }
   }, [request]);
+  // Open on the library when it already holds evidence for this control.
+  React.useEffect(() => { if (request && library.length) setByIds(true); }, [request, library.length]);
 
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!request) return;
     setErr(null);
     if (byIds) {
-      if (!parseIds(ids).length) return setErr("Add at least one evidence ID.");
+      if (!ids.size) return setErr("Tick at least one piece of evidence.");
     } else {
       if (f.title.trim().length < 2) return setErr("Give the evidence a title.");
       if (f.source_ref.trim() && !/^https?:\/\//i.test(f.source_ref.trim()) && f.source_ref.trim().length < 3) return setErr("Say where the evidence lives.");
@@ -406,7 +525,7 @@ function SubmitEvidenceModal({ id, request, onClose, onDone }: { id: number; req
     if (!(await requireDualControl("Submitting audit evidence is a recorded change."))) return;
     setBusy(true);
     try {
-      if (byIds) await updateEvidenceRequest(id, request.id, { status: "submitted", evidence_ids: parseIds(ids) });
+      if (byIds) await updateEvidenceRequest(id, request.id, { status: "submitted", evidence_ids: Array.from(ids) });
       else await registerEvidence(id, request.id, { title: f.title.trim(), evidence_type: f.evidence_type, source_ref: f.source_ref.trim() || null, description: f.description.trim() || null });
       onDone();
     } catch (ex) { setErr(errMsg(ex, "Couldn't submit the evidence")); } finally { setBusy(false); }
@@ -418,10 +537,25 @@ function SubmitEvidenceModal({ id, request, onClose, onDone }: { id: number; req
         <form onSubmit={submit} className="space-y-4">
           {request.instructions && <p className="text-sm text-slate-400">{request.instructions}</p>}
           {byIds ? (
-            <div>
-              <label className="label" htmlFor="pbc-ids">Evidence IDs from your evidence library</label>
-              <input id="pbc-ids" className="input font-mono" value={ids} onChange={(ev) => setIds(ev.target.value)} placeholder="12, 15" />
-            </div>
+            <fieldset>
+              <legend className="label">Evidence already in your library for {request.control_id}</legend>
+              {libLoading && <p className="text-sm text-slate-500">Loading…</p>}
+              {!libLoading && library.length === 0 && <p className="text-sm text-slate-500">Nothing in the library for this control yet. Describe the evidence instead.</p>}
+              <ul className="max-h-64 space-y-1 overflow-y-auto">
+                {library.map((ev) => (
+                  <li key={ev.id}>
+                    <label className="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 hover:bg-phantix-800/40">
+                      <input type="checkbox" className="mt-1" checked={ids.has(Number(ev.id))}
+                        onChange={(e) => setIds((cur) => { const next = new Set(cur); if (e.target.checked) next.add(Number(ev.id)); else next.delete(Number(ev.id)); return next; })} />
+                      <span className="min-w-0 text-sm text-slate-200">
+                        {ev.title || `Evidence #${ev.id}`}
+                        <span className="block text-xs text-slate-500">{[ev.source, ev.status, ev.collected_at ? fmtDate(ev.collected_at) : null].filter(Boolean).join(" · ")}</span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
           ) : (
             <>
               <div><label className="label" htmlFor="pbc-title">What it is</label>
@@ -490,68 +624,230 @@ function ReviewEvidenceModal({ id, request, onClose, onDone }: { id: number; req
   );
 }
 
-// ── Testing ──────────────────────────────────────────────────────────────────
+// ── Controls (testing worklist) ──────────────────────────────────────────────
 
 const RESULTS: TestResult[] = ["effective", "partially_effective", "ineffective", "not_tested", "na"];
+const QUICK: { result: TestResult; label: string; cls: string }[] = [
+  { result: "effective", label: "Effective", cls: "hover:border-emerald-400/50 hover:text-emerald-300" },
+  { result: "partially_effective", label: "Partly", cls: "hover:border-gold-400/50 hover:text-gold-300" },
+  { result: "ineffective", label: "Not effective", cls: "hover:border-severity-critical/50 hover:text-severity-critical" },
+  { result: "na", label: "N/A", cls: "hover:border-phantix-500 hover:text-slate-200" },
+];
+const needsNote = (r: TestResult) => r === "ineffective" || r === "partially_effective";
+const RISK_CLS: Record<string, string> = {
+  critical: "text-severity-critical", high: "text-severity-high", medium: "text-gold-300", low: "text-slate-400",
+};
 
-function Testing({ e }: { e: EngagementSummary }) {
-  const { data: tests, reload } = useResource(() => loadTests(e.id), [] as ControlTest[], `assurance-${e.id}-tests`);
+type ControlFilter = "todo" | "suggested" | "judge" | "done" | "all";
+const FILTER_LABEL: Record<ControlFilter, string> = { todo: "To do", suggested: "Suggested", judge: "Needs your judgement", done: "Done", all: "All" };
+
+const testFrom = (c: EngagementControl, result: TestResult, note?: string): ControlTestInput => ({
+  framework_id: c.framework_id, control_id: c.control_id,
+  test_type: c.proposal?.test_type ?? "design",
+  procedure: c.proposal?.procedure ?? null,
+  sample_size: c.proposal?.sample_size ?? null,
+  sample_ref: null,
+  result,
+  exception_notes: needsNote(result) ? (note?.trim() || c.proposal?.exception_notes || null) : null,
+  evidence_ids: c.proposal?.evidence_ids ?? [],
+});
+
+function Controls({ e }: { e: EngagementSummary }) {
+  const { data: view, reload } = useResource(() => loadControls(e.id), emptyControls(e.id), `assurance-${e.id}-controls`);
+  const { data: tests, reload: reloadTests } = useResource(() => loadTests(e.id), [] as ControlTest[], `assurance-${e.id}-tests`);
   const { data: team } = useResource(() => loadTeam(e.id), [], `assurance-${e.id}-team`);
   const { toast, requireDualControl } = useStore();
   const me = useMe();
   const can = useCan();
-  const [recording, setRecording] = useState(false);
+  const [filter, setFilter] = useState<ControlFilter>("todo");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [noting, setNoting] = useState<{ key: string; result: TestResult; text: string } | null>(null);
+  const [recording, setRecording] = useState<EngagementControl | true | null>(null);
   const isAuditee = team.some((m) => m.role === "auditee" && !!m.principal_email && m.principal_email.toLowerCase() === me.email);
+  const selfAssessed = (view.assurance_mode ?? e.assurance_mode) === "self_assessment";
+  const canTest = can.can_audit && !isAuditee;
 
-  const signOff = async (t: ControlTest) => {
+  const key = (c: EngagementControl) => `${c.framework_id}:${c.control_id}`;
+  const todo = view.controls.filter((c) => !!c.proposal);
+  const suggested = todo.filter((c) => c.proposal?.result);
+  const shown = view.controls.filter((c) =>
+    filter === "all" ? true : filter === "done" ? !c.proposal : filter === "suggested" ? !!c.proposal?.result : filter === "judge" ? !!c.proposal && !c.proposal.result : !!c.proposal);
+  const refresh = () => { reload(); reloadTests(); };
+
+  const record = async (batch: ControlTestInput[], label: string) => {
+    if (!batch.length || !(await requireDualControl("Recording control tests is a recorded change."))) return;
+    setBusy(label);
+    try {
+      const r = await bulkRecordTests(e.id, batch);
+      toast("success", `${r.recorded} control${r.recorded === 1 ? "" : "s"} recorded`,
+        r.findings_raised ? `${r.findings_raised} finding${r.findings_raised === 1 ? "" : "s"} raised with the details filled in. Review them on the Findings tab.` : undefined);
+      setNoting(null);
+      refresh();
+    } catch (ex) { toast("error", "Couldn't record the results", errMsg(ex, "")); } finally { setBusy(null); }
+  };
+
+  const quick = (c: EngagementControl, result: TestResult) => {
+    if (needsNote(result) && !c.proposal?.exception_notes) { setNoting({ key: key(c), result, text: "" }); return; }
+    void record([testFrom(c, result)], key(c));
+  };
+
+  const signable = tests.filter((t) => !t.reviewed_by && !me.is(t.tested_by) && t.result !== "not_tested");
+  const signAll = async () => {
+    if (!signable.length || !(await requireDualControl("Reviewer sign-off is a recorded change."))) return;
+    setBusy("sign");
+    try {
+      const r = await bulkSignOff(e.id, signable.map((t) => t.id));
+      toast("success", `${r.signed} test${r.signed === 1 ? "" : "s"} signed off`, r.skipped_own ? `${r.skipped_own} you tested yourself need another reviewer.` : undefined);
+      reloadTests();
+    } catch (ex) { toast("error", "Couldn't sign off", errMsg(ex, "")); } finally { setBusy(null); }
+  };
+  const signOne = async (t: ControlTest) => {
     if (!(await requireDualControl("Reviewer sign-off is a recorded change."))) return;
     try {
       await updateTest(e.id, t.id, { reviewed_by: me.email || undefined });
       toast("success", "Test signed off");
-      reload();
+      reloadTests();
     } catch (ex) { toast("error", "Couldn't sign off", errMsg(ex, "")); }
   };
 
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <p className="min-w-[12rem] flex-1 text-sm text-slate-400">Design tests check a control is built right; operating tests check it worked over the period.</p>
-        {can.can_audit && (
-          <span title={isAuditee ? "You're an auditee on this audit, so you can't test its controls." : undefined}>
-            <button className="btn-primary !py-1.5 text-xs" disabled={isAuditee} onClick={() => setRecording(true)}><FlaskConical size={13} /> Record test</button>
-          </span>
-        )}
+    <div className="space-y-4">
+      <Card>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="min-w-[14rem] flex-1">
+            <p className="font-display text-lg text-white">{view.tested} of {view.total} controls tested</p>
+            <p className="mt-0.5 text-sm text-slate-400">
+              {suggested.length
+                ? `${suggested.length} have a suggested result from your monitoring, connectors and findings. `
+                : ""}
+              {view.needs_judgement ? `${view.needs_judgement} need your judgement: pick a result on each row.` : todo.length ? "" : "Every control has a result."}
+            </p>
+          </div>
+          {canTest && suggested.length > 0 && (
+            <button className="btn-primary" disabled={!!busy} onClick={() => void record(suggested.map((c) => testFrom(c, c.proposal!.result!)), "all")}>
+              <Sparkles size={14} /> {busy === "all" ? "Recording..." : `Accept ${suggested.length} suggested result${suggested.length === 1 ? "" : "s"}`}
+            </button>
+          )}
+          {canTest && <button className="btn-secondary !py-2 text-xs" onClick={() => setRecording(true)}><FlaskConical size={13} /> Detailed test</button>}
+        </div>
+        {isAuditee && <p className="mt-3 text-xs text-slate-500">You're an auditee on this audit, so recording results is left to the auditors.</p>}
+        {canTest && suggested.length > 0 && <p className="mt-3 text-xs text-slate-500">Controls that aren't effective get a finding with the condition, criteria, effect and recommendation filled in.</p>}
+      </Card>
+
+      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filter controls">
+        {(Object.keys(FILTER_LABEL) as ControlFilter[]).map((f) => {
+          const n = f === "all" ? view.total : f === "done" ? view.tested : f === "suggested" ? suggested.length : f === "judge" ? view.needs_judgement : todo.length;
+          return (
+            <button key={f} role="tab" aria-selected={filter === f} onClick={() => setFilter(f)}
+              className={cx("rounded-full border px-3 py-1 text-xs", filter === f ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700 text-slate-400 hover:text-slate-200")}>
+              {FILTER_LABEL[f]} <span className="text-slate-500">{n}</span>
+            </button>
+          );
+        })}
       </div>
-      {isAuditee && <p className="mb-3 text-xs text-slate-500">You're an auditee on this audit, so recording tests is left to the auditors.</p>}
-      {tests.length === 0 ? (
-        <Card><EmptyState icon={<FlaskConical size={20} />} title="No tests yet" body="Until controls are tested, readiness stays inconclusive rather than 0%." /></Card>
+
+      {view.total === 0 ? (
+        <Card><EmptyState icon={<FlaskConical size={20} />} title="No controls" body="This audit has no criteria with controls. Check the programme on the Overview tab." /></Card>
+      ) : shown.length === 0 ? (
+        <Card><p className="text-sm text-slate-400">{filter === "todo" ? "Nothing left to test." : "No controls here."}</p></Card>
       ) : (
         <Card className="!p-0">
+          <ul className="divide-y divide-phantix-700/40">
+            {shown.map((c) => {
+              const k = key(c);
+              const p = c.proposal;
+              return (
+                <li key={k} className="px-4 py-3">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <div className="min-w-[14rem] flex-1">
+                      <p className="text-sm text-white">{c.title || c.control_id}</p>
+                      <p className="font-mono text-[11px] text-slate-500">
+                        {c.framework_id} · {c.control_id}
+                        {c.risk && <span className={cx("ml-2 font-sans capitalize", RISK_CLS[c.risk] ?? "text-slate-400")}>{c.risk} risk</span>}
+                        {c.request_status && <span className="ml-2 font-sans text-slate-500">· evidence {REQUEST_STATUS_LABEL[c.request_status].toLowerCase()}</span>}
+                      </p>
+                      {p && p.basis.length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5">
+                          {p.basis.slice(0, 3).map((b) => <li key={b} className="text-xs text-slate-400">· {b}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                    {!p && c.result && (
+                      <span className="flex items-center gap-2 text-xs text-slate-500"><ResultChip result={c.result} />{c.tested_by}</span>
+                    )}
+                    {p && (
+                      <div className="flex flex-col items-end gap-1.5">
+                        {p.result ? (
+                          <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><Sparkles size={11} className="text-gold-400" /> Suggested <ResultChip result={p.result} /></span>
+                        ) : (
+                          <span className="text-[11px] text-slate-500">No automated signal: your call</span>
+                        )}
+                        {canTest && (
+                          <div className="flex flex-wrap justify-end gap-1">
+                            {QUICK.map((q) => (
+                              <button key={q.result} disabled={!!busy}
+                                className={cx("rounded-md border px-2 py-1 text-[11px] text-slate-300 transition-colors disabled:opacity-40", p.result === q.result ? "border-gold-400/50 bg-gold-400/10 text-gold-200" : "border-phantix-700", q.cls)}
+                                onClick={() => quick(c, q.result)}>
+                                {busy === k ? "…" : q.label}
+                              </button>
+                            ))}
+                            <button className="rounded-md px-1.5 py-1 text-[11px] text-slate-500 hover:text-slate-200" onClick={() => setRecording(c)}>More</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {noting?.key === k && (
+                    <form className="mt-2 flex flex-wrap gap-2" onSubmit={(ev) => { ev.preventDefault(); if (noting.text.trim()) void record([testFrom(c, noting.result, noting.text)], k); }}>
+                      <input autoFocus aria-label="What's wrong" className="input min-w-[16rem] flex-1 !py-1.5 text-sm" placeholder="What's wrong, e.g. no access review since March"
+                        value={noting.text} onChange={(ev) => setNoting({ ...noting, text: ev.target.value })} />
+                      <button className="btn-primary !py-1.5 text-xs" disabled={!noting.text.trim() || !!busy}>Save {RESULT_LABEL[noting.result].toLowerCase()}</button>
+                      <button type="button" className="btn-ghost !py-1.5 text-xs" onClick={() => setNoting(null)}>Cancel</button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+
+      {tests.length > 0 && (
+        <Card className="!p-0">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <h3 className="flex-1 text-sm font-semibold text-white">Recorded tests <span className="font-normal text-slate-500">{tests.length}</span></h3>
+            {!selfAssessed && can.can_audit && signable.length > 0 && (
+              <button className="btn-secondary !py-1.5 text-xs" disabled={!!busy} onClick={() => void signAll()}><CheckCheck size={13} /> Sign off {signable.length} I didn't test</button>
+            )}
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
-                <tr className="border-b border-phantix-700/50 text-left text-[12px] uppercase tracking-wider text-slate-500">
+                <tr className="border-y border-phantix-700/50 text-left text-[12px] uppercase tracking-wider text-slate-500">
                   <th className="px-4 py-2.5 font-medium">Control</th><th className="px-4 py-2.5 font-medium">Type</th>
-                  <th className="px-4 py-2.5 font-medium">Procedure</th><th className="px-4 py-2.5 font-medium">Sample</th>
-                  <th className="px-4 py-2.5 font-medium">Result</th><th className="px-4 py-2.5 font-medium">Tester</th><th className="px-4 py-2.5 font-medium">Reviewer</th>
+                  <th className="px-4 py-2.5 font-medium">Result</th><th className="px-4 py-2.5 font-medium">Tester</th>
+                  {!selfAssessed && <th className="px-4 py-2.5 font-medium">Reviewer</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-phantix-700/40">
                 {tests.map((t) => (
                   <tr key={t.id}>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-200">{t.framework_id} · {t.control_id}</td>
-                    <td className="px-4 py-3 capitalize text-slate-300">{t.test_type}</td>
-                    <td className="max-w-xs px-4 py-3 text-slate-400">{t.procedure || "—"}{t.exception_notes && <span className="mt-0.5 block text-xs text-severity-critical">{t.exception_notes}</span>}</td>
-                    <td className="px-4 py-3 text-slate-400">{t.sample_size ?? "—"}</td>
-                    <td className="px-4 py-3"><ResultChip result={t.result} /></td>
-                    <td className="px-4 py-3 text-xs text-slate-400">{t.tested_by || "—"}<span className="block text-slate-600">{fmtDate(t.tested_at)}</span></td>
-                    <td className="px-4 py-3 text-xs">
-                      {t.reviewed_by ? <span className="text-emerald-300">{t.reviewed_by}</span> : !can.can_audit ? <span className="text-slate-500">Awaiting review</span> : me.is(t.tested_by) ? (
-                        <span className="text-slate-500" title="You tested this control, so someone else reviews it.">Needs another reviewer</span>
-                      ) : (
-                        <button className="text-gold-400 hover:text-gold-300" onClick={() => void signOff(t)}>Sign off</button>
-                      )}
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs text-slate-200">{t.framework_id} · {t.control_id}</span>
+                      {t.exception_notes && <span className="mt-0.5 block max-w-md text-xs text-severity-critical">{t.exception_notes}</span>}
                     </td>
+                    <td className="px-4 py-3 capitalize text-slate-300">{t.test_type}</td>
+                    <td className="px-4 py-3"><ResultChip result={t.result} /></td>
+                    <td className="px-4 py-3 text-xs text-slate-400">{t.tested_by || "Unknown"}<span className="block text-slate-600">{fmtDate(t.tested_at)}</span></td>
+                    {!selfAssessed && (
+                      <td className="px-4 py-3 text-xs">
+                        {t.reviewed_by ? <span className="text-emerald-300">{t.reviewed_by}</span> : !can.can_audit ? <span className="text-slate-500">Awaiting review</span> : me.is(t.tested_by) ? (
+                          <span className="text-slate-500" title="You tested this control, so someone else reviews it.">Needs another reviewer</span>
+                        ) : (
+                          <button className="text-gold-400 hover:text-gold-300" onClick={() => void signOne(t)}>Sign off</button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -559,50 +855,97 @@ function Testing({ e }: { e: EngagementSummary }) {
           </div>
         </Card>
       )}
-      <RecordTestModal e={e} open={recording} onClose={() => setRecording(false)} onDone={() => { setRecording(false); reload(); }} />
+      <RecordTestModal e={e} controls={view.controls} initial={recording === true ? null : recording} open={recording !== null}
+        onClose={() => setRecording(null)} onDone={() => { setRecording(null); refresh(); }} />
     </div>
   );
 }
 
-function RecordTestModal({ e, open, onClose, onDone }: { e: EngagementSummary; open: boolean; onClose: () => void; onDone: () => void }) {
+function RecordTestModal({ e, controls, initial, open, onClose, onDone }: {
+  e: EngagementSummary; controls: EngagementControl[]; initial: EngagementControl | null; open: boolean; onClose: () => void; onDone: () => void;
+}) {
   const { requireDualControl } = useStore();
-  const [f, setF] = useState({ framework_id: "", control_id: "", test_type: "design" as "design" | "operating", procedure: "", sample_size: "", sample_ref: "", result: "effective" as TestResult, exception_notes: "", evidence: "" });
+  const [ctl, setCtl] = useState("");
+  const [f, setF] = useState({ test_type: "design" as "design" | "operating", procedure: "", sample_size: "", sample_ref: "", result: "effective" as TestResult, exception_notes: "" });
+  const [evidence, setEvidence] = useState<Set<number>>(new Set());
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  React.useEffect(() => { if (open) { setF((x) => ({ ...x, framework_id: e.criteria[0] ?? "", control_id: "", procedure: "", sample_size: "", sample_ref: "", exception_notes: "", evidence: "" })); setErr(null); } }, [open, e.criteria]);
+  const chosen = controls.find((c) => `${c.framework_id}:${c.control_id}` === ctl) ?? null;
+  const { data: library } = useResource(
+    () => (chosen ? loadEvidenceLibrary({ framework: chosen.framework_id, control_id: chosen.control_id }) : Promise.resolve([])),
+    [], `assurance-lib-${ctl}`,
+  );
+
+  // Prefill from the control's proposal so a detailed test starts from what SecureGraph knows.
+  const pick = (c: EngagementControl | null) => {
+    setCtl(c ? `${c.framework_id}:${c.control_id}` : "");
+    const p = c?.proposal;
+    setF({
+      test_type: p?.test_type ?? "design", procedure: p?.procedure ?? "", sample_size: p?.sample_size != null ? String(p.sample_size) : "",
+      sample_ref: "", result: p?.result ?? "effective", exception_notes: p?.exception_notes ?? "",
+    });
+    setEvidence(new Set(p?.evidence_ids ?? []));
+  };
+  React.useEffect(() => { if (open) { pick(initial ?? controls.find((c) => !!c.proposal) ?? null); setErr(null); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open, initial]);
 
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!f.framework_id || !f.control_id.trim()) return setErr("Choose the framework and enter the control ID.");
-    if ((f.result === "ineffective" || f.result === "partially_effective") && !f.exception_notes.trim()) return setErr("Describe the exception you found.");
+    if (!chosen) return setErr("Choose the control you tested.");
+    if (needsNote(f.result) && !f.exception_notes.trim()) return setErr("Describe the exception you found.");
     if (!(await requireDualControl("Recording a control test is a recorded change."))) return;
     setBusy(true);
     try {
-      await recordTest(e.id, {
-        framework_id: f.framework_id, control_id: f.control_id.trim(), test_type: f.test_type, procedure: f.procedure.trim() || null,
+      await bulkRecordTests(e.id, [{
+        framework_id: chosen.framework_id, control_id: chosen.control_id, test_type: f.test_type, procedure: f.procedure.trim() || null,
         sample_size: f.sample_size ? Number(f.sample_size) : null, sample_ref: f.sample_ref.trim() || null, result: f.result,
-        exception_notes: f.exception_notes.trim() || null, evidence_ids: parseIds(f.evidence),
-      });
+        exception_notes: f.exception_notes.trim() || null, evidence_ids: Array.from(evidence),
+      }]);
       onDone();
     } catch (ex) { setErr(errMsg(ex, "Couldn't record the test")); } finally { setBusy(false); }
   };
 
+  const frameworks = Array.from(new Set(controls.map((c) => c.framework_id)));
   return (
     <Modal open={open} onClose={onClose} title="Record a control test" wide>
       <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div><label className="label" htmlFor="rt-fw">Framework</label>
-          <select id="rt-fw" className="input" value={f.framework_id} onChange={(ev) => setF({ ...f, framework_id: ev.target.value })}>{e.criteria.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
-        <div><label className="label" htmlFor="rt-ctl">Control ID</label><input id="rt-ctl" className="input font-mono" value={f.control_id} onChange={(ev) => setF({ ...f, control_id: ev.target.value })} /></div>
+        <div className="sm:col-span-2"><label className="label" htmlFor="rt-ctl">Control</label>
+          <select id="rt-ctl" className="input" value={ctl} onChange={(ev) => pick(controls.find((c) => `${c.framework_id}:${c.control_id}` === ev.target.value) ?? null)}>
+            <option value="">Choose a control…</option>
+            {frameworks.map((fw) => (
+              <optgroup key={fw} label={fw}>
+                {controls.filter((c) => c.framework_id === fw).map((c) => (
+                  <option key={c.control_id} value={`${c.framework_id}:${c.control_id}`}>{c.control_id} · {c.title}{c.result ? ` (${RESULT_LABEL[c.result]})` : ""}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select></div>
         <div><label className="label" htmlFor="rt-type">Test type</label>
-          <select id="rt-type" className="input" value={f.test_type} onChange={(ev) => setF({ ...f, test_type: ev.target.value as "design" | "operating" })}><option value="design">Design</option><option value="operating">Operating</option></select></div>
+          <select id="rt-type" className="input" value={f.test_type} onChange={(ev) => setF({ ...f, test_type: ev.target.value as "design" | "operating" })}><option value="design">Design: is it built right?</option><option value="operating">Operating: did it work over the period?</option></select></div>
         <div><label className="label" htmlFor="rt-res">Result</label>
           <select id="rt-res" className="input" value={f.result} onChange={(ev) => setF({ ...f, result: ev.target.value as TestResult })}>{RESULTS.map((r) => <option key={r} value={r}>{RESULT_LABEL[r]}</option>)}</select></div>
         <div className="sm:col-span-2"><label className="label" htmlFor="rt-proc">Procedure</label><textarea id="rt-proc" rows={2} className="input" value={f.procedure} onChange={(ev) => setF({ ...f, procedure: ev.target.value })} placeholder="What you inspected, sampled or re-performed." /></div>
         <div><label className="label" htmlFor="rt-ss">Sample size</label><input id="rt-ss" type="number" min={0} className="input" value={f.sample_size} onChange={(ev) => setF({ ...f, sample_size: ev.target.value })} /></div>
-        <div><label className="label" htmlFor="rt-sr">Sample reference</label><input id="rt-sr" className="input" value={f.sample_ref} onChange={(ev) => setF({ ...f, sample_ref: ev.target.value })} /></div>
-        <div className="sm:col-span-2"><label className="label" htmlFor="rt-ex">Exceptions</label><textarea id="rt-ex" rows={2} className="input" value={f.exception_notes} onChange={(ev) => setF({ ...f, exception_notes: ev.target.value })} placeholder="Required when the control isn't fully effective." /></div>
-        <div className="sm:col-span-2"><label className="label" htmlFor="rt-ev">Evidence IDs</label><input id="rt-ev" className="input font-mono" value={f.evidence} onChange={(ev) => setF({ ...f, evidence: ev.target.value })} placeholder="12, 15" /></div>
+        <div><label className="label" htmlFor="rt-sr">Sample reference</label><input id="rt-sr" className="input" value={f.sample_ref} onChange={(ev) => setF({ ...f, sample_ref: ev.target.value })} placeholder="e.g. Q2 access review export" /></div>
+        {needsNote(f.result) && (
+          <div className="sm:col-span-2"><label className="label" htmlFor="rt-ex">What's wrong</label><textarea id="rt-ex" rows={2} className="input" value={f.exception_notes} onChange={(ev) => setF({ ...f, exception_notes: ev.target.value })} placeholder="e.g. 3 of 10 leavers still had access after 30 days." /></div>
+        )}
+        {library.length > 0 && (
+          <fieldset className="sm:col-span-2">
+            <legend className="label">Evidence</legend>
+            <ul className="max-h-40 space-y-1 overflow-y-auto">
+              {library.map((ev) => (
+                <li key={ev.id}>
+                  <label className="flex items-center gap-2 text-sm text-slate-300">
+                    <input type="checkbox" checked={evidence.has(Number(ev.id))} onChange={(x) => setEvidence((cur) => { const next = new Set(cur); if (x.target.checked) next.add(Number(ev.id)); else next.delete(Number(ev.id)); return next; })} />
+                    {ev.title || `Evidence #${ev.id}`}<span className="text-xs text-slate-500">{ev.source ? ` · ${ev.source}` : ""}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </fieldset>
+        )}
         <div className="sm:col-span-2 space-y-3">
+          <p className="text-xs text-slate-500">If the control isn't effective, a finding is raised with the details filled in.</p>
           <InlineError message={err} />
           <button className="btn-primary w-full" disabled={busy}>{busy ? "Saving..." : "Record test"}</button>
         </div>
@@ -780,7 +1123,17 @@ function RaiseFindingModal({ e, open, onClose, onDone }: { e: EngagementSummary;
   const [f, setF] = useState(blank);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { data: view } = useResource(() => loadControls(e.id), emptyControls(e.id), `assurance-${e.id}-controls`);
   React.useEffect(() => { if (open) { setF(blank); setErr(null); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
+  const pickControl = (value: string) => {
+    const c = view.controls.find((x) => `${x.framework_id}:${x.control_id}` === value);
+    if (!c) return setF({ ...f, control_id: "" });
+    setF({
+      ...f, framework_id: c.framework_id, control_id: c.control_id,
+      title: f.title || `${c.title ?? c.control_id} is not effective`,
+      criteria: f.criteria || `${c.framework_id.toUpperCase()} ${c.control_id}: ${c.title ?? ""}`.trim(),
+    });
+  };
 
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -806,9 +1159,15 @@ function RaiseFindingModal({ e, open, onClose, onDone }: { e: EngagementSummary;
     <Modal open={open} onClose={onClose} title="Raise a finding" wide>
       <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2"><label className="label" htmlFor="rf-title">Title</label><input id="rf-title" className="input" value={f.title} onChange={(ev) => setF({ ...f, title: ev.target.value })} /></div>
-        <div><label className="label" htmlFor="rf-fw">Framework</label>
-          <select id="rf-fw" className="input" value={f.framework_id} onChange={(ev) => setF({ ...f, framework_id: ev.target.value })}>{e.criteria.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
-        <div><label className="label" htmlFor="rf-ctl">Control ID</label><input id="rf-ctl" className="input font-mono" value={f.control_id} onChange={(ev) => setF({ ...f, control_id: ev.target.value })} /></div>
+        <div className="sm:col-span-2"><label className="label" htmlFor="rf-ctl">Control</label>
+          <select id="rf-ctl" className="input" value={f.control_id ? `${f.framework_id}:${f.control_id}` : ""} onChange={(ev) => pickControl(ev.target.value)}>
+            <option value="">Not tied to one control</option>
+            {Array.from(new Set(view.controls.map((c) => c.framework_id))).map((fw) => (
+              <optgroup key={fw} label={fw}>
+                {view.controls.filter((c) => c.framework_id === fw).map((c) => <option key={c.control_id} value={`${c.framework_id}:${c.control_id}`}>{c.control_id} · {c.title}</option>)}
+              </optgroup>
+            ))}
+          </select></div>
         <div><label className="label" htmlFor="rf-sev">Severity</label>
           <select id="rf-sev" className="input" value={f.severity} onChange={(ev) => setF({ ...f, severity: ev.target.value as FindingSeverity })}>{SEVERITIES.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}</select></div>
         <div><label className="label" htmlFor="rf-sig">Significance</label>
