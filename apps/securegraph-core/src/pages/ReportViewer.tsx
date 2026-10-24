@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Download, ExternalLink, FileText, Printer } from "lucide-react";
 import { PageSkeleton, ErrorState } from "@sg/ui";
-import { api, ApiError } from "@sg/api";
+import { api, ApiError, saveBlob } from "@sg/api";
 
 /**
  * Full-page report viewer.
@@ -47,6 +47,7 @@ export default function ReportViewer() {
   const [params] = useSearchParams();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const pdfUrlRef = useRef<string | null>(null);
+  const pdfFileRef = useRef<{ blob: Blob; filename: string | null } | null>(null);
 
   const reportId = Number(id);
 
@@ -86,11 +87,28 @@ export default function ReportViewer() {
   }, [reportId]);
 
   const loadPdf = useCallback(async () => {
-    const blob = await api.download(`/reports/${reportId}/download?format=pdf`);
+    const { blob, filename } = await api.downloadFile(`/reports/${reportId}/download?format=pdf`);
     if (!blob || blob.size === 0) throw new Error("Server returned an empty PDF");
     setObjectUrl(blob);
+    pdfFileRef.current = { blob, filename };
     setHtml(null);
   }, [reportId, setObjectUrl]);
+
+  // The embedded viewer's own save button names the file after the blob URL
+  // (a UUID); this saves it under the server's report name instead.
+  const downloadCurrent = useCallback(async () => {
+    try {
+      if (format === "pdf" && pdfFileRef.current) {
+        const { blob, filename } = pdfFileRef.current;
+        saveBlob(blob, filename || `report-${reportId}.pdf`);
+        return;
+      }
+      const { blob, filename } = await api.downloadFile(`/reports/${reportId}/download?format=${format}`);
+      saveBlob(blob, filename || `report-${reportId}.${format}`);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Could not download this report");
+    }
+  }, [format, reportId]);
 
   const load = useCallback(
     async (requested?: ViewerFormat) => {
@@ -223,6 +241,14 @@ export default function ReportViewer() {
               className="flex items-center gap-1.5 rounded-lg border border-phantix-700/50 bg-phantix-950/50 px-3 py-2 text-xs text-slate-300 hover:bg-phantix-800/60 disabled:opacity-40"
             >
               <Printer size={13} /> Print / Save PDF
+            </button>
+          )}
+          {((format === "pdf" && pdfUrl) || (format === "html" && html)) && (
+            <button
+              onClick={() => void downloadCurrent()}
+              className="flex items-center gap-1.5 rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-xs font-semibold text-gold-200 hover:bg-gold-400/20"
+            >
+              <Download size={13} /> Download {format.toUpperCase()}
             </button>
           )}
           {format === "pdf" && pdfUrl && (
