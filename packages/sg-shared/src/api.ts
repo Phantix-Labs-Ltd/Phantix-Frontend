@@ -1080,6 +1080,33 @@ function buildAuthHeaders(method: string): Record<string, string> {
   return headers;
 }
 
+/** Filename from a Content-Disposition header; prefers the RFC 5987 `filename*` form. */
+export function dispositionFilename(header: string | null): string | null {
+  if (!header) return null;
+  const star = header.match(/filename\*\s*=\s*([^']*)''([^;]+)/i);
+  if (star) {
+    try {
+      return decodeURIComponent(star[2].trim());
+    } catch { /* malformed escape: fall through to the plain form */ }
+  }
+  const plain = header.match(/filename\s*=\s*"?([^";]+)"?/i);
+  return plain ? plain[1].trim() : null;
+}
+
+/** Save a blob under a filename (an anchor click; blob URLs alone save as their UUID). */
+export function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  // Anchor must be in the DOM for the download to fire in some browsers.
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoke after the click has been handed to the browser.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export const api = {
   get: <T>(path: string, opts?: RequestOpts) =>
     dedupedRequest("GET", path, opts?.body, () => request<T>("GET", path, opts)),
@@ -1092,6 +1119,11 @@ export const api = {
 
   /** Fetch binary/raw content with auth headers, returns a Blob. */
   async download(path: string): Promise<Blob> {
+    return (await api.downloadFile(path)).blob;
+  },
+
+  /** Like `download`, plus the server's Content-Disposition filename (null when absent). */
+  async downloadFile(path: string): Promise<{ blob: Blob; filename: string | null }> {
     const headers = buildAuthHeaders("GET");
 
     const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
@@ -1105,7 +1137,7 @@ export const api = {
       } catch { /* non-JSON */ }
       throw new ApiError(res.status, detail, res.headers.get("X-Correlation-ID") || undefined);
     }
-    return res.blob();
+    return { blob: await res.blob(), filename: dispositionFilename(res.headers.get("content-disposition")) };
   },
 
   /** POST that returns a file (e.g. threat-model export) — auth + JSON body. */

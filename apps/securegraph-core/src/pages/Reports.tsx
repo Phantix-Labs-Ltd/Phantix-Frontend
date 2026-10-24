@@ -7,7 +7,7 @@ import DocLink from "@sg/components/DocLink";
 import ReportSolutions from "@sg/components/ReportSolutions";
 import { loadReportsBundle, loadReportTypes } from "@sg/data";
 import type { ReportTypeEntry } from "@sg/types";
-import { api, ApiError, publicErrorMessage, publicDetailCopy } from "@sg/api";
+import { api, ApiError, publicErrorMessage, publicDetailCopy, saveBlob } from "@sg/api";
 import { useResource } from "@sg/useResource";
 import { timeAgo, formatBytes, titleCase, cx, normalizeReportRow, extractReportFindings } from "@sg/utils";
 import { useStore } from "@sg/store";
@@ -32,6 +32,8 @@ type VerificationGate = {
   by_status?: Record<string, number>;
   severity_counts?: Record<string, number>;
   needs_acknowledgement: boolean;
+  /** False for report types without a findings register (activity, SLA, GRC audits). */
+  applies?: boolean;
   message?: string;
   hint?: string;
   acknowledged?: boolean | null;
@@ -94,17 +96,11 @@ async function handleDownload(
 ) {
   const ext = downloadExt(format);
   try {
-    const blob = await api.download(`/reports/${reportId}/download?format=${format}`);
+    const { blob, filename } = await api.downloadFile(`/reports/${reportId}/download?format=${format}`);
     if (!blob || blob.size === 0) throw new Error("Server returned an empty file");
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `report-${reportId}.${ext}`;
-    // Anchor must be in the DOM for the download to fire in some browsers.
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    // The server names the file (organization, report, date); the id-only
+    // name is a fallback for a response without Content-Disposition.
+    saveBlob(blob, filename || `report-${reportId}.${ext}`);
   } catch (err) {
     // Backend re-renders from stored sections when possible; when the artifact
     // is gone entirely it answers 404 { detail: { code: "report_artifact_missing",
@@ -239,7 +235,11 @@ export default function Reports() {
   const ackRef = useRef(false);
 
   const loadGate = useCallback(async (campaignId: string, reportType: string) => {
-    if (!campaignId || fromAgi) return;
+    // Org-wide types have no campaign; returning early here left the previous
+    // campaign's gate on screen, so the preview counted a different scope from
+    // the report that was generated.
+    setGate(null);
+    if (fromAgi) return;
     if (isDemoMode()) {
       // Demo tenants have no backend session for the gate endpoint.
       setGate({
@@ -361,7 +361,7 @@ export default function Reports() {
       if (!fromAgi && !isDemoMode()) {
         const g = await api.get<VerificationGate>(gateQuery(genForm.campaign_id, genForm.report_type));
         setGate(g);
-        if (g.needs_acknowledgement && !ackRef.current) {
+        if (g.applies !== false && g.needs_acknowledgement && !ackRef.current) {
           setAckGate(g);
           setAckOpen(true);
           return;
@@ -568,7 +568,7 @@ export default function Reports() {
                             {r.campaign_id ? <span className="shrink-0 text-[12px] text-slate-500">Campaign #{r.campaign_id}</span> : null}
                           </span>
                         </td>
-                        <td className="td whitespace-nowrap text-[13px] text-slate-400">{titleCase(r.report_type)}</td>
+                        <td className="td whitespace-nowrap text-[13px] text-slate-400">{(r as any).type_label ?? titleCase(r.report_type)}</td>
                         <td className="td whitespace-nowrap">
                           {r.status === "generating" ? (
                             <span className="flex w-28 items-center gap-2"><ProgressBar value={72} color="#38BDF8" /></span>
@@ -698,8 +698,10 @@ export default function Reports() {
             );
           })()}
 
-          {/* Verification gate preview --- counts before generate */}
-          {!fromAgi && (
+          {/* Verification gate preview --- counts before generate. Only for report
+              types with a findings register; activity, SLA and audit reports have
+              nothing to verify (the gate says so with applies: false). */}
+          {!fromAgi && gate?.applies !== false && (
             <div className={cx(
               "rounded-xl border p-3.5 text-xs",
               gate?.needs_acknowledgement
