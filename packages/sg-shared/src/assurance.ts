@@ -60,7 +60,10 @@ export interface EngagementSummary extends Engagement {
   scope_items_in: number;
   team_size: number;
   next_statuses: EngagementStatus[];
+  /** self_assessment: the org audits itself, so there is no reviewer sign-off step. */
+  assurance_mode?: AssuranceMode;
 }
+export type AssuranceMode = "self_assessment" | "independent";
 
 export interface ScopeItem {
   id: number;
@@ -562,3 +565,125 @@ export async function getFinding(findingId: number): Promise<AuditFinding & { en
   if (isDemoMode()) return { ...demoFindings[0], engagement_id: 41 };
   return api.get<AuditFinding & { engagement_id: number }>(`${B}/findings/${findingId}`);
 }
+
+// ── Less work: guided scope, prepare, proposals, bulk actions ───────────────
+
+export type ScopeSource = "inventory" | "connector" | "profile" | "programme";
+export interface ScopeSuggestion extends ScopeItemInput {
+  key: string;
+  source: ScopeSource;
+  group: string;
+  /** Ticked by default (important systems and every programme process). */
+  selected: boolean;
+}
+export interface ScopeSuggestions {
+  groups: { title: string; items: ScopeSuggestion[] }[];
+  total: number;
+  scope_summary: string | null;
+  has_inventory: boolean;
+}
+
+export interface ControlProposal {
+  /** null: no automated signal, a person has to judge it. */
+  result: TestResult | null;
+  test_type: "design" | "operating";
+  procedure: string | null;
+  sample_size: number | null;
+  exception_notes: string | null;
+  evidence_ids: number[];
+  basis: string[];
+}
+export interface EngagementControl {
+  framework_id: string;
+  control_id: string;
+  title: string | null;
+  description: string | null;
+  category: string | null;
+  risk: string | null;
+  test_id: number | null;
+  result: TestResult | null;
+  tested_by: string | null;
+  reviewed_by: string | null;
+  request_id: number | null;
+  request_status: EvidenceRequestStatus | null;
+  proposal: ControlProposal | null;
+}
+export interface EngagementControls {
+  engagement_id: number;
+  assurance_mode: AssuranceMode;
+  controls: EngagementControl[];
+  total: number;
+  tested: number;
+  with_proposal: number;
+  needs_judgement: number;
+}
+export interface PrepareResult { requests_created: number; requests_with_evidence: number; proposals: number; needs_judgement: number; status: EngagementStatus }
+export interface LibraryEvidence extends EvidenceRef { framework: string | null; control_id: string | null; source: string | null; collected_at: string | null }
+
+export const loadProgramScopeSuggestions = async (programKey: string) =>
+  (isDemoMode() ? (await delay(300), demoSuggestions) : api.get<ScopeSuggestions>(`${B}/programs/${encodeURIComponent(programKey)}/scope-suggestions`));
+export const loadScopeSuggestions = async (id: number) =>
+  (isDemoMode() ? (await delay(300), demoSuggestions) : api.get<ScopeSuggestions>(`${E(id)}/scope-suggestions`));
+export const addScopeItems = async (id: number, items: ScopeItemInput[]) =>
+  (isDemoMode() ? (await delay(300), items.map((x, i) => ({ ...x, id: Date.now() + i }))) : list<ScopeItem>(await api.post(`${E(id)}/scope/bulk`, { items })));
+
+export const prepareEngagement = async (id: number) =>
+  (isDemoMode() ? (await delay(600), { requests_created: 36, requests_with_evidence: 9, proposals: 14, needs_judgement: 22, status: "fieldwork" as const }) : api.post<PrepareResult>(`${E(id)}/prepare`, {}));
+export const loadControls = async (id: number) =>
+  (isDemoMode() ? (await delay(250), demoControls) : api.get<EngagementControls>(`${E(id)}/controls`));
+export const bulkUpdateEvidenceRequests = async (id: number, ids: number[], status: "accepted" | "waived" | "rejected" | "submitted", review_notes?: string | null) =>
+  (isDemoMode() ? (await delay(400), { updated: ids.length, skipped: 0 }) : api.post<{ updated: number; skipped: number }>(`${E(id)}/evidence-requests/bulk`, { ids, status, review_notes: review_notes ?? null }));
+export const bulkRecordTests = async (id: number, tests: ControlTestInput[], raise_findings = true) =>
+  (isDemoMode()
+    ? (await delay(500), { recorded: tests.length, findings_raised: tests.filter((t) => t.result === "ineffective" || t.result === "partially_effective").length, test_ids: [] as number[] })
+    : api.post<{ recorded: number; findings_raised: number; test_ids: number[] }>(`${E(id)}/tests/bulk`, { tests, raise_findings }));
+export const bulkSignOff = async (id: number, ids: number[]) =>
+  (isDemoMode() ? (await delay(400), { signed: ids.length, skipped_own: 0, already_signed: 0 }) : api.post<{ signed: number; skipped_own: number; already_signed: number }>(`${E(id)}/tests/sign-off`, { ids }));
+export async function loadEvidenceLibrary(filter: { framework?: string; control_id?: string } = {}): Promise<LibraryEvidence[]> {
+  if (isDemoMode()) return [{ id: 8, title: "DPO appointment letter", evidence_type: "document", source_ref: null, status: "submitted", framework: "ndpc_gaid_2025", control_id: "GAID-DPO", source: "audit_pbc", collected_at: day(-12) }];
+  const q = new URLSearchParams(Object.entries(filter).filter(([, v]) => !!v) as [string, string][]).toString();
+  try {
+    return list<LibraryEvidence>(await api.get(`${B}/evidence/library${q ? `?${q}` : ""}`));
+  } catch {
+    return [];
+  }
+}
+
+const sg = (group: string, source: ScopeSource, item_type: ScopeItemType, description: string, ref: string | null, rationale: string, selected = true): ScopeSuggestion =>
+  ({ key: `${item_type}:${(ref || description).toLowerCase()}`, item_type, description, ref, rationale, in_scope: true, source, group, selected });
+const demoSuggestions: ScopeSuggestions = {
+  total: 7, has_inventory: true,
+  scope_summary: "NDPA readiness 2026 covering Customer API, acme.ng and the access management, incident response processes.",
+  groups: [
+    { title: "Systems from your inventory", items: [
+      sg("Systems from your inventory", "inventory", "system", "Customer API", "api.acme.ng", "API in your asset inventory, critical criticality, production."),
+      sg("Systems from your inventory", "inventory", "system", "acme.ng", "acme.ng", "Domain in your asset inventory, high criticality, covers 6 subdomains."),
+      sg("Systems from your inventory", "inventory", "system", "staging.acme.dev", "staging.acme.dev", "Domain in your asset inventory, low criticality.", false),
+    ] },
+    { title: "Connected evidence sources", items: [
+      sg("Connected evidence sources", "connector", "system", "AWS", "aws connector", "Connected evidence source: its control evidence is collected automatically."),
+    ] },
+    { title: "What this audit covers", items: [
+      sg("What this audit covers", "programme", "process", "Access management", null, "Joiners, movers and leavers, privileged access and access reviews."),
+      sg("What this audit covers", "programme", "process", "Incident response", null, "How security incidents are detected, escalated and closed."),
+      sg("What this audit covers", "programme", "process", "Data subject requests", null, "Access, correction and deletion requests."),
+    ] },
+  ],
+};
+
+const ctl = (framework_id: string, control_id: string, title: string, risk: string, rest: Partial<EngagementControl>): EngagementControl => ({
+  framework_id, control_id, title, risk, description: null, category: null, test_id: null, result: null, tested_by: null, reviewed_by: null,
+  request_id: null, request_status: null, proposal: null, ...rest,
+});
+const demoControls: EngagementControls = {
+  engagement_id: 41, assurance_mode: "independent", total: 4, tested: 1, with_proposal: 2, needs_judgement: 1,
+  controls: [
+    ctl("ndpa_2023", "NDPA-34", "Access to personal data is reviewed", "high", { test_id: 201, result: "effective", tested_by: "Ifeoma Ade", reviewed_by: "Tunde Bello" }),
+    ctl("ndpa_2023", "NDPA-39", "Breaches are reported within 72 hours", "critical", { request_id: 102, request_status: "rejected",
+      proposal: { result: "ineffective", test_type: "operating", procedure: "Reviewed the automated evidence over the audit period to confirm the control operated as designed.", sample_size: 10, exception_notes: "Monitoring (wazuh) reports drift.", evidence_ids: [12], basis: ["Monitoring (wazuh) reports drift."] } }),
+    ctl("ndpc_gaid_2025", "GAID-DPO", "A Data Protection Officer is appointed", "medium", { request_id: 103, request_status: "accepted",
+      proposal: { result: "effective", test_type: "design", procedure: "Inspected the submitted evidence to confirm the control is designed and in place.", sample_size: null, exception_notes: null, evidence_ids: [8], basis: ["Evidence for this control was accepted."] } }),
+    ctl("ndpa_2023", "NDPA-26", "Consent is recorded", "medium", { request_id: 104, request_status: "submitted",
+      proposal: { result: null, test_type: "design", procedure: "Inspected the submitted evidence to confirm the control is designed and in place.", sample_size: null, exception_notes: null, evidence_ids: [15, 16], basis: [] } }),
+  ],
+};

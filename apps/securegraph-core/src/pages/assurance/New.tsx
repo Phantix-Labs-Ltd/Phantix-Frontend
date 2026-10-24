@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Trash2 } from "lucide-react";
 import { Card, ErrorState, PageHeader, PageSkeleton } from "@sg/ui";
 import { useResource } from "@sg/useResource";
 import { useStore } from "@sg/store";
@@ -8,10 +8,11 @@ import { loadOrgUsers } from "@sg/data";
 import { cx } from "@sg/utils";
 import type { OrgUser } from "@sg/types";
 import {
-  AUDIT_TYPE_LABEL, AUDIT_TYPE_ORDER, ROLE_LABEL, SCOPE_TYPE_LABEL, createEngagement, loadPrograms,
-  type AuditProgram, type AuditType, type ScopeItemInput, type ScopeItemType, type TeamMemberInput, type TeamRole,
+  AUDIT_TYPE_LABEL, AUDIT_TYPE_ORDER, ROLE_LABEL, createEngagement, loadProgramScopeSuggestions, loadPrograms, prepareEngagement,
+  type AuditProgram, type AuditType, type ScopeItemInput, type ScopeSuggestions, type TeamMemberInput, type TeamRole,
 } from "@sg/assurance";
 import { InlineError, errMsg } from "./parts";
+import { ScopePicker, chosenScope, defaultSelection } from "./ScopePicker";
 
 const STEPS = ["Programme", "Details", "Scope", "Team"] as const;
 type Data = { all: AuditProgram[]; applicable: AuditProgram[]; users: OrgUser[] };
@@ -41,7 +42,10 @@ export default function NewEngagement() {
   const [lead, setLead] = useState("");
   const [auditorOrg, setAuditorOrg] = useState("internal");
   const [summary, setSummary] = useState("");
-  const [scope, setScope] = useState<ScopeItemInput[]>([]);
+  const [suggestions, setSuggestions] = useState<ScopeSuggestions | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [custom, setCustom] = useState<ScopeItemInput[]>([]);
   const [team, setTeam] = useState<TeamMemberInput[]>([]);
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -67,6 +71,25 @@ export default function NewEngagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.all]);
 
+  // Scope is suggested from the inventory, connectors, profile and programme,
+  // so the user ticks boxes instead of facing a blank form.
+  const programKey = program?.program_key;
+  useEffect(() => {
+    if (!programKey) return;
+    let live = true;
+    setSuggesting(true);
+    loadProgramScopeSuggestions(programKey)
+      .then((s) => {
+        if (!live) return;
+        setSuggestions(s);
+        setPicked(defaultSelection(s));
+        setSummary((cur) => cur || s.scope_summary || "");
+      })
+      .catch(() => live && setSuggestions(null))
+      .finally(() => live && setSuggesting(false));
+    return () => { live = false; };
+  }, [programKey]);
+
   if (loading && !data.all.length) return <PageSkeleton />;
   if (error && !data.all.length) return <ErrorState onRetry={reload} body="We couldn't load the audit programmes. Try again." />;
 
@@ -82,11 +105,20 @@ export default function NewEngagement() {
         program_key: program.program_key, title: title.trim(), audit_type: auditType, criteria: program.framework_ids,
         period_start: start || null, period_end: end || null, lead_auditor_name: lead.trim() || null,
         auditor_org: auditorOrg, scope_summary: summary.trim() || null,
-        scope_items: scope.filter((s) => (s.description ?? "").trim() || (s.ref ?? "").trim()),
+        scope_items: chosenScope(suggestions, picked, custom),
         team,
       });
-      toast("success", "Audit opened", "Next: request evidence from the controls in scope.");
-      navigate(`/assurance/${created.id}`);
+      // Request evidence for every control and attach what the library already
+      // holds, so the audit opens on work to review rather than set-up.
+      const prepared = await prepareEngagement(created.id).catch(() => null);
+      toast(
+        "success",
+        "Audit opened",
+        prepared
+          ? `${prepared.requests_created} evidence requests created${prepared.requests_with_evidence ? `, ${prepared.requests_with_evidence} already have evidence` : ""}.`
+          : "Next: prepare the audit from its overview.",
+      );
+      navigate(`/assurance/${created.id}?tab=controls`);
     } catch (err) {
       setServerError(errMsg(err, "Couldn't open the audit"));
     } finally {
@@ -183,39 +215,26 @@ export default function NewEngagement() {
             </div>
           </div>
           <div>
-            <label className="label" htmlFor="ne-lead">Lead auditor</label>
-            <input id="ne-lead" className="input" value={lead} onChange={(e) => setLead(e.target.value)} placeholder="Name" />
-          </div>
-          <div>
-            <label className="label" htmlFor="ne-summary">Scope summary</label>
-            <textarea id="ne-summary" rows={3} className="input" value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="What's covered, in a sentence or two." />
+            <label className="label" htmlFor="ne-lead">Lead auditor <span className="text-slate-500">(optional)</span></label>
+            <input id="ne-lead" className="input" value={lead} onChange={(e) => setLead(e.target.value)} placeholder="Who runs the audit" />
           </div>
           {detailsError && (title || end) && <p className="text-sm text-severity-critical">{detailsError}</p>}
         </Card>
       )}
 
       {step === 2 && (
-        <Card className="max-w-3xl">
-          <p className="mb-3 text-sm text-slate-400">Systems, processes, vendors, locations and data flows. Say why anything is left out.</p>
-          <ul className="space-y-3">
-            {scope.map((s, i) => (
-              <li key={i} className="grid grid-cols-1 gap-2 rounded-md border border-phantix-700 p-3 sm:grid-cols-[150px_1fr_1fr_auto]">
-                <select aria-label="Type" className="input" value={s.item_type} onChange={(e) => setScope((cur) => cur.map((x, j) => (j === i ? { ...x, item_type: e.target.value as ScopeItemType } : x)))}>
-                  {(Object.keys(SCOPE_TYPE_LABEL) as ScopeItemType[]).map((t) => <option key={t} value={t}>{SCOPE_TYPE_LABEL[t]}</option>)}
-                </select>
-                <input aria-label="Description" className="input" placeholder="Customer API" value={s.description ?? ""} onChange={(e) => setScope((cur) => cur.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))} />
-                <input aria-label="Reference" className="input font-mono" placeholder="api.acme.com" value={s.ref ?? ""} onChange={(e) => setScope((cur) => cur.map((x, j) => (j === i ? { ...x, ref: e.target.value || null } : x)))} />
-                <button type="button" aria-label="Remove" className="rounded p-2 text-slate-500 hover:text-severity-critical" onClick={() => setScope((cur) => cur.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
-                <label className="flex items-center gap-2 text-sm text-slate-300">
-                  <input type="checkbox" checked={s.in_scope} onChange={(e) => setScope((cur) => cur.map((x, j) => (j === i ? { ...x, in_scope: e.target.checked } : x)))} /> In scope
-                </label>
-                <input aria-label="Rationale" className="input sm:col-span-3" placeholder={s.in_scope ? "Why (optional)" : "Why it's out of scope"} value={s.rationale ?? ""} onChange={(e) => setScope((cur) => cur.map((x, j) => (j === i ? { ...x, rationale: e.target.value || null } : x)))} />
-              </li>
-            ))}
-          </ul>
-          <button type="button" className="btn-secondary mt-3" onClick={() => setScope((cur) => [...cur, { item_type: "system", ref: null, description: "", in_scope: true, rationale: null }])}>
-            <Plus size={14} /> Add item
-          </button>
+        <Card className="max-w-3xl space-y-5">
+          <p className="text-sm text-slate-400">
+            We've picked what this audit usually covers from your inventory and the programme. Untick anything that doesn't apply.
+          </p>
+          <ScopePicker
+            suggestions={suggestions} loading={suggesting} selected={picked} custom={custom} onCustom={setCustom}
+            onToggle={(keys, on) => setPicked((cur) => { const next = new Set(cur); keys.forEach((k) => (on ? next.add(k) : next.delete(k))); return next; })}
+          />
+          <div>
+            <label className="label" htmlFor="ne-summary">Scope in a sentence</label>
+            <textarea id="ne-summary" rows={2} className="input" value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="e.g. Our customer platform and the processes that protect customer data." />
+          </div>
         </Card>
       )}
 
