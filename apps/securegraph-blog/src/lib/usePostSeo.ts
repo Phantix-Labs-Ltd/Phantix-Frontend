@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { Post } from "./types";
+import type { Post, PostSummary } from "./types";
 
 /*
  * usePostSeo — per-post SEO / GEO / AEO head management.
@@ -70,6 +70,51 @@ function upsertCanonical(href: string): () => void {
   };
 }
 
+/**
+ * The Article and BreadcrumbList graph for one essay. The hook adds it in the
+ * browser; prerender.mjs bakes the same graph into /posts/<slug>/index.html so
+ * a crawler that does not run JavaScript reads it too.
+ */
+export function postJsonLd(post: PostSummary): Record<string, unknown> {
+  const url = `${ORIGIN}/posts/${post.slug}`;
+  const description =
+    post.excerpt || `${post.title}, from The SecureGraph Weekly by SecureGraph.`;
+  const published = isoDate(post.date);
+
+  const article: Record<string, unknown> = {
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: post.title,
+    description,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    author: { "@id": ORG_ID },
+    publisher: { "@id": ORG_ID },
+    isPartOf: { "@id": BLOG_ID },
+    image: DEFAULT_IMAGE,
+    inLanguage: "en",
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: [".post-title", ".post-standfirst"],
+    },
+  };
+  if (published) {
+    article.datePublished = published;
+    article.dateModified = published;
+  }
+  if (post.kicker) article.articleSection = post.kicker;
+
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    "@id": `${url}#breadcrumb`,
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "The SecureGraph Weekly", item: `${ORIGIN}/` },
+      { "@type": "ListItem", position: 2, name: post.title, item: url },
+    ],
+  };
+
+  return { "@context": "https://schema.org", "@graph": [article, breadcrumb] };
+}
+
 export function usePostSeo(post: Post | undefined): void {
   useEffect(() => {
     if (!post) return;
@@ -97,44 +142,12 @@ export function usePostSeo(post: Post | undefined): void {
     const previousTitle = document.title;
     document.title = title;
 
-    const article: Record<string, unknown> = {
-      "@type": "Article",
-      "@id": `${url}#article`,
-      headline: post.title,
-      description,
-      mainEntityOfPage: { "@type": "WebPage", "@id": url },
-      author: { "@id": ORG_ID },
-      publisher: { "@id": ORG_ID },
-      isPartOf: { "@id": BLOG_ID },
-      image: DEFAULT_IMAGE,
-      inLanguage: "en",
-      speakable: {
-        "@type": "SpeakableSpecification",
-        cssSelector: [".post-title", ".post-standfirst"],
-      },
-    };
-    if (published) {
-      article.datePublished = published;
-      article.dateModified = published;
-    }
-    if (post.kicker) article.articleSection = post.kicker;
-
-    const breadcrumb = {
-      "@type": "BreadcrumbList",
-      "@id": `${url}#breadcrumb`,
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "The SecureGraph Weekly", item: `${ORIGIN}/` },
-        { "@type": "ListItem", position: 2, name: post.title, item: url },
-      ],
-    };
-
     const script = document.createElement("script");
     script.type = "application/ld+json";
     script.dataset.postSeo = "true";
-    script.textContent = JSON.stringify({
-      "@context": "https://schema.org",
-      "@graph": [article, breadcrumb],
-    });
+    script.textContent = JSON.stringify(postJsonLd(post));
+    // A prerendered page already carries this graph; replace it, not repeat it.
+    document.head.querySelectorAll('script[data-post-seo="true"]').forEach((el) => el.remove());
     document.head.appendChild(script);
 
     return () => {

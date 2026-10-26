@@ -14,6 +14,7 @@ import { StaticRouter } from "react-router-dom/server";
 import App from "./App";
 
 export { API_MODE, setContentOrigin, snapshot } from "./lib/content";
+export { postJsonLd } from "./lib/usePostSeo";
 
 /** Render `url` to HTML. */
 export function render(url: string, timeoutMs = 20_000): Promise<string> {
