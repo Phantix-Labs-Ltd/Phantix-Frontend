@@ -37,6 +37,7 @@ const Docs = React.lazy(() => import("@sg/pages/Docs"));
 const DocPage = React.lazy(() => import("@sg/pages/DocPage"));
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const NotificationPreferences = React.lazy(() => import("@sg/components/NotificationPreferences"));
 const Assets = React.lazy(() => import("./pages/Assets"));
 const Analytics = React.lazy(() => import("./pages/Analytics"));
 const Reports = React.lazy(() => import("./pages/Reports"));
@@ -133,6 +134,7 @@ export default function App() {
             <Route path="/support" element={<Support />} />
             <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/danger-zone" element={<DangerZone />} />
+            <Route path="/settings/notifications" element={<NotificationPreferences />} />
             <Route path="/assistant" element={<Agent />} />
             <Route path="*" element={<NotFound homePath="/dashboard" />} />
           </Route>

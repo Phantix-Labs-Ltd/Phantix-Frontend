@@ -231,6 +231,7 @@ type NotifyCtx = {
   setPanelOpen: (v: boolean | ((p: boolean) => boolean)) => void;
   push: (n: AlertNotice) => void;
   markAllRead: () => void;
+  markRead: (notice: AlertNotice) => void;
   dismissInbox: (notice: AlertNotice) => void;
   desktop: DesktopPermission;
   enableDesktop: () => Promise<void>;
@@ -266,6 +267,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (serverFeed && ids.length) postQuietly("/org-users/notifications/read", { ids });
       return prev.map((x) => ({ ...x, read: true }));
     });
+  }, []);
+
+  const markRead = useCallback((notice: AlertNotice) => {
+    const key = noticeKey(notice);
+    rememberNotices("read", [key]);
+    if (notice.source === "alert" && serverFeed && !notice.read) postQuietly("/org-users/notifications/read", { ids: [notice.id] });
+    setInbox((prev) => prev.map((x) => (noticeKey(x) === key ? { ...x, read: true } : x)));
   }, []);
 
   const dismissInbox = useCallback((notice: AlertNotice) => {
@@ -339,8 +347,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const unread = useMemo(() => inbox.filter((x) => !x.read).length, [inbox]);
 
   const value = useMemo(
-    () => ({ inbox, unread, panelOpen, setPanelOpen, push, markAllRead, dismissInbox, desktop, enableDesktop, push_, enablePush, disablePush }),
-    [inbox, unread, panelOpen, push, markAllRead, dismissInbox, desktop, enableDesktop, push_, enablePush, disablePush],
+    () => ({ inbox, unread, panelOpen, setPanelOpen, push, markAllRead, markRead, dismissInbox, desktop, enableDesktop, push_, enablePush, disablePush }),
+    [inbox, unread, panelOpen, push, markAllRead, markRead, dismissInbox, desktop, enableDesktop, push_, enablePush, disablePush],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -367,15 +375,22 @@ function NoticeLinkWrap({ link, onGo, className, children }: { link?: NoticeLink
 
 // ── Bell + inbox ─────────────────────────────────────────────────────────────
 
-export function NotificationBell() {
-  const { inbox, unread, panelOpen, setPanelOpen, markAllRead, dismissInbox, desktop, enableDesktop, push_, enablePush, disablePush } = useNotifications();
+/** Where "View preferences" goes: Core's settings page, from any application. */
+export const NOTIFICATION_PREFERENCES_PATH = "/settings/notifications";
 
+export function NotificationBell() {
+  const { inbox, unread, panelOpen, setPanelOpen, markAllRead, markRead, dismissInbox } = useNotifications();
+  const [view, setView] = useState<"unread" | "all">("unread");
+
+  // Open on Unread when there is something new, else on All.
   useEffect(() => {
-    if (panelOpen) markAllRead();
-  }, [panelOpen, markAllRead]);
+    if (panelOpen) setView(unread > 0 ? "unread" : "all");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelOpen]);
 
   // Pressing anywhere outside the bell or the panel closes it.
   const ref = useDismiss(panelOpen, () => setPanelOpen(false));
+  const shown = view === "unread" ? inbox.filter((n) => !n.read) : inbox;
 
   return (
     <div ref={ref} className="relative">
@@ -398,72 +413,107 @@ export function NotificationBell() {
       </button>
       <AnimatePresence>
         {panelOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 6 }}
-              className="absolute right-0 top-full z-[85] mt-2 w-[22rem] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-phantix-700/50 bg-phantix-900 shadow-card"
-              role="dialog"
-              aria-label="Notifications"
-            >
-              <div className="flex items-center justify-between border-b border-phantix-700/40 px-3.5 py-2.5">
-                <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">Notifications</p>
-                <span className="text-[12px] text-slate-500">{inbox.length} total</span>
-              </div>
-              {push_.available ? (
-                <div className="border-b border-phantix-700/40 px-3.5 py-2 text-[12px]">
-                  {push_.subscribed ? (
-                    <div className="flex items-center justify-between gap-2 text-slate-400">
-                      <span className="flex items-center gap-1.5"><BellRing size={13} className="text-emerald-400" /> Push notifications on for this browser</span>
-                      <button type="button" disabled={push_.busy} onClick={() => void disablePush()} className="text-slate-500 hover:text-slate-200">Turn off</button>
-                    </div>
-                  ) : (
-                    <button type="button" disabled={push_.busy || desktop === "denied"} onClick={() => void enablePush()}
-                      className="flex w-full items-center gap-2 text-left text-gold-300 hover:text-gold-200 disabled:text-slate-500">
-                      {desktop === "denied" ? <BellOff size={13} /> : <Monitor size={13} />}
-                      {desktop === "denied"
-                        ? "Notifications are blocked for this site in your browser settings"
-                        : "Turn on push notifications, even when SecureGraph is closed"}
-                    </button>
-                  )}
-                  {push_.error && <p className="mt-1 text-severity-critical">{push_.error}</p>}
-                </div>
-              ) : desktop === "default" && (
-                <button
-                  type="button"
-                  onClick={() => void enableDesktop()}
-                  className="flex w-full items-center gap-2 border-b border-phantix-700/40 bg-gold-400/5 px-3.5 py-2 text-left text-[12px] text-gold-300 hover:bg-gold-400/10"
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="absolute right-0 top-full z-[85] mt-2 flex max-h-[min(36rem,calc(100vh-96px))] w-[24rem] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-xl border border-phantix-700/50 bg-phantix-900 shadow-card"
+            role="dialog"
+            aria-label="Notifications"
+          >
+            <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4">
+              <p className="font-display text-base font-semibold text-white">Notifications</p>
+              <span onClick={() => setPanelOpen(false)} className="contents">
+                <CrossAppLink
+                  app="core"
+                  to={NOTIFICATION_PREFERENCES_PATH}
+                  className="rounded-lg border border-phantix-700 px-3 py-1.5 text-[13px] font-medium text-slate-200 transition-colors hover:border-phantix-500 hover:text-white"
                 >
-                  <Monitor size={13} /> Get desktop notifications when this tab is in the background
+                  View preferences
+                </CrossAppLink>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 px-4 pb-3" role="tablist" aria-label="Show">
+              {([["unread", "Unread", unread], ["all", "All", inbox.length]] as const).map(([key, label, count]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === key}
+                  onClick={() => setView(key)}
+                  className={cx(
+                    "rounded-lg border px-3 py-2 text-left transition-colors",
+                    view === key
+                      ? "border-gold-400/50 bg-gold-400/10"
+                      : "border-phantix-700 hover:border-phantix-600",
+                  )}
+                >
+                  <span className={cx("block text-[13px]", view === key ? "text-gold-300" : "text-slate-400")}>{label}</span>
+                  <span className={cx("block font-display text-lg font-semibold", view === key ? "text-gold-200" : "text-white")}>{count}</span>
                 </button>
+              ))}
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto border-t border-phantix-700/40">
+              {shown.length === 0 && (
+                <p className="px-4 py-10 text-center text-[13px] text-slate-500">
+                  {view === "unread"
+                    ? "You're all caught up."
+                    : "Nothing yet. Finished scans, campaigns, audits and reports show up here."}
+                </p>
               )}
-              <div className="max-h-96 overflow-y-auto">
-                {inbox.length === 0 && <p className="px-4 py-8 text-center text-xs text-slate-500">Nothing yet. Finished scans, campaigns, audits and reports show up here.</p>}
-                {inbox.map((n) => {
-                  const meta = SEV_META[n.severity] ?? SEV_META.info;
-                  return (
-                    <div key={noticeKey(n)} className="flex items-start gap-2.5 border-b border-phantix-700/30 px-3.5 py-2.5 last:border-0">
-                      <span className={cx("mt-1.5 h-2 w-2 shrink-0 rounded-full", meta.bar)} />
-                      <NoticeLinkWrap link={n.link} onGo={() => setPanelOpen(false)} className={cx("block min-w-0 flex-1", n.link && "group")}>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[12px] font-medium text-slate-400">{eventLabel(n.eventType)}</span>
-                          <span className="text-[12px] text-slate-600">· {timeAgo(n.createdAt)}</span>
-                        </div>
-                        <p className="mt-0.5 text-[13px] leading-5 text-slate-200 group-hover:text-white">
+              {shown.map((n) => {
+                const meta = SEV_META[n.severity] ?? SEV_META.info;
+                const serious = n.severity === "critical" || n.severity === "high";
+                return (
+                  <div
+                    key={noticeKey(n)}
+                    className={cx(
+                      "group/item relative border-b border-phantix-700/30 px-4 py-3 last:border-0",
+                      !n.read && "bg-gold-400/[0.03]",
+                    )}
+                  >
+                    {!n.read && <span className="absolute inset-y-0 left-0 w-[3px] bg-gold-400" aria-hidden />}
+                    <NoticeLinkWrap
+                      link={n.link}
+                      onGo={() => { markRead(n); setPanelOpen(false); }}
+                      className="block min-w-0"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className={cx("min-w-0 text-[14px] leading-5", n.read ? "font-medium text-slate-300" : "font-semibold text-white")}>
                           {n.title}
-                          {n.link && <ArrowUpRight size={12} className="ml-1 inline text-gold-400" />}
                         </p>
-                      </NoticeLinkWrap>
-                      <button onClick={() => dismissInbox(n)} className="rounded p-1 text-slate-500 hover:text-slate-200" aria-label="Remove notification">
-                        <X size={12} />
-                      </button>
+                        <span className="shrink-0 pt-0.5 text-[12px] text-slate-500">{timeAgo(n.createdAt)}</span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-slate-400">
+                        {serious && <span className={cx("chip mr-1.5 !py-0 !text-[11px]", meta.chip)}>{meta.label}</span>}
+                        {n.body || eventLabel(n.eventType)}
+                        {n.link && <ArrowUpRight size={12} className="ml-1 inline text-gold-400" />}
+                      </p>
+                    </NoticeLinkWrap>
+                    <div className="mt-1.5 flex gap-3 text-[12px] opacity-0 transition-opacity focus-within:opacity-100 group-hover/item:opacity-100">
+                      {!n.read && (
+                        <button type="button" onClick={() => markRead(n)} className="text-slate-400 hover:text-slate-200">Mark as read</button>
+                      )}
+                      <button type="button" onClick={() => dismissInbox(n)} className="text-slate-500 hover:text-slate-200">Remove</button>
                     </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end border-t border-phantix-700/40 px-4 py-3">
+              <button
+                type="button"
+                onClick={markAllRead}
+                disabled={unread === 0}
+                className="text-[13px] font-semibold text-gold-400 hover:text-gold-300 disabled:text-slate-600"
+              >
+                Mark all as read
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -494,7 +544,7 @@ function toNotice(e: AlertEvent): AlertNotice {
  * bell. Nothing here blocks the page.
  */
 export default function AlertNotifications() {
-  const { push, push_ } = useNotifications();
+  const { push, push_, panelOpen } = useNotifications();
   const [toasts, setToasts] = useState<AlertNotice[]>([]);
   const pushOn = useRef(false);
   pushOn.current = push_.subscribed;
@@ -577,7 +627,9 @@ export default function AlertNotifications() {
   }, [surface]);
 
   return (
-    <div className="pointer-events-none fixed inset-x-3 top-[calc(64px+env(safe-area-inset-top))] z-[90] flex flex-col gap-2 md:inset-x-auto md:right-4 md:top-16 md:w-[22rem] md:max-w-[calc(100vw-32px)]" aria-live="polite">
+    // While the panel is open the same notices are listed in it, so toasts step
+    // aside instead of covering it.
+    <div className={cx("pointer-events-none fixed inset-x-3 top-[calc(64px+env(safe-area-inset-top))] z-[90] flex flex-col gap-2 md:inset-x-auto md:right-4 md:top-16 md:w-[22rem] md:max-w-[calc(100vw-32px)]", panelOpen && "hidden")} aria-live="polite">
       <AnimatePresence>
         {(phone ? pinned.slice(0, 1) : pinned).map((n) => (
           <motion.div

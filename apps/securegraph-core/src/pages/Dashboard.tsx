@@ -2,10 +2,17 @@ import React, { useCallback, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Boxes, ShieldAlert, ArrowRight, BellRing, CalendarRange, Gauge, Bug, CheckCircle2,
+  Boxes, ShieldAlert, ArrowRight, BellRing, Gauge, Bug, CheckCircle2,
   Zap, Activity, KanbanSquare, FileText, FlaskConical, HeartPulse, ScanSearch,
   ShieldCheck, Radar, BarChart3, ScrollText, Plug, Code2, Cloud, Smartphone, PenTool, TestTube2,
+  SlidersHorizontal, SearchCheck, Wrench,
 } from "lucide-react";
+import DateRangeFilter, { daysBackFor, fmtDay, resolveRange, withinRange } from "@sg/components/DateRangeFilter";
+import CustomizeOverview, { type OverviewCardDef } from "@sg/components/CustomizeOverview";
+import {
+  cachedDashboardLayout, loadDashboardLayout, saveDashboardLayout,
+  type DashboardLayout, type DateRangeValue,
+} from "@sg/preferences";
 import { SeverityBadge, StatusBadge, PageSkeleton, ErrorState } from "@sg/ui";
 import SecurityDbBanner from "@sg/components/SecurityDbBanner";
 import DocLink from "@sg/components/DocLink";
@@ -89,6 +96,52 @@ function incidentToServerEvent(i: AvailabilityIncident): ServerEvent {
   };
 }
 
+/** Every card the overview can show; DEFAULT_CARDS is the layout a new user gets. */
+const OVERVIEW_CARDS: (OverviewCardDef & { size: "kpi" | "panel" | "wide" })[] = [
+  { id: "posture_score", label: "Posture score", description: "The one posture score, out of 100", size: "kpi" },
+  { id: "open_findings", label: "Open findings", description: "Verified findings not fixed or accepted", size: "kpi" },
+  { id: "open_risks", label: "Open risks", description: "Risks in the treatment queue", size: "kpi" },
+  { id: "active_assets", label: "Active assets", description: "Assets in your inventory", size: "kpi" },
+  { id: "fix_rate", label: "Fix rate", description: "Share of verified findings fixed", size: "kpi" },
+  { id: "found_in_range", label: "Found in range", description: "Findings first detected in the date range", size: "kpi" },
+  { id: "fixed_in_range", label: "Fixed in range", description: "Findings fixed in the date range", size: "kpi" },
+  { id: "posture_trend", label: "Posture overview", description: "Daily posture score over the date range", size: "panel" },
+  { id: "surface", label: "Findings by surface", description: "Verified findings per attack surface", size: "panel" },
+  { id: "severity", label: "Findings by severity", description: "Share of verified findings by severity", size: "panel" },
+  { id: "open_per_day", label: "Open findings per day", description: "Backlog at the end of each day", size: "panel" },
+  { id: "critical_assets", label: "Critical assets at risk", description: "Critical assets with open findings", size: "panel" },
+  { id: "critical_tracker", label: "Critical tracker items", description: "Critical findings still open", size: "panel" },
+  { id: "top_risks", label: "Top risks", description: "Highest open risks", size: "panel" },
+  { id: "recent_reports", label: "Recent reports", description: "Latest reports in the library", size: "panel" },
+  { id: "soc", label: "SOC detections", description: "Top detections in the open queue", size: "panel" },
+  { id: "shortcuts", label: "Shortcuts", description: "Quick links to common pages", size: "panel" },
+  { id: "heartbeat", label: "Server heartbeat", description: "Organization uptime checks", size: "panel" },
+  { id: "latest_assessment", label: "Latest assessment", description: "What the last completed assessment left", size: "wide" },
+  { id: "verified_assets", label: "Verified assets", description: "Ownership-verified assets", size: "kpi" },
+  { id: "never_scanned", label: "Never scanned", description: "Assets awaiting a first scan", size: "kpi" },
+  { id: "reports_generated", label: "Reports generated", description: "Reports in the library", size: "kpi" },
+];
+const DEFAULT_CARDS = OVERVIEW_CARDS.map((c) => c.id).filter((id) => id !== "found_in_range" && id !== "fixed_in_range");
+type CardSize = "kpi" | "panel" | "wide";
+const BAND_GRID: Record<CardSize, string> = {
+  kpi: "grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]",
+  panel: "grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4",
+  wide: "grid grid-cols-1 gap-4",
+};
+
+/** Runs of consecutive cards of the same size, in order. */
+function cardBands(ids: string[]): { size: CardSize; ids: string[] }[] {
+  const bands: { size: CardSize; ids: string[] }[] = [];
+  for (const id of ids) {
+    const size = OVERVIEW_CARDS.find((c) => c.id === id)?.size ?? "panel";
+    const last = bands[bands.length - 1];
+    if (last && last.size === size && size !== "wide") last.ids.push(id);
+    else bands.push({ size, ids: [id] });
+  }
+  return bands;
+}
+const DEFAULT_RANGE: DateRangeValue = { preset: "30d" };
+
 function num(v: unknown, fallback = 0): number {
   // `Number(null)` is 0, which would report a real "0" for a value we simply
   // do not have. Treat null/undefined/"" as absent and use the fallback.
@@ -113,9 +166,37 @@ export default function Dashboard() {
   // (it was loaded once and never updated).
   const trackerRes = useResource<TrackerSummary | null>(() => loadTrackerSummary().catch(() => null), null, "tracker-summary-verified");
   const tracker = trackerRes.data;
-  const timelineRes = useResource(() => loadTrackerTimeline(14, { verified: true }).catch(() => null), null as Awaited<ReturnType<typeof loadTrackerTimeline>>, "tracker-timeline-14-verified");
 
-  const trendRes = useResource<PosturePoint[]>(() => loadPostureTrend(), [] as PosturePoint[], "posture-trend");
+  // The person's layout and date range: painted from this browser's copy, then
+  // the server copy (it follows them across devices).
+  const [layout, setLayout] = useState<DashboardLayout>(() => cachedDashboardLayout("core"));
+  const [customizing, setCustomizing] = useState(false);
+  React.useEffect(() => {
+    let live = true;
+    void loadDashboardLayout("core").then((l) => { if (live) setLayout(l); });
+    return () => { live = false; };
+  }, []);
+  const updateLayout = (patch: DashboardLayout) => {
+    setLayout((cur) => ({ ...cur, ...patch }));
+    void saveDashboardLayout("core", patch);
+  };
+  const range = layout.range ?? DEFAULT_RANGE;
+  const resolved = resolveRange(range);
+  // The trend APIs serve a trailing window ending today; fetch back to the
+  // range start and keep the days inside the range.
+  const fetchDays = Math.max(2, daysBackFor(resolved));
+  const visibleCards = (layout.cards?.length ? layout.cards : DEFAULT_CARDS).filter((id) => OVERVIEW_CARDS.some((c) => c.id === id));
+
+  const timelineRes = useResource(() => loadTrackerTimeline(fetchDays, { verified: true }).catch(() => null), null as Awaited<ReturnType<typeof loadTrackerTimeline>>, "dashboard-tracker-timeline");
+  const trendRes = useResource<PosturePoint[]>(() => loadPostureTrend(fetchDays), [] as PosturePoint[], "dashboard-posture-trend");
+  const reloadTimeline = timelineRes.reload;
+  const reloadTrend = trendRes.reload;
+  const firstWindow = useRef(true);
+  React.useEffect(() => {
+    if (firstWindow.current) { firstWindow.current = false; return; }
+    reloadTimeline();
+    reloadTrend();
+  }, [fetchDays, reloadTimeline, reloadTrend]);
   // The one posture score (GET /posture), the same number Defend and Analytics show.
   const postureRes = useResource<PostureSnapshot | null>(() => loadPostureSnapshot().catch(() => null), null, "posture-snapshot");
   const [serverEvents, setServerEvents] = useState<ServerEvent[]>([]);
@@ -371,8 +452,8 @@ export default function Dashboard() {
   const pages = cc?.pages ?? {};
   const href = (key: string, fallback: string) => str(pages[key], fallback);
 
-  const trend = trendRes.data ?? [];
-  const scorePoints = trend.map((p) => ({ label: p.day, value: Math.round(Number(p.score ?? 0)) }));
+  const trend = withinRange(trendRes.data ?? [], resolved, (p) => p.day);
+  const scorePoints = trend.map((p) => ({ label: p.day.slice(5) || p.day, value: Math.round(Number(p.score ?? 0)) }));
   const hasTrend = trend.length > 1;
   const scoreDelta = hasTrend ? scorePoints[scorePoints.length - 1].value - scorePoints[0].value : null;
   // Open-per-day comes from the tracker's own daily series (the posture trend
@@ -380,14 +461,18 @@ export default function Dashboard() {
   // verified findings only, so today's bar equals the Open findings card. An API
   // that predates the filter answers with every tracked finding, and the subtitle
   // then says so rather than implying the two should match.
-  const timeline = timelineRes.data?.series ?? [];
+  const timeline = withinRange(timelineRes.data?.series ?? [], resolved, (p) => p.day);
   const timelineVerified = timelineRes.data?.verification === "verified";
   const findingPoints = timeline.map((p) => ({ label: p.day.slice(5), value: Number(p.cumulative_open ?? 0) }));
   const hasFindingTrend = findingPoints.length > 1;
   const findingsDelta = hasFindingTrend
     ? pctChange(findingPoints[0].value, findingPoints[findingPoints.length - 1].value)
     : null;
-  const rangeLabel = hasTrend ? `${trend[0].day} – ${trend[trend.length - 1].day}` : "Last 14 days";
+  const foundInRange = timelineRes.data ? timeline.reduce((n, p) => n + Number(p.detected ?? 0), 0) : null;
+  const fixedInRange = timelineRes.data ? timeline.reduce((n, p) => n + Number(p.fixed ?? 0), 0) : null;
+  const sinceLabel = `since ${fmtDay(resolved.start)}`;
+  const shortRange = resolved.days < 2;
+  const rangeChip = <span className="chip border-phantix-700 bg-phantix-900 text-[12px] text-slate-400">{resolved.label}</span>;
 
   // The verified board first; the command centre's own summary only as a fallback.
   const summary = tracker ?? cc?.tracker?.summary ?? {};
@@ -503,6 +588,296 @@ export default function Dashboard() {
     { to: "/integrations", label: "Integrations hub", hint: "Connect scanners and clouds", icon: <Plug size={15} /> },
   ];
 
+  // Every card the overview can show, keyed by id; the person picks and orders them.
+  const cardNodes: Record<string, React.ReactNode> = {
+    posture_score: (
+      <KpiTile
+        icon={<Gauge size={22} />}
+        label="Posture score"
+        value={postureKnown ? postureScore : null}
+        suffix="/100"
+        delta={<Delta value={scoreDelta} unit=" pts" goodWhen="up" />}
+        hint={scoreDelta != null ? sinceLabel : `${activeAssets} active assets`}
+        to="/analytics"
+      />
+    ),
+    open_findings: (
+      <KpiTile icon={<Bug size={22} />} label="Open findings" value={openFindings} hint="Verified, not fixed or accepted" to={href("tracker", "/tracker")} />
+    ),
+    open_risks: (
+      <KpiTile
+        icon={<ShieldAlert size={22} />}
+        label="Open risks"
+        value={openRisks}
+        hint={cc?.risks?.available === false ? "Risk engine unavailable" : "In the treatment queue"}
+      />
+    ),
+    active_assets: (
+      <KpiTile icon={<Boxes size={22} />} label="Active assets" value={activeAssets} hint={`${criticalAssets.length} critical at risk`} to={href("assets", "/assets")} />
+    ),
+    fix_rate: (
+      <KpiTile
+        icon={<CheckCircle2 size={22} />}
+        label="Fix rate"
+        value={fixRate}
+        suffix="%"
+        hint={trackedTotal ? `${fixed} of ${trackedTotal} verified findings fixed` : "No verified findings yet"}
+      />
+    ),
+    found_in_range: (
+      <KpiTile icon={<SearchCheck size={22} />} label="Found in range" value={foundInRange} hint={`First detected ${resolved.label.toLowerCase()}`} to={href("tracker", "/tracker")} />
+    ),
+    fixed_in_range: (
+      <KpiTile icon={<Wrench size={22} />} label="Fixed in range" value={fixedInRange} hint={`Fixed ${resolved.label.toLowerCase()}`} to={href("tracker", "/tracker")} />
+    ),
+    posture_trend: (
+      <Panel title="Posture overview" subtitle="Daily composite score" action={rangeChip}>
+        <div className="mb-2 flex items-baseline gap-2">
+          <span className="font-mono text-[26px] font-semibold text-white">{postureKnown ? postureScore : "Not set"}</span>
+          <Delta value={scoreDelta} unit=" pts" goodWhen="up" />
+        </div>
+        {trendRes.loading && !hasTrend ? (
+          <div className="skeleton h-[170px] rounded-md" />
+        ) : hasTrend ? (
+          <AreaTrend points={scorePoints} name="Posture score" />
+        ) : (
+          <PanelEmpty>{shortRange ? "Pick a longer range to see a trend." : "Posture history builds up as scans and intelligence runs accumulate."}</PanelEmpty>
+        )}
+      </Panel>
+    ),
+    surface: (
+      <Panel title="Findings by surface" subtitle="Verified findings per attack surface" action={<ViewAll to="/analytics" />}>
+        {surfaceTop.length === 0 ? (
+          <PanelEmpty>No findings tracked on any surface yet.</PanelEmpty>
+        ) : (
+          <>
+            <RankedBars rows={surfaceTop} scale="share" total={surfaceTotal} />
+            {surfaceMore > 0 && (
+              <div className="mt-3">
+                <ViewAll to="/analytics" label={`+${surfaceMore} more ${surfaceMore === 1 ? "surface" : "surfaces"}`} />
+              </div>
+            )}
+          </>
+        )}
+      </Panel>
+    ),
+    severity: (
+      <Panel title="Findings by severity" subtitle="Share of verified findings">
+        <Donut slices={severitySlices} centerLabel="findings" />
+      </Panel>
+    ),
+    open_per_day: (
+      <Panel
+        title="Open findings per day"
+        subtitle={
+          timelineVerified
+            ? "Verified findings still open at the end of each day"
+            : "Every tracked finding still open at the end of each day, verified or not"
+        }
+        action={<Delta value={findingsDelta} goodWhen="down" />}
+      >
+        {timelineRes.loading && !hasFindingTrend ? (
+          <div className="skeleton h-[170px] rounded-md" />
+        ) : hasFindingTrend ? (
+          <ColumnTrend points={findingPoints} name="Open findings" />
+        ) : (
+          <PanelEmpty>{shortRange ? "Pick a longer range to see a trend." : "Daily finding counts appear once history is recorded."}</PanelEmpty>
+        )}
+      </Panel>
+    ),
+    critical_assets: (
+      <Panel title="Critical assets at risk" action={<ViewAll to={href("assets", "/assets")} />}>
+        <MiniTable
+          rows={criticalAssets.slice(0, 6)}
+          columns={assetCols}
+          rowKey={(a, i) => Number(a.id ?? 0) || i}
+          rowHref={(a) => `/assets?id=${Number(a.id ?? 0)}`}
+          empty="No critical assets flagged."
+        />
+      </Panel>
+    ),
+    critical_tracker: (
+      <Panel title="Critical tracker items" action={<ViewAll to={href("tracker", "/tracker")} />}>
+        <MiniTable
+          rows={trackerCritical.slice(0, 6)}
+          columns={trackerCols}
+          rowKey={(t, i) => str(t.findingKey ?? t.finding_key, `row-${i}`)}
+          rowHref={(t) => `/tracker?key=${encodeURIComponent(str(t.findingKey ?? t.finding_key, ""))}`}
+          empty="No critical open tracker items."
+        />
+      </Panel>
+    ),
+    top_risks: (
+      <Panel
+        title="Top risks"
+        subtitle={cc?.risks?.available === false ? "Risk engine unavailable" : undefined}
+        action={
+          <CrossAppLink app="defend" to="/risks" className="text-xs font-semibold text-gold-400 hover:text-gold-300">
+            View all
+          </CrossAppLink>
+        }
+      >
+        <MiniTable rows={topRisks.slice(0, 6)} columns={riskCols} rowKey={(r, i) => Number(r.id ?? 0) || i} empty="No open risks." />
+      </Panel>
+    ),
+    recent_reports: (
+      <Panel title="Recent reports" action={<ViewAll to={href("reports", "/reports")} />}>
+        <MiniTable
+          rows={recentReports.slice(0, 6)}
+          columns={reportCols}
+          rowKey={(r, i) => Number(r.id ?? 0) || i}
+          rowHref={(r) => `/reports?id=${Number(r.id ?? 0)}`}
+          empty="No reports yet."
+        />
+      </Panel>
+    ),
+    soc: (
+      <Panel
+        title="SOC detections"
+        subtitle={cc?.soc?.available === false ? "SOC unavailable" : `${socOpen} in the open queue`}
+        action={
+          <CrossAppLink app="defend" to="/soc" className="text-xs font-semibold text-gold-400 hover:text-gold-300">
+            View all
+          </CrossAppLink>
+        }
+      >
+        {topDetections.length === 0 ? (
+          <PanelEmpty>Queue clear.</PanelEmpty>
+        ) : (
+          <ul className="space-y-3">
+            {topDetections.slice(0, 5).map((d, i) => (
+              <li key={Number(d.id ?? 0) || i} className="flex items-start gap-2.5">
+                <SeverityBadge severity={str(d.severity, "info") as any} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] text-slate-200">{str(d.title)}</p>
+                  <p className="text-[12px] text-slate-500">
+                    {titleCase(str(d.status, "open"))}
+                    {d.occurrenceCount != null ? ` · ×${num(d.occurrenceCount)}` : ""}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    ),
+    shortcuts: (
+      <Panel title="Shortcuts">
+        <ul className="space-y-2">
+          {shortcuts.map((s) => (
+            <li key={s.to}>
+              <Link
+                to={s.to}
+                className="group flex items-center gap-3 rounded-md border border-phantix-700 bg-phantix-950 px-3 py-2 transition-colors hover:border-phantix-600 hover:bg-phantix-900"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gold-400/10 text-gold-300">{s.icon}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium text-slate-200">{s.label}</span>
+                  <span className="block truncate text-[12px] text-slate-500">{s.hint}</span>
+                </span>
+                <ArrowRight size={14} className="text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-gold-300" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    ),
+    heartbeat: (
+      <Panel
+        title="Server heartbeat"
+        subtitle="Organization uptime checks"
+        action={
+          <span
+            className={cx(
+              "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium",
+              serverConnected
+                ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                : "border-severity-medium/30 bg-severity-medium/10 text-severity-medium",
+            )}
+          >
+            <span className={cx("h-2 w-2 rounded-full", serverConnected ? "bg-emerald-400" : "bg-severity-medium")} />
+            {serverConnected ? "Live" : "Reconnecting"}
+          </span>
+        }
+      >
+        <div className="flex items-center gap-3 rounded-md border border-phantix-700 bg-phantix-950 px-3 py-2.5">
+          <HeartPulse size={16} className="shrink-0 text-gold-400" />
+          <p className="min-w-0 flex-1 truncate text-[12px] text-slate-400">
+            {availability
+              ? lastHeartbeatAt
+                ? `Last probe ${timeAgo(lastHeartbeatAt)}`
+                : "Uptime checks configured"
+              : "Configure uptime checks in Defend → SOC availability."}
+          </p>
+          <svg width="72" height="24" viewBox="0 0 90 30" className="shrink-0" aria-hidden>
+            <polyline
+              points="0,15 10,15 15,15 18,7 21,23 24,13 27,15 44,15 49,15 54,9 57,21 60,13 63,15 90,15"
+              fill="none"
+              stroke={checks?.down ? "#ef4444" : "#E8B54D"}
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              className={cx("ecg-line", !serverConnected && "stopped")}
+            />
+          </svg>
+        </div>
+        <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+          {[
+            { label: "Checks", value: checks?.total ?? 0, tone: "text-slate-100" },
+            { label: "Up", value: checks?.up ?? 0, tone: "text-emerald-300" },
+            { label: "Degraded", value: checks?.degraded ?? 0, tone: "text-severity-medium" },
+            { label: "Down", value: checks?.down ?? 0, tone: "text-severity-critical" },
+          ].map((m) => (
+            <div key={m.label} className="rounded-md border border-phantix-700 bg-phantix-950 py-2">
+              <p className={cx("font-mono text-lg font-semibold", m.tone)}>{m.value}</p>
+              <p className="text-[12px] text-slate-500">{m.label}</p>
+            </div>
+          ))}
+        </div>
+        {serverEvents.length > 0 && (
+          <ul className="mt-3 max-h-32 space-y-2 overflow-y-auto">
+            {serverEvents.slice(0, 5).map((e, i) => (
+              <li key={`${e.ts}-${i}`} className="flex items-start gap-2 text-xs">
+                <span className={cx("mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-current", e.tone)} />
+                <div className="min-w-0">
+                  <p className="truncate text-slate-300">
+                    <span className="font-mono text-[12px] uppercase text-slate-500">{e.type}</span> · {e.label}
+                  </p>
+                  <p className="text-slate-600">{timeAgo(e.ts)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-3 flex flex-wrap gap-3 text-xs">
+          <CrossAppLink app="defend" to="/soc" className="inline-flex items-center gap-1 font-semibold text-gold-400 hover:text-gold-300">
+            Server monitoring <ArrowRight size={12} />
+          </CrossAppLink>
+          <CrossAppLink app="defend" to="/assets/intelligence" className="inline-flex items-center gap-1 font-semibold text-gold-400 hover:text-gold-300">
+            Intelligence <ArrowRight size={12} />
+          </CrossAppLink>
+        </div>
+      </Panel>
+    ),
+    // Shared feed: what the last completed assessment left for Core.
+    latest_assessment: <LatestAssessmentPanel app="core" />,
+    verified_assets: (
+      <KpiTile
+        icon={<ShieldCheck size={24} />}
+        label="Verified assets"
+        value={verified}
+        hint={activeAssets ? `${Math.round((verified / Math.max(1, activeAssets)) * 100)}% of active assets` : "Ownership-verified assets"}
+        to={href("assets", "/assets")}
+      />
+    ),
+    never_scanned: (
+      <KpiTile icon={<ScanSearch size={24} />} label="Never scanned" value={neverScanned} hint="Discovered assets awaiting a first scan" to={href("assets", "/assets")} />
+    ),
+    reports_generated: (
+      <KpiTile icon={<Radar size={24} />} label="Reports generated" value={reportsTotal} hint="In the report library" to={href("reports", "/reports")} />
+    ),
+  };
+
   return (
     <div>
       {data.securityDbBlocked && <SecurityDbBanner message={data.error} />}
@@ -537,9 +912,10 @@ export default function Dashboard() {
           )}
         </motion.div>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="flex flex-wrap items-center gap-2.5">
-          <span className="inline-flex items-center gap-2 rounded-md border border-phantix-700 bg-phantix-900 px-3 py-2 text-xs font-medium text-slate-300">
-            <CalendarRange size={14} className="text-gold-400" /> {rangeLabel}
-          </span>
+          <DateRangeFilter value={range} onChange={(next) => updateLayout({ range: next })} />
+          <button type="button" onClick={() => setCustomizing(true)} className="inline-flex items-center gap-2 rounded-md border border-phantix-700 bg-phantix-900 px-3 py-2 text-xs font-medium text-slate-200 hover:border-phantix-600">
+            <SlidersHorizontal size={14} className="text-gold-400" /> Customize
+          </button>
           <DocLink docId="howto-app-29" label="Dashboard how-to" />
           <AppSwitcher current="core" />
           <Link to={href("tracker", "/tracker")} className="btn-primary">
@@ -548,320 +924,35 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Headline KPIs */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6 xl:grid-cols-5">
-        <KpiTile
-          icon={<Gauge size={22} />}
-          label="Posture score"
-          className="lg:col-span-2 xl:col-span-1"
-          value={postureKnown ? postureScore : null}
-          suffix="/100"
-          delta={<Delta value={scoreDelta} unit=" pts" goodWhen="up" />}
-          hint={scoreDelta != null ? "vs 14 days ago" : `${activeAssets} active assets`}
-          to="/analytics"
-          delay={0}
-        />
-        <KpiTile
-          icon={<Bug size={22} />}
-          label="Open findings"
-          className="lg:col-span-2 xl:col-span-1"
-          value={openFindings}
-          hint="Verified, not fixed or accepted"
-          to={href("tracker", "/tracker")}
-          delay={0.04}
-        />
-        <KpiTile
-          icon={<ShieldAlert size={22} />}
-          label="Open risks"
-          className="lg:col-span-2 xl:col-span-1"
-          value={openRisks}
-          hint={cc?.risks?.available === false ? "Risk engine unavailable" : "In the treatment queue"}
-          delay={0.08}
-        />
-        <KpiTile
-          icon={<Boxes size={22} />}
-          label="Active assets"
-          className="lg:col-span-3 xl:col-span-1"
-          value={activeAssets}
-          hint={`${criticalAssets.length} critical at risk`}
-          to={href("assets", "/assets")}
-          delay={0.12}
-        />
-        <KpiTile
-          icon={<CheckCircle2 size={22} />}
-          label="Fix rate"
-          className="lg:col-span-3 xl:col-span-1"
-          value={fixRate}
-          suffix="%"
-          hint={trackedTotal ? `${fixed} of ${trackedTotal} verified findings fixed` : "No verified findings yet"}
-          delay={0.16}
-        />
-      </div>
-
-      {/* Charts */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
-        <Panel
-          title="Posture overview"
-          subtitle="Daily composite score"
-          delay={0.1}
-          action={<span className="chip border-phantix-700 bg-phantix-900 text-[12px] text-slate-400">14 days</span>}
-        >
-          <div className="mb-2 flex items-baseline gap-2">
-            <span className="font-mono text-[26px] font-semibold text-white">{postureKnown ? postureScore : "Not set"}</span>
-            <Delta value={scoreDelta} unit=" pts" goodWhen="up" />
-          </div>
-          {trendRes.loading && !hasTrend ? (
-            <div className="skeleton h-[170px] rounded-md" />
-          ) : hasTrend ? (
-            <AreaTrend points={scorePoints} name="Posture score" />
-          ) : (
-            <PanelEmpty>Posture history builds up as scans and intelligence runs accumulate.</PanelEmpty>
-          )}
-        </Panel>
-
-        <Panel title="Findings by surface" subtitle="Verified findings per attack surface" delay={0.14} action={<ViewAll to="/analytics" />}>
-          {surfaceTop.length === 0 ? (
-            <PanelEmpty>No findings tracked on any surface yet.</PanelEmpty>
-          ) : (
-            <>
-              <RankedBars rows={surfaceTop} scale="share" total={surfaceTotal} />
-              {surfaceMore > 0 && (
-                <div className="mt-3">
-                  <ViewAll to="/analytics" label={`+${surfaceMore} more ${surfaceMore === 1 ? "surface" : "surfaces"}`} />
-                </div>
-              )}
-            </>
-          )}
-        </Panel>
-
-        <Panel title="Findings by severity" subtitle="Share of verified findings" delay={0.18}>
-          <Donut slices={severitySlices} centerLabel="findings" />
-        </Panel>
-
-        <Panel
-          title="Open findings per day"
-          subtitle={
-            timelineVerified
-              ? "Verified findings still open at the end of each day"
-              : "Every tracked finding still open at the end of each day, verified or not"
-          }
-          delay={0.22}
-          action={<Delta value={findingsDelta} goodWhen="down" />}
-        >
-          {timelineRes.loading && !hasFindingTrend ? (
-            <div className="skeleton h-[170px] rounded-md" />
-          ) : hasFindingTrend ? (
-            <ColumnTrend points={findingPoints} name="Open findings" />
-          ) : (
-            <PanelEmpty>Daily finding counts appear once history is recorded.</PanelEmpty>
-          )}
-        </Panel>
-      </div>
-
-      {/* Work queues */}
-      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Panel title="Critical assets at risk" delay={0.16} action={<ViewAll to={href("assets", "/assets")} />}>
-          <MiniTable
-            rows={criticalAssets.slice(0, 6)}
-            columns={assetCols}
-            rowKey={(a, i) => Number(a.id ?? 0) || i}
-            rowHref={(a) => `/assets?id=${Number(a.id ?? 0)}`}
-            empty="No critical assets flagged."
-          />
-        </Panel>
-        <Panel title="Critical tracker items" delay={0.2} action={<ViewAll to={href("tracker", "/tracker")} />}>
-          <MiniTable
-            rows={trackerCritical.slice(0, 6)}
-            columns={trackerCols}
-            rowKey={(t, i) => str(t.findingKey ?? t.finding_key, `row-${i}`)}
-            rowHref={(t) => `/tracker?key=${encodeURIComponent(str(t.findingKey ?? t.finding_key, ""))}`}
-            empty="No critical open tracker items."
-          />
-        </Panel>
-        <Panel
-          title="Top risks"
-          subtitle={cc?.risks?.available === false ? "Risk engine unavailable" : undefined}
-          delay={0.24}
-          action={
-            <CrossAppLink app="defend" to="/risks" className="text-xs font-semibold text-gold-400 hover:text-gold-300">
-              View all
-            </CrossAppLink>
-          }
-        >
-          <MiniTable rows={topRisks.slice(0, 6)} columns={riskCols} rowKey={(r, i) => Number(r.id ?? 0) || i} empty="No open risks." />
-        </Panel>
-      </div>
-
-      {/* Activity */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
-        <Panel title="Recent reports" delay={0.2} action={<ViewAll to={href("reports", "/reports")} />}>
-          <MiniTable
-            rows={recentReports.slice(0, 6)}
-            columns={reportCols}
-            rowKey={(r, i) => Number(r.id ?? 0) || i}
-            rowHref={(r) => `/reports?id=${Number(r.id ?? 0)}`}
-            empty="No reports yet."
-          />
-        </Panel>
-
-        <Panel
-          title="SOC detections"
-          subtitle={cc?.soc?.available === false ? "SOC unavailable" : `${socOpen} in the open queue`}
-          delay={0.24}
-          action={
-            <CrossAppLink app="defend" to="/soc" className="text-xs font-semibold text-gold-400 hover:text-gold-300">
-              View all
-            </CrossAppLink>
-          }
-        >
-          {topDetections.length === 0 ? (
-            <PanelEmpty>Queue clear.</PanelEmpty>
-          ) : (
-            <ul className="space-y-3">
-              {topDetections.slice(0, 5).map((d, i) => (
-                <li key={Number(d.id ?? 0) || i} className="flex items-start gap-2.5">
-                  <SeverityBadge severity={str(d.severity, "info") as any} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] text-slate-200">{str(d.title)}</p>
-                    <p className="text-[12px] text-slate-500">
-                      {titleCase(str(d.status, "open"))}
-                      {d.occurrenceCount != null ? ` · ×${num(d.occurrenceCount)}` : ""}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-
-        <Panel title="Shortcuts" delay={0.28}>
-          <ul className="space-y-2">
-            {shortcuts.map((s) => (
-              <li key={s.to}>
-                <Link
-                  to={s.to}
-                  className="group flex items-center gap-3 rounded-md border border-phantix-700 bg-phantix-950 px-3 py-2 transition-colors hover:border-phantix-600 hover:bg-phantix-900"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gold-400/10 text-gold-300">{s.icon}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-medium text-slate-200">{s.label}</span>
-                    <span className="block truncate text-[12px] text-slate-500">{s.hint}</span>
-                  </span>
-                  <ArrowRight size={14} className="text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-gold-300" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-
-        <Panel
-          title="Server heartbeat"
-          subtitle="Organization uptime checks"
-          delay={0.32}
-          action={
-            <span
-              className={cx(
-                "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium",
-                serverConnected
-                  ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                  : "border-severity-medium/30 bg-severity-medium/10 text-severity-medium",
-              )}
-            >
-              <span className={cx("h-2 w-2 rounded-full", serverConnected ? "bg-emerald-400" : "bg-severity-medium")} />
-              {serverConnected ? "Live" : "Reconnecting"}
-            </span>
-          }
-        >
-          <div className="flex items-center gap-3 rounded-md border border-phantix-700 bg-phantix-950 px-3 py-2.5">
-            <HeartPulse size={16} className="shrink-0 text-gold-400" />
-            <p className="min-w-0 flex-1 truncate text-[12px] text-slate-400">
-              {availability
-                ? lastHeartbeatAt
-                  ? `Last probe ${timeAgo(lastHeartbeatAt)}`
-                  : "Uptime checks configured"
-                : "Configure uptime checks in Defend → SOC availability."}
-            </p>
-            <svg width="72" height="24" viewBox="0 0 90 30" className="shrink-0" aria-hidden>
-              <polyline
-                points="0,15 10,15 15,15 18,7 21,23 24,13 27,15 44,15 49,15 54,9 57,21 60,13 63,15 90,15"
-                fill="none"
-                stroke={checks?.down ? "#ef4444" : "#E8B54D"}
-                strokeWidth="2"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                className={cx("ecg-line", !serverConnected && "stopped")}
-              />
-            </svg>
-          </div>
-          <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-            {[
-              { label: "Checks", value: checks?.total ?? 0, tone: "text-slate-100" },
-              { label: "Up", value: checks?.up ?? 0, tone: "text-emerald-300" },
-              { label: "Degraded", value: checks?.degraded ?? 0, tone: "text-severity-medium" },
-              { label: "Down", value: checks?.down ?? 0, tone: "text-severity-critical" },
-            ].map((m) => (
-              <div key={m.label} className="rounded-md border border-phantix-700 bg-phantix-950 py-2">
-                <p className={cx("font-mono text-lg font-semibold", m.tone)}>{m.value}</p>
-                <p className="text-[12px] text-slate-500">{m.label}</p>
-              </div>
+      {/* The person's cards, in their order. Consecutive cards of one kind form
+          a band: KPIs share a row that fills its width, panels sit in a grid,
+          wide cards take the full width. */}
+      <div className="space-y-4">
+        {cardBands(visibleCards).map((band) => (
+          <div key={band.ids.join("|")} className={BAND_GRID[band.size]}>
+            {band.ids.map((id, i) => (
+              <motion.div
+                key={id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: Math.min(i, 8) * 0.03 }}
+                className="min-w-0 [&>*]:h-full"
+              >
+                {cardNodes[id]}
+              </motion.div>
             ))}
           </div>
-          {serverEvents.length > 0 && (
-            <ul className="mt-3 max-h-32 space-y-2 overflow-y-auto">
-              {serverEvents.slice(0, 5).map((e, i) => (
-                <li key={`${e.ts}-${i}`} className="flex items-start gap-2 text-xs">
-                  <span className={cx("mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-current", e.tone)} />
-                  <div className="min-w-0">
-                    <p className="truncate text-slate-300">
-                      <span className="font-mono text-[12px] uppercase text-slate-500">{e.type}</span> · {e.label}
-                    </p>
-                    <p className="text-slate-600">{timeAgo(e.ts)}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="mt-3 flex flex-wrap gap-3 text-xs">
-            <CrossAppLink app="defend" to="/soc" className="inline-flex items-center gap-1 font-semibold text-gold-400 hover:text-gold-300">
-              Server monitoring <ArrowRight size={12} />
-            </CrossAppLink>
-            <CrossAppLink app="defend" to="/assets/intelligence" className="inline-flex items-center gap-1 font-semibold text-gold-400 hover:text-gold-300">
-              Intelligence <ArrowRight size={12} />
-            </CrossAppLink>
-          </div>
-        </Panel>
+        ))}
       </div>
 
-      {/* Shared feed: what the last completed assessment left for Core. */}
-      <LatestAssessmentPanel app="core" className="mt-4" />
-
-      {/* Coverage summary */}
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-        <KpiTile
-          icon={<ShieldCheck size={24} />}
-          label="Verified assets"
-          value={verified}
-          hint={activeAssets ? `${Math.round((verified / Math.max(1, activeAssets)) * 100)}% of active assets` : "Ownership-verified assets"}
-          to={href("assets", "/assets")}
-          delay={0.2}
-        />
-        <KpiTile
-          icon={<ScanSearch size={24} />}
-          label="Never scanned"
-          value={neverScanned}
-          hint="Discovered assets awaiting a first scan"
-          to={href("assets", "/assets")}
-          delay={0.24}
-        />
-        <KpiTile
-          icon={<Radar size={24} />}
-          label="Reports generated"
-          value={reportsTotal}
-          hint="In the report library"
-          to={href("reports", "/reports")}
-          delay={0.28}
-        />
-      </div>
+      <CustomizeOverview
+        open={customizing}
+        onClose={() => setCustomizing(false)}
+        cards={OVERVIEW_CARDS}
+        visible={visibleCards}
+        defaults={DEFAULT_CARDS}
+        onApply={(cards) => updateLayout({ cards })}
+      />
 
       {!operate.unlocked && dualControl.policy_mode !== "off" && (
         <motion.div
