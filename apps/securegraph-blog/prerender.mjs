@@ -42,7 +42,7 @@ for (const key of [
   }
 }
 
-const { render, snapshot, setContentOrigin, API_MODE } = await import(pathToFileURL(ssrEntry).href);
+const { render, snapshot, setContentOrigin, API_MODE, postJsonLd } = await import(pathToFileURL(ssrEntry).href);
 
 // ── Head helpers ─────────────────────────────────────────────────────────────
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -60,30 +60,46 @@ function page(template, route, body, data, meta) {
     /<div id="root"><\/div>/,
     `<div id="root">${body}</div>\n    <script type="application/json" id="weekly-content">${json}</script>`,
   );
+  html = setTag(html, /<link\s+rel="canonical"[^>]*>/, `<link rel="canonical" href="${esc(href)}" />`);
   if (!meta) return html;
   html = setTag(html, /<title>[\s\S]*?<\/title>/, `<title>${esc(meta.title)}</title>`);
   html = setTag(html, /<meta\s+name="description"[\s\S]*?\/>/, `<meta name="description" content="${esc(meta.description)}" />`);
-  html = setTag(html, /<link\s+rel="canonical"[^>]*>/, `<link rel="canonical" href="${esc(href)}" />`);
   html = setTag(html, /<meta\s+property="og:type"[^>]*>/, `<meta property="og:type" content="article" />`);
   html = setTag(html, /<meta\s+property="og:url"[^>]*>/, `<meta property="og:url" content="${esc(href)}" />`);
   html = setTag(html, /<meta\s+property="og:title"[^>]*>/, `<meta property="og:title" content="${esc(meta.title)}" />`);
   html = setTag(html, /<meta\s+property="og:description"[^>]*>/, `<meta property="og:description" content="${esc(meta.description)}" />`);
   html = setTag(html, /<meta\s+name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${esc(meta.title)}" />`);
   html = setTag(html, /<meta\s+name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${esc(meta.description)}" />`);
-  return html;
+  // The essay's Article + BreadcrumbList graph, under the marker usePostSeo
+  // replaces on mount. Without it a crawler read only the home page's graph.
+  const graph = JSON.stringify(meta.jsonLd).replace(/</g, "\\u003c");
+  return html.replace("</head>", `    <script type="application/ld+json" data-post-seo="true">${graph}</script>\n  </head>`);
 }
 
 // ── Render ───────────────────────────────────────────────────────────────────
-// The SPA fallback for every non-prerendered path (see vercel.json rewrites).
-// Written once from the fresh build; a rerun starts from it, never from an
-// index.html that is already prerendered.
+// The SPA fallback for a post published after this build (see vercel.json
+// rewrites). Written once from the fresh build; a rerun starts from it, never
+// from an index.html that is already prerendered. It carries no canonical:
+// the home one told Google every such post was a copy of the issue page, and
+// usePostSeo sets the post's own on mount. page() sets each prerendered
+// page's canonical itself.
 const shell = path.join(dist, "app-shell.html");
-if (!fs.existsSync(shell)) fs.copyFileSync(path.join(dist, "index.html"), shell);
+if (!fs.existsSync(shell)) {
+  const fresh = fs.readFileSync(path.join(dist, "index.html"), "utf8");
+  fs.writeFileSync(shell, fresh.replace(/\s*<link\s+rel="canonical"[^>]*>/, ""));
+}
 const template = fs.readFileSync(shell, "utf8");
 if (!template.includes('<div id="root"></div>')) {
   console.error("prerender: app-shell.html has no empty #root; rebuild with vite build first");
   process.exit(1);
 }
+// Every other unknown path gets a real 404 (Vercel serves 404.html with that
+// status) instead of a 200 copy of the issue page. The app still mounts and
+// shows its not-found page.
+fs.writeFileSync(
+  path.join(dist, "404.html"),
+  template.replace(/<meta\s+name="robots"[^>]*>/, '<meta name="robots" content="noindex" />'),
+);
 
 // Same-origin API bases ("/api/v1/blog") resolve against the site, exactly as
 // in the browser (vercel.json rewrites /api/v1 to the backend).
@@ -108,6 +124,7 @@ const routes = [
     {
       title: `${p.title} · ${PUBLICATION}`,
       description: p.excerpt || `${p.title}, from ${PUBLICATION} by SecureGraph.`,
+      jsonLd: postJsonLd(p),
     },
   ]),
 ];

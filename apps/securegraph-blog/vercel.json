@@ -4,13 +4,21 @@
   "installCommand": "cd ../.. && npm install",
   "buildCommand": "cd ../.. && npm run build:blog",
   "outputDirectory": "dist",
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/posts/the-new-security-problem-edited",
+      "destination": "/posts/the-new-security-problem",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/v1/:path*",
       "destination": "https://staging.phantix.site/api/v1/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/posts/:slug",
       "destination": "/app-shell.html"
     }
   ],
