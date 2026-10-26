@@ -115,22 +115,33 @@ const WEB_TYPES = new Set(["domain", "subdomain", "url", "web_app", "webapp", "a
 export const isWebAssetType = (type: string) => WEB_TYPES.has(String(type || "").toLowerCase());
 
 /**
- * The org's verified domains (Platform → Identity), refreshed when the user
- * comes back to the tab. Empty on a backend without the endpoint.
+ * The org's verified domains, refreshed when the user comes back to the tab.
+ *
+ * `verifiedNames` is the server's own list: the one the active-testing gate
+ * checks, including a company domain verified at sign-up that has no row on
+ * Platform → Identity. Deciding coverage from it keeps every application in
+ * agreement with what the server will actually allow. An older backend without
+ * the field falls back to the verified rows. Empty on a backend without the
+ * endpoint.
  */
 export function useVerifiedDomains() {
   const [domains, setDomains] = useState<VerifiedDomain[]>([]);
+  const [names, setNames] = useState<string[] | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   const reload = useCallback(() => {
     if (isDemoMode()) {
       setDomains([{ id: 1, domain: "acme.ng", status: "verified", is_primary: true }]);
+      setNames(["acme.ng"]);
       setLoaded(true);
       return;
     }
-    api.get<{ items?: VerifiedDomain[] }>("/org-users/domains")
-      .then((res) => setDomains(Array.isArray(res?.items) ? res.items : []))
-      .catch(() => setDomains([]))
+    api.get<{ items?: VerifiedDomain[]; verified_names?: string[] }>("/org-users/domains")
+      .then((res) => {
+        setDomains(Array.isArray(res?.items) ? res.items : []);
+        setNames(Array.isArray(res?.verified_names) ? res.verified_names.map((n) => hostOf(n)).filter(Boolean) : null);
+      })
+      .catch(() => { setDomains([]); setNames(null); })
       .finally(() => setLoaded(true));
   }, []);
 
@@ -138,12 +149,32 @@ export function useVerifiedDomains() {
   useOnReturn(reload);
 
   const verified = domains.filter((d) => d.status === "verified");
+  const verifiedNames = names ?? verified.map((d) => hostOf(d.domain));
+  const pendingNames = domains.filter((d) => d.status === "pending").map((d) => hostOf(d.domain));
   const coveredBy = useCallback(
-    (value: string) => verified.find((d) => hostUnder(value, d.domain))?.domain ?? null,
+    (value: string) => verifiedNames.find((d) => hostUnder(value, d)) ?? null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [domains],
+    [domains, names],
   );
-  return { domains, verified, loaded, reload, coveredBy };
+  return { domains, verified, verifiedNames, pendingNames, loaded, reload, coveredBy };
+}
+
+/**
+ * Which domains to offer for verification, given targets no verified domain
+ * covers. Never just "the first asset": a domain the user already started
+ * verifying comes first, then the domain of the address they signed in with,
+ * then the rest by how many targets each would cover.
+ */
+export function domainsToVerify(uncovered: string[], opts: { pending?: string[]; signedInEmail?: string | null } = {}): string[] {
+  const counts = new Map<string, number>();
+  for (const v of uncovered) {
+    const d = suggestDomain(v);
+    if (d && !isIpLike(d)) counts.set(d, (counts.get(d) ?? 0) + 1);
+  }
+  const emailDomain = suggestDomain(String(opts.signedInEmail || "").split("@")[1] || "");
+  const rank = (d: string) =>
+    (opts.pending ?? []).some((p) => hostUnder(d, p) || hostUnder(p, d)) ? 0 : emailDomain && d === emailDomain ? 1 : 2;
+  return [...counts.keys()].sort((a, b) => rank(a) - rank(b) || (counts.get(b)! - counts.get(a)!) || a.localeCompare(b));
 }
 
 // ── Prerequisites ───────────────────────────────────────────────────────────
@@ -156,7 +187,7 @@ type Milestones = { milestones?: { key: string; done_at: string | null }[] };
  * domains. `null` means unknown (older backend) — callers then stay quiet.
  */
 export function useSetupStatus() {
-  const { verified, loaded: domainsLoaded, reload: reloadDomains } = useVerifiedDomains();
+  const { verifiedNames, loaded: domainsLoaded, reload: reloadDomains } = useVerifiedDomains();
   const [databaseReady, setDatabaseReady] = useState<boolean | null>(null);
 
   const reload = useCallback(() => {
@@ -174,7 +205,7 @@ export function useSetupStatus() {
 
   return {
     databaseReady,
-    hasVerifiedDomain: domainsLoaded ? verified.length > 0 : null,
+    hasVerifiedDomain: domainsLoaded ? verifiedNames.length > 0 : null,
     reload: () => { reload(); reloadDomains(); },
   };
 }

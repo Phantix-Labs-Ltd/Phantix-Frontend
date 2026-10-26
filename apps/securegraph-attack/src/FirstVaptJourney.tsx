@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Loader2, Play, Plus, Sparkles } from "lucide-react";
 import { Card } from "@sg/ui";
 import { loadAssetsBundle } from "@sg/data";
-import { PlatformSetupLink, isWebAssetType, suggestDomain, useOnReturn, useVerifiedDomains } from "@sg/platformSetup";
+import { PlatformSetupLink, domainsToVerify, isIpLike, isWebAssetType, useAupStatus, useOnReturn, useVerifiedDomains } from "@sg/platformSetup";
+import { useStore } from "@sg/store";
 import { cx } from "@sg/utils";
 import type { Asset, VaptCampaign } from "@sg/types";
 
@@ -11,7 +12,7 @@ type StepKey = "asset" | "verify" | "plan" | "start";
 
 const STEPS: { key: StepKey; title: string; detail: string }[] = [
   { key: "asset", title: "Add your first asset", detail: "The domain, IP or app you want tested." },
-  { key: "verify", title: "Verify you own it", detail: "Active tests send real attack traffic, so a domain needs proof of ownership first." },
+  { key: "verify", title: "Verify you own it", detail: "Active tests send real attack traffic, so a target needs proof of ownership first. Verifying one domain covers it and all its subdomains." },
   { key: "plan", title: "Review the plan", detail: "SecureGraph proposes what to test on your assets. Switch off anything you don't want." },
   { key: "start", title: "Start the campaign", detail: "Launch the draft the plan created." },
 ];
@@ -36,7 +37,9 @@ export default function FirstVaptJourney({ campaigns, planning, onPlan, onStart 
   }, []);
   useEffect(() => { load(); }, [load]);
   useOnReturn(load);
-  const { loaded: domainsLoaded, coveredBy } = useVerifiedDomains();
+  const { loaded: domainsLoaded, coveredBy, pendingNames } = useVerifiedDomains();
+  const aup = useAupStatus();
+  const { session } = useStore();
 
   if (!assets || !domainsLoaded) {
     return (
@@ -46,17 +49,27 @@ export default function FirstVaptJourney({ campaigns, planning, onPlan, onStart 
     );
   }
 
-  // Web assets need a verified domain over them; IPs are covered by the AUP instead.
+  // The same rule as the server: a web asset needs a verified domain over it, an
+  // IP the AUP confirmation; anything else needs no proof. One testable target is
+  // enough to go on. Assets outside the verified domains are left out of the plan
+  // rather than blocking it: they may not be the user's to verify at all.
+  const testable = (a: Asset) =>
+    isWebAssetType(a.asset_type) ? Boolean(coveredBy(a.value))
+      : isIpLike(a.value) ? !aup.status || aup.status.covers_ip_targets
+        : true;
+  const covered = assets.filter(testable);
   const uncovered = assets.filter((a) => isWebAssetType(a.asset_type) && !coveredBy(a.value));
   const draft = campaigns.find((c) => c.status === "draft") ?? null;
   const done: Record<StepKey, boolean> = {
     asset: assets.length > 0,
-    verify: assets.length > 0 && uncovered.length === 0,
+    verify: covered.length > 0,
     plan: Boolean(draft),
     start: false,
   };
   const current = STEPS.findIndex((s) => !done[s.key]);
-  const toVerify = uncovered.length ? suggestDomain(uncovered[0].value) : "";
+  const choices = domainsToVerify(uncovered.map((a) => a.value), { pending: pendingNames, signedInEmail: session?.userEmail });
+  const toVerify = choices[0] ?? "";
+  const outside = [...new Set(uncovered.map((a) => a.value))];
 
   const action = (key: StepKey): React.ReactNode => {
     switch (key) {
@@ -68,11 +81,24 @@ export default function FirstVaptJourney({ campaigns, planning, onPlan, onStart 
         );
       case "verify":
         return (
-          <div className="flex flex-wrap items-center gap-2">
-            <PlatformSetupLink task={{ kind: "verify_domain", domain: toVerify || undefined }} variant="primary" className="!py-1.5 text-xs">
-              Verify {toVerify || "your domain"}
-            </PlatformSetupLink>
-            <span className="text-[12px] text-slate-500">Opens the Platform in a new tab. This updates when you come back.</span>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <PlatformSetupLink task={{ kind: "verify_domain", domain: toVerify || undefined }} variant="primary" className="!py-1.5 text-xs">
+                Verify {toVerify || "your domain"}
+              </PlatformSetupLink>
+              {choices.slice(1, 3).map((d) => (
+                <PlatformSetupLink key={d} task={{ kind: "verify_domain", domain: d }} variant="secondary" className="!py-1.5 text-xs">
+                  Verify {d}
+                </PlatformSetupLink>
+              ))}
+              <span className="text-[12px] text-slate-500">Opens the Platform in a new tab. This updates when you come back.</span>
+            </div>
+            {toVerify && (
+              <p className="text-[12px] text-slate-500">
+                Not your domain? Verify the one you own instead, or{" "}
+                <Link to="/targets" className="text-gold-400 hover:text-gold-300">remove assets that aren&apos;t yours</Link>.
+              </p>
+            )}
           </div>
         );
       case "plan":
@@ -119,6 +145,13 @@ export default function FirstVaptJourney({ campaigns, planning, onPlan, onStart 
                     <p className="mt-0.5 text-[13px] text-slate-400">{s.detail}</p>
                     <div className="mt-2.5">{action(s.key)}</div>
                   </>
+                )}
+                {isDone && s.key === "verify" && outside.length > 0 && (
+                  <p className="mt-0.5 text-[12px] text-slate-500">
+                    {covered.length} target{covered.length === 1 ? "" : "s"} ready to test. {outside.length} outside your verified domains{" "}
+                    ({outside.slice(0, 2).join(", ")}{outside.length > 2 ? ", …" : ""}) {outside.length === 1 ? "is" : "are"} left out.{" "}
+                    <Link to="/targets" className="text-gold-400 hover:text-gold-300">Review targets</Link>
+                  </p>
                 )}
                 {isDone && s.key === "asset" && (
                   <Link to="/targets" className="mt-0.5 inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-300">

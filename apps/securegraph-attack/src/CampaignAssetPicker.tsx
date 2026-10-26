@@ -3,11 +3,12 @@ import { Link } from "react-router-dom";
 import { Loader2, Lock, Plus, Search, Sparkles } from "lucide-react";
 import { api, isDemoMode } from "@sg/api";
 import { loadAssetsBundle } from "@sg/data";
+import { useStore } from "@sg/store";
 import {
   PlatformSetupLink,
+  domainsToVerify,
   isIpLike,
   isWebAssetType,
-  suggestDomain,
   useAupStatus,
   useOnReturn,
   useVerifiedDomains,
@@ -95,8 +96,9 @@ export default function CampaignAssetPicker({ procedureKey, selected, onChange }
     return () => { alive = false; };
   }, [procedureKey]);
 
-  const { loaded: domainsLoaded, coveredBy } = useVerifiedDomains();
+  const { loaded: domainsLoaded, coveredBy, pendingNames } = useVerifiedDomains();
   const aup = useAupStatus();
+  const { session } = useStore();
 
   /** Why an asset can't be tested yet, or null when it can. */
   const blockedReason = useCallback((a: Asset): string | null => {
@@ -150,7 +152,12 @@ export default function CampaignAssetPicker({ procedureKey, selected, onChange }
     const rank = (x: Asset) => (suited(x) ? 0 : 2) + (blockedReason(x) ? 1 : 0);
     return rank(a) - rank(b) || a.value.localeCompare(b.value);
   });
-  const firstUnverified = assets.find((a) => isWebAssetType(a.asset_type) && !coveredBy(a.value));
+  // The domain to offer: one the user started verifying or signed in with, not
+  // simply the first uncovered asset (which may belong to someone else).
+  const toVerify = domainsToVerify(
+    assets.filter((a) => isWebAssetType(a.asset_type) && !coveredBy(a.value)).map((a) => a.value),
+    { pending: pendingNames, signedInEmail: session?.userEmail },
+  )[0];
 
   return (
     <div className="space-y-2">
@@ -223,9 +230,9 @@ export default function CampaignAssetPicker({ procedureKey, selected, onChange }
             ? `${selected.length} asset${selected.length === 1 ? "" : "s"} selected`
             : "Select at least one asset."}
         </span>
-        {firstUnverified && (
-          <PlatformSetupLink task={{ kind: "verify_domain", domain: suggestDomain(firstUnverified.value) }} variant="secondary" className="!py-1 text-[12px]">
-            Verify {suggestDomain(firstUnverified.value)}
+        {toVerify && (
+          <PlatformSetupLink task={{ kind: "verify_domain", domain: toVerify }} variant="secondary" className="!py-1 text-[12px]">
+            Verify {toVerify}
           </PlatformSetupLink>
         )}
       </div>

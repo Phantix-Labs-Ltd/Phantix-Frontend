@@ -1374,15 +1374,25 @@ export type TrendSeriesPoint = { label: string; value: number; secondary?: numbe
 
 /** 14-day posture score trend for the main dashboard.
  *  Prefers the intelligence dashboard's `posture_trend`, derives from open risks when absent. */
-export async function loadPostureTrend(): Promise<PosturePoint[]> {
+/** Demo series carry fixed dates; re-date them so the last point is today. */
+function demoDaysEndingToday<T>(points: T[], set: (p: T, day: string) => T): T[] {
+  const end = new Date();
+  return points.map((p, i) => {
+    const d = new Date(end.getFullYear(), end.getMonth(), end.getDate() - (points.length - 1 - i));
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return set(p, day);
+  });
+}
+
+export async function loadPostureTrend(days = 14): Promise<PosturePoint[]> {
   if (isDemoMode()) {
     await delay(150);
-    return demo.postureTrend as PosturePoint[];
+    return demoDaysEndingToday(demo.postureTrend as PosturePoint[], (p, day) => ({ ...p, day }));
   }
   // The canonical posture score per day (GET /posture), the same formula as the
   // score shown beside every trend chart. The asset-intelligence trend below is a
   // different index; it only answers until the API serves the canonical trend.
-  const posture = await softOne<{ trend?: { day?: string; score?: number | null }[] }>("/posture?days=14");
+  const posture = await softOne<{ trend?: { day?: string; score?: number | null }[] }>(`/posture?days=${Math.max(1, Math.min(365, Math.round(days)))}`);
   const canonical = (posture?.trend ?? [])
     .filter((p) => p.day && p.score != null)
     .map((p) => ({ day: String(p.day), score: Number(p.score), findings: 0 }));
@@ -3688,7 +3698,10 @@ export interface TrackerTimeline {
  * with evidence, the population the dashboard cards count.
  */
 export async function loadTrackerTimeline(days = 90, opts: { verified?: boolean } = {}): Promise<TrackerTimeline | null> {
-  if (isDemoMode()) { await delay(250); return demo.trackerTimeline; }
+  if (isDemoMode()) {
+    await delay(250);
+    return { ...demo.trackerTimeline, series: demoDaysEndingToday(demo.trackerTimeline.series, (p, day) => ({ ...p, day })) };
+  }
   const filter = opts.verified ? "&verification=verified" : "";
   const raw = await softOne<any>(`/reports/tracker/analytics/timeline?days=${days}${filter}`);
   if (!raw || !Array.isArray(raw.series)) return null;

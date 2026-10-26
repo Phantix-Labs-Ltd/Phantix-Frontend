@@ -16,6 +16,7 @@ import {
   LifeBuoy,
   Lock,
   LogOut,
+  BellRing,
   MessageSquareWarning,
   PanelLeftClose,
   PanelLeftOpen,
@@ -1004,6 +1005,13 @@ export function ApplicationShell({
                           <ExternalLink size={15} /> Platform settings
                         </a>
                         <CoreLink
+                          path="/settings/notifications"
+                          title="Notification preferences"
+                          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-phantix-800"
+                        >
+                          <BellRing size={15} /> Notification preferences
+                        </CoreLink>
+                        <CoreLink
                           path="/settings/privacy"
                           title="Privacy and data requests"
                           className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-phantix-800"
@@ -1208,6 +1216,9 @@ export function ApplicationShell({
             <a href={PLATFORM_IDENTITY_URL} className={`${SHEET_ROW} text-slate-200`}>
               <ExternalLink size={17} /> Platform settings
             </a>
+            <CoreLink path="/settings/notifications" title="Notification preferences" className={`${SHEET_ROW} text-slate-200`}>
+              <BellRing size={17} /> Notification preferences
+            </CoreLink>
             <CoreLink path="/settings/privacy" title="Privacy and data requests" className={`${SHEET_ROW} text-slate-200`}>
               <ShieldCheck size={17} /> Privacy and data requests
             </CoreLink>
