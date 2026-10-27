@@ -44,6 +44,7 @@ import type { AgiAction, AgiEngagement, AgiSession, AgiTranscriptChunk, Severity
 import { cx, humanize } from "../utils";
 import { useStickToBottom } from "../useStickToBottom";
 import type { SendHint } from "../useChatSend";
+import { useStore } from "../store";
 
 const NODE_DOT: Record<NodeStatus, string> = {
   pending: "bg-slate-500",
@@ -553,6 +554,8 @@ export default function AgiConsole({
   pendingPrompts = [],
   streaming = false,
 }: AgiConsoleProps) {
+  // Only the assigned authorizer can open the Authorizations queue.
+  const isAuthorizer = Boolean(useStore().session?.isAuthorizer);
   const [persona, setPersona] = useState<AgentPersona | "all">("all");
   const [lanes, setLanes] = useState(false);
   const [showTerm, setShowTerm] = useState(false);
@@ -996,7 +999,7 @@ export default function AgiConsole({
                   <ApprovalNotice
                     count={actions.length}
                     stateChanging={actions.some((a) => a.action_type === "state_changing")}
-                    authorizationsHref="/authorizations"
+                    authorizationsHref={isAuthorizer ? "/authorizations" : undefined}
                   />
                 )}
                 {thinking && !paused && !clarification && <TypingIndicator workingOn={(workingOn || "").trim() || undefined} phaseId={livePhaseId} />}

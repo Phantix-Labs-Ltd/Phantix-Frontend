@@ -17,6 +17,8 @@ interface ModuleEntry {
   label: string;
   /** Where it lives in the sidebar (for the human answer). */
   section: string;
+  /** Only the organization's assigned authorizer may open it. */
+  authorizerOnly?: boolean;
   /** What it does. */
   desc: string;
   /** Keywords matched against the question (lowercased). */
@@ -47,14 +49,14 @@ const MODULES: ModuleEntry[] = [
   { route: "/audit", label: "Audit Trail", section: "System", desc: "the audit trail of actions", keywords: ["audit", "audit trail", "activity log", "history", "actions"] },
   { route: "/people", label: "People", section: "System", desc: "team members and access", keywords: ["people", "users", "team", "members", "access", "roles", "staff"] },
   { route: "/support", label: "Support", section: "System", desc: "support tickets and help", keywords: ["support", "ticket", "help", "contact", "bug"] },
-  { route: "/authorizations", label: "Approvals", section: "Authorizer", desc: "your authorizer approval inbox", keywords: ["approval", "approvals", "authorizer", "authorization", "inbox", "pending actions", "sign off"] },
+  { route: "/authorizations", authorizerOnly: true, label: "Approvals", section: "Authorizer", desc: "your authorizer approval inbox", keywords: ["approval", "approvals", "authorizer", "authorization", "inbox", "pending actions", "sign off"] },
   { route: "/docs", label: "Documentation", section: "System", desc: "in-app documentation and guides", keywords: ["docs", "documentation", "guide", "manual", "how to", "help center", "faq"] },
   { route: "/settings", label: "Platform settings", section: "Tenant admin", desc: "company settings, billing and AI governance (opens the Platform)", keywords: ["settings", "billing", "plan", "subscription", "upgrade", "ai settings", "payment", "profile"] },
 ];
 
 // Prefer phrase matches (stronger than loose keyword), then keyword counts.
-function matchModules(q: string): ModuleEntry[] {
-  const scored = MODULES.map((m) => {
+function matchModules(q: string, isAuthorizer: boolean): ModuleEntry[] {
+  const scored = MODULES.filter((m) => isAuthorizer || !m.authorizerOnly).map((m) => {
     let score = 0;
     for (const p of m.phrases ?? []) {
       if (q.includes(p)) score += 3;
@@ -78,7 +80,7 @@ function resultFor(modules: ModuleEntry[]): NavGuideResult | null {
 }
 
 /** Try to answer a "where do I find X" style question locally. Null = not a navigation question. */
-export function tryNavigationAnswer(raw: string): NavGuideResult | null {
+export function tryNavigationAnswer(raw: string, { isAuthorizer = false }: { isAuthorizer?: boolean } = {}): NavGuideResult | null {
   const q = ` ${raw.toLowerCase().trim()} `.replace(/\s+/g, " ");
 
   // Gate on clear navigation intent.
@@ -95,7 +97,7 @@ export function tryNavigationAnswer(raw: string): NavGuideResult | null {
     /where.*(module|page|section|screen)/.test(q);
   if (!intent) return null;
 
-  const modules = matchModules(q);
+  const modules = matchModules(q, isAuthorizer);
   return resultFor(modules);
 }
 

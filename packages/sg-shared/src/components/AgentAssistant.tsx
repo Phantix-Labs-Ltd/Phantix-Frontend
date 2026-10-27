@@ -409,7 +409,7 @@ export default function AgentAssistant() {
     if (busy) abortRef.current?.abort();
 
     if (!msg.toLowerCase().startsWith("/")) {
-      const nav = tryNavigationAnswer(msg);
+      const nav = tryNavigationAnswer(msg, { isAuthorizer: Boolean(session?.isAuthorizer) });
       if (nav) {
         setMessages((m) => [...m, { role: "user", text: msg }, { role: "agent", text: nav.text, nav }]);
         setInput("");

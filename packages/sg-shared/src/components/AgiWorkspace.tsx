@@ -176,7 +176,9 @@ function hasRealBrief(loop: any): boolean {
 }
 
 export default function AgiWorkspace({ variant = "drawer" }: { variant?: WorkspaceVariant }) {
-  const { toast, requireDualControl, demoActive } = useStore();
+  const { toast, requireDualControl, demoActive, session: storeSession } = useStore();
+  // Only the assigned authorizer can open the Authorizations queue.
+  const isAuthorizer = Boolean(storeSession?.isAuthorizer);
   const reportSubmitted = useRef(false);
   const [access, setAccess] = useState<AgiAccess | null>(null);
   const [booting, setBooting] = useState(true);
@@ -1688,7 +1690,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                     <ApprovalNotice
                       count={actions.length}
                       stateChanging={actions.some((a) => a.action_type === "state_changing")}
-                      authorizationsHref="/authorizations"
+                      authorizationsHref={isAuthorizer ? "/authorizations" : undefined}
                     />
                   )}
                   {running && transcript.length > 0 && !thinking && !connError && actions.length === 0 && !openClarification && !stalled && (

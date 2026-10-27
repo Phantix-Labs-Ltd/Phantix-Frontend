@@ -324,7 +324,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         initiatorName: initName,
         authorizerName: authName,
         isInitiator: s.isInitiator || matchInit,
-        isAuthorizer: s.isAuthorizer || matchAuth,
+        // The role assignment names the one authorizer, so it decides outright:
+        // OR-ing kept the flag (the Authorizations page and its nav entry) on a
+        // person after the organization handed the role to someone else.
+        isAuthorizer: dc.authorizer?.email ? matchAuth : s.isAuthorizer,
       };
     });
     return dc;

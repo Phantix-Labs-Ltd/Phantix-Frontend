@@ -25,6 +25,8 @@ type InboxItem = {
   treatmentId?: number;
   riskId?: number;
   requiredRole?: string;
+  /** When the request lapses; an expired one can no longer be approved. */
+  expiresAt?: string | null;
   decidePaths: { approve?: string; reject?: string; decide?: string };
 };
 
@@ -66,7 +68,11 @@ export default function AuthorizerInbox() {
     null,
   );
 
-  const items = inbox?.items || [];
+  // The server leaves expired requests out; filtering here too keeps one that
+  // lapses while the page is open (or a server without that filter) from showing.
+  const now = Date.now();
+  const items = (inbox?.items || []).filter((i) => !i.expiresAt || Date.parse(i.expiresAt) > now);
+  const countOf = (channel: InboxItem["channel"]) => items.filter((i) => i.channel === channel).length;
   const filtered = filter === "all" ? items : items.filter((i) => {
     if (filter === "dual_control") return i.channel === "dual_control";
     if (filter === "vapt") return i.channel === "vapt";
@@ -157,9 +163,9 @@ export default function AuthorizerInbox() {
         actions={
           <span className="flex items-center gap-2">
             <DocLink docId="howto-app-14" label="Approvals how-to" />
-            {inbox?.total ? (
+            {items.length ? (
               <span className="chip text-sm font-mono text-gold-400 bg-gold-400/10 border-gold-400/30">
-                {inbox.total} pending
+                {items.length} pending
               </span>
             ) : null}
           </span>
@@ -192,10 +198,10 @@ export default function AuthorizerInbox() {
 
       <div className="flex flex-wrap items-center gap-1.5 mb-4">
         {[
-          { id: "all", label: "All", count: inbox?.total },
-          { id: "dual_control", label: "Dual Control", count: inbox?.counts?.dualControl },
-          { id: "vapt", label: "VAPT", count: inbox?.counts?.vapt },
-          { id: "risk", label: "Risk", count: inbox?.counts?.riskTreatments },
+          { id: "all", label: "All", count: items.length },
+          { id: "dual_control", label: "Dual Control", count: countOf("dual_control") },
+          { id: "vapt", label: "VAPT", count: countOf("vapt") },
+          { id: "risk", label: "Risk", count: countOf("risk") },
         ].map((f) => (
           <button
             key={f.id}
