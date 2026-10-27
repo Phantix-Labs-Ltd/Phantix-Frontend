@@ -450,6 +450,8 @@ const demoTeam: TeamMember[] = [
   { id: 1, principal_type: "staff", principal_id: 9, principal_name: "Ifeoma Ade", principal_email: "ifeoma@phantixlabs.com", role: "lead" },
   { id: 2, principal_type: "staff", principal_id: 11, principal_name: "Tunde Bello", principal_email: "tunde@phantixlabs.com", role: "reviewer" },
   { id: 3, principal_type: "org_user", principal_id: 1, principal_name: "Ada Okonkwo", principal_email: "ada@acme.ng", role: "auditee" },
+  // The demo session's user, so the demo shows an auditor's view of each page.
+  { id: 4, principal_type: "org_user", principal_id: 2, principal_name: "Demo Explorer", principal_email: "demo@acme.ng", role: "auditor" },
 ];
 
 const demoRequests: EvidenceRequest[] = [

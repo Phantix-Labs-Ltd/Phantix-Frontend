@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeft, CheckCheck, ChevronDown, ClipboardList, ExternalLink, FileText, FlaskConical, ListChecks, MessageSquare, NotebookPen,
+  ArrowLeft, ArrowRight, Bot, CheckCheck, ChevronDown, ClipboardList, Hand, ExternalLink, FileText, FlaskConical, ListChecks, MessageSquare, NotebookPen,
   Plus, RefreshCw, ShieldAlert, Sparkles, Trash2, Wand2,
 } from "lucide-react";
 import { Card, CardHeader, EmptyState, ErrorState, Modal, PageHeader, PageSkeleton, SeverityBadge, Tabs } from "@sg/ui";
@@ -20,7 +20,7 @@ import {
   EVIDENCE_TYPE_LABEL, loadEvidence, loadMe, registerEvidence, type AssuranceMe, type EvidenceType,
   type AuditFinding, type AuditReport, type ControlTest, type EngagementStatus, type EngagementSummary,
   type EvidenceRequest, type EvidenceRequestStatus, type FindingSeverity, type FindingSignificance, type ReportType,
-  type ScopeItem, type ScopeItemInput, type ScopeItemType, type TestResult, type Workpaper,
+  type ScopeItem, type ScopeItemInput, type ScopeItemType, type TeamMember, type TeamRole, type TestResult, type Workpaper,
   addScopeItems, bulkRecordTests, bulkSignOff, bulkUpdateEvidenceRequests, loadControls, loadEvidenceLibrary, loadScopeSuggestions,
   prepareEngagement, type ControlTestInput, type EngagementControl, type EngagementControls,
 } from "@sg/assurance";
@@ -29,6 +29,7 @@ import {
   EffectivenessBar, InlineError, OpinionBadge, ReadinessRing, ResultChip, SourceChips, StageStrip, errMsg, fmtDate, isOverdue,
 } from "./parts";
 import { SCOPE_HINT, ScopePicker, chosenScope, defaultSelection } from "./ScopePicker";
+import { AccessContext, ROLE_DUTY, RoleNotice, TEAM_ROLES, useAccess, useAuditAccess } from "./access";
 
 const TABS = ["overview", "scope", "controls", "evidence", "findings", "readiness", "workpapers", "reports"] as const;
 type Tab = (typeof TABS)[number];
@@ -66,6 +67,8 @@ export default function AssuranceWorkspace() {
   const loader = useCallback(() => loadEngagement(id), [id]);
   const { data: e, loading, error, reload, setData } = useResource<EngagementSummary | null>(loader, null, `assurance-${id}`);
   const { data: me } = useResource(loadMe, ALL, "assurance-me");
+  const { data: team, reload: reloadTeam } = useResource(() => loadTeam(id), [], `assurance-${id}-team`);
+  const access = useAuditAccess(me, team, reloadTeam);
 
   if (!Number.isFinite(id)) return <ErrorState title="Audit not found" body="This link doesn't point to an audit." />;
   if (loading && !e) return <PageSkeleton />;
@@ -74,11 +77,9 @@ export default function AssuranceWorkspace() {
 
   return (
     <Can.Provider value={me}>
+    <AccessContext.Provider value={access}>
     <div>
       <Link to="/assurance" className="mb-3 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200"><ArrowLeft size={14} /> Assurance</Link>
-      {!me.can_audit && !me.can_manage && (
-        <p className="mb-3 rounded-md border border-phantix-700 bg-phantix-900 px-3 py-2 text-xs text-slate-400">You can view this audit. Ask an admin for audit permissions to record tests or change it.</p>
-      )}
       <PageHeader title={e.title} description={`${AUDIT_TYPE_LABEL[e.audit_type] ?? e.audit_type}${e.program_name ? ` · ${e.program_name}` : ""} · ${fmtDate(e.period_start)} – ${fmtDate(e.period_end)}${e.lead_auditor_name ? ` · Lead: ${e.lead_auditor_name}` : ""}`} />
 
       <Card className="mb-5 flex flex-wrap items-center gap-6">
@@ -101,6 +102,7 @@ export default function AssuranceWorkspace() {
 
       <Tabs tabs={TABS.map((t) => ({ id: t, label: TAB_LABEL[t] }))} active={tab} onChange={setTab} />
       <div className="mt-5">
+        <RoleNotice page={tab} />
         {tab === "overview" && <Overview e={e} />}
         {tab === "scope" && <Scope id={e.id} />}
         {tab === "evidence" && <Evidence id={e.id} />}
@@ -111,6 +113,7 @@ export default function AssuranceWorkspace() {
         {tab === "reports" && <ReportsTab id={e.id} onPublished={reload} />}
       </div>
     </div>
+    </AccessContext.Provider>
     </Can.Provider>
   );
 }
@@ -188,19 +191,28 @@ function PrepareButton({ id, onDone, label = "Prepare audit" }: { id: number; on
 // ── Overview ─────────────────────────────────────────────────────────────────
 
 function Overview({ e }: { e: EngagementSummary }) {
-  const { data: team, reload } = useResource(() => loadTeam(e.id), [], `assurance-${e.id}-team`);
+  const { team, reloadTeam: reload } = useAccess();
   const { data: users } = useResource(() => loadOrgUsers().catch(() => []), [], "assurance-org-users");
   const { data: intel } = useResource(() => loadIntelligence(e.id).catch(() => null), null, `assurance-${e.id}-intel`);
   const { toast, requireDualControl } = useStore();
   const can = useCan();
+  const [newRole, setNewRole] = useState<TeamRole>("auditor");
 
   const add = async (userId: number) => {
     const u = users.find((x) => x.id === userId);
     if (!u || !(await requireDualControl("Changing the audit team is a recorded change."))) return;
     try {
-      await addTeamMember(e.id, { principal_type: "org_user", principal_id: u.id, principal_name: u.full_name, principal_email: u.email, role: "auditee" });
+      await addTeamMember(e.id, { principal_type: "org_user", principal_id: u.id, principal_name: u.full_name, principal_email: u.email, role: newRole });
       reload();
     } catch (ex) { toast("error", "Couldn't add them", errMsg(ex, "")); }
+  };
+  /** The backend upserts by person, so posting again changes the role. */
+  const changeRole = async (m: TeamMember, role: TeamRole) => {
+    if (role === m.role || !(await requireDualControl("Changing the audit team is a recorded change."))) return;
+    try {
+      await addTeamMember(e.id, { principal_type: m.principal_type, principal_id: m.principal_id, principal_name: m.principal_name, principal_email: m.principal_email, role });
+      reload();
+    } catch (ex) { toast("error", "Couldn't change their role", errMsg(ex, "")); }
   };
   const remove = async (memberId: number) => {
     if (!(await requireDualControl("Changing the audit team is a recorded change."))) return;
@@ -223,13 +235,20 @@ function Overview({ e }: { e: EngagementSummary }) {
       </Card>
 
       <Card>
-        <CardHeader title="Audit team" subtitle="Auditees can't record tests on this audit; preparers can't review their own work." />
+        <CardHeader title="Audit team" subtitle="Each person's role decides what they can do on every page of this audit." />
         <ul className="mt-2 divide-y divide-phantix-700/40">
           {team.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-3 py-2 text-sm">
               <span className="min-w-0 truncate text-slate-200">{m.principal_name || m.principal_email || `#${m.principal_id}`}</span>
               <span className="flex items-center gap-2 text-xs text-slate-500">
-                {ROLE_LABEL[m.role]}{m.principal_type === "staff" ? " · Phantix" : ""}
+                {m.principal_type === "org_user" && can.can_manage ? (
+                  <select aria-label={`Role for ${m.principal_name || m.principal_email}`} className="input !w-auto !py-1 text-xs" value={m.role}
+                    onChange={(ev) => void changeRole(m, ev.target.value as TeamRole)}>
+                    {TEAM_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                  </select>
+                ) : (
+                  <>{ROLE_LABEL[m.role]}{m.principal_type === "staff" ? " · Phantix" : ""}</>
+                )}
                 {m.principal_type === "org_user" && can.can_manage && (
                   <button aria-label="Remove from team" className="rounded p-1 hover:text-severity-critical" onClick={() => void remove(m.id)}><Trash2 size={13} /></button>
                 )}
@@ -239,13 +258,23 @@ function Overview({ e }: { e: EngagementSummary }) {
           {team.length === 0 && <li className="py-2 text-sm text-slate-500">No one assigned yet.</li>}
         </ul>
         {can.can_manage && users.filter((u) => u.is_active && !team.some((m) => m.principal_type === "org_user" && m.principal_id === u.id)).length > 0 && (
-          <select aria-label="Add a person" className="input mt-3" value="" onChange={(ev) => ev.target.value && void add(Number(ev.target.value))}>
-            <option value="">Add a person as auditee…</option>
-            {users.filter((u) => u.is_active && !team.some((m) => m.principal_type === "org_user" && m.principal_id === u.id)).map((u) => (
-              <option key={u.id} value={u.id}>{u.full_name}</option>
-            ))}
-          </select>
+          <div className="mt-3 flex gap-2">
+            <select aria-label="Add a person" className="input flex-1" value="" onChange={(ev) => ev.target.value && void add(Number(ev.target.value))}>
+              <option value="">Add a person…</option>
+              {users.filter((u) => u.is_active && !team.some((m) => m.principal_type === "org_user" && m.principal_id === u.id)).map((u) => (
+                <option key={u.id} value={u.id}>{u.full_name}</option>
+              ))}
+            </select>
+            <select aria-label="Role for the new person" className="input !w-auto" value={newRole} onChange={(ev) => setNewRole(ev.target.value as TeamRole)}>
+              {TEAM_ROLES.map((r) => <option key={r} value={r}>as {ROLE_LABEL[r]}</option>)}
+            </select>
+          </div>
         )}
+        <dl className="mt-4 space-y-1 border-t border-phantix-700/40 pt-3 text-[12px] leading-5">
+          {TEAM_ROLES.map((r) => (
+            <div key={r} className="flex gap-2"><dt className="w-24 shrink-0 text-slate-300">{ROLE_LABEL[r]}</dt><dd className="text-slate-500">{ROLE_DUTY[r]}</dd></div>
+          ))}
+        </dl>
       </Card>
 
       {intel && intel.controls_at_risk.length > 0 && (
@@ -378,7 +407,7 @@ const BOARD: EvidenceRequestStatus[] = ["open", "submitted", "accepted", "reject
 function Evidence({ id }: { id: number }) {
   const { data: items, reload } = useResource(() => loadEvidenceRequests(id), [] as EvidenceRequest[], `assurance-${id}-pbc`);
   const { toast, requireDualControl } = useStore();
-  const can = useCan();
+  const access = useAccess();
   // One call for the titles of every attached evidence row on the board.
   const idKey = items.flatMap((r) => r.evidence_ids).join(",");
   const { data: evidence } = useResource(() => loadEvidence(idKey ? idKey.split(",") : []), [], `assurance-${id}-ev-${idKey}`);
@@ -419,12 +448,12 @@ function Evidence({ id }: { id: number }) {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <p className="min-w-[12rem] flex-1 text-sm text-slate-400">One request per control. Evidence your connectors or earlier audits collected is attached for you. {waived ? `${waived} waived.` : ""}</p>
-        {can.can_audit && submittedIds.length > 1 && (
+        {access.reviewEvidence && submittedIds.length > 1 && (
           <button className="btn-primary !py-1.5 text-xs" disabled={busy} onClick={() => void bulk(submittedIds, "accepted")}><CheckCheck size={13} /> Accept all {submittedIds.length} submitted</button>
         )}
-        {can.can_audit && items.length > 0 && <button className="btn-secondary !py-1.5 text-xs" disabled={busy} onClick={() => void generate()}><ListChecks size={13} /> Request any missing evidence</button>}
+        {access.requestEvidence && items.length > 0 && <button className="btn-secondary !py-1.5 text-xs" disabled={busy} onClick={() => void generate()}><ListChecks size={13} /> Request any missing evidence</button>}
       </div>
-      {chosen.length > 0 && can.can_audit && (
+      {chosen.length > 0 && access.reviewEvidence && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-gold-400/30 bg-gold-400/5 px-3 py-2 text-sm">
           <span className="flex-1 text-slate-200">{chosen.length} selected</span>
           <button className="btn-primary !py-1 text-xs" disabled={busy || !chosen.some((r) => r.status === "submitted")} onClick={() => void bulk(chosen.filter((r) => r.status === "submitted").map((r) => r.id), "accepted")}>Accept</button>
@@ -452,7 +481,7 @@ function Evidence({ id }: { id: number }) {
                     return (
                       <li key={r.id} className={cx("rounded-md border bg-phantix-900 p-3", selected.has(r.id) ? "border-gold-400/50" : "border-phantix-700")}>
                         <div className="flex items-start gap-2">
-                          {can.can_audit && (r.status === "open" || r.status === "submitted" || r.status === "rejected") && (
+                          {access.reviewEvidence && (r.status === "open" || r.status === "submitted" || r.status === "rejected") && (
                             <input type="checkbox" className="mt-1" aria-label="Select request" checked={selected.has(r.id)} onChange={(ev) => toggle(r.id, ev.target.checked)} />
                           )}
                           <p className="text-sm text-white">{r.request}</p>
@@ -475,8 +504,8 @@ function Evidence({ id }: { id: number }) {
                           </ul>
                         )}
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {(r.status === "open" || r.status === "rejected") && <button className="btn-primary !px-2 !py-1 text-[11px]" onClick={() => setSubmitting(r)}>{r.status === "rejected" ? "Resubmit" : "Submit evidence"}</button>}
-                          {r.status === "submitted" && can.can_audit && <button className="btn-secondary !px-2 !py-1 text-[11px]" onClick={() => setReviewing(r)}>Review</button>}
+                          {access.submitEvidence && (r.status === "open" || r.status === "rejected") && <button className="btn-primary !px-2 !py-1 text-[11px]" onClick={() => setSubmitting(r)}>{r.status === "rejected" ? "Resubmit" : "Submit evidence"}</button>}
+                          {r.status === "submitted" && access.reviewEvidence && <button className="btn-secondary !px-2 !py-1 text-[11px]" onClick={() => setReviewing(r)}>Review</button>}
                         </div>
                       </li>
                     );
@@ -638,8 +667,23 @@ const RISK_CLS: Record<string, string> = {
   critical: "text-severity-critical", high: "text-severity-high", medium: "text-gold-300", low: "text-slate-400",
 };
 
-type ControlFilter = "todo" | "suggested" | "judge" | "done" | "all";
-const FILTER_LABEL: Record<ControlFilter, string> = { todo: "To do", suggested: "Suggested", judge: "Needs your judgement", done: "Done", all: "All" };
+type ControlFilter = "todo" | "automated" | "manual" | "done" | "all";
+const FILTER_LABEL: Record<ControlFilter, string> = { todo: "To do", automated: "Automated", manual: "Manual", done: "Done", all: "All" };
+
+/** Automated: monitoring or connector evidence exists, so SecureGraph tests how the control operated. */
+const isAutomated = (c: EngagementControl) => c.proposal?.test_type === "operating";
+
+/** The proposed procedure is written as a record ("Inspected the ..."); as guidance it reads as a step. */
+const asInstruction = (procedure: string) => procedure.replace(/^Inspected /, "Inspect ").replace(/^Reviewed /, "Review ");
+
+/** Where a manual control's evidence stands, and what the auditor does about it. */
+const EVIDENCE_STEP: Record<EvidenceRequestStatus, string> = {
+  open: "Waiting for the control owner to provide evidence",
+  submitted: "Evidence submitted: review it before you decide",
+  accepted: "Evidence accepted: ready for your result",
+  rejected: "Evidence sent back to the control owner",
+  waived: "Evidence waived for this control",
+};
 
 const testFrom = (c: EngagementControl, result: TestResult, note?: string): ControlTestInput => ({
   framework_id: c.framework_id, control_id: c.control_id,
@@ -652,26 +696,49 @@ const testFrom = (c: EngagementControl, result: TestResult, note?: string): Cont
   evidence_ids: c.proposal?.evidence_ids ?? [],
 });
 
+/** How automated and manual controls are tested, and whether evidence is needed. */
+function ControlsGuide({ automated, manual }: { automated: number; manual: number }) {
+  return (
+    <div className="mt-4 grid grid-cols-1 gap-3 border-t border-phantix-700/40 pt-4 md:grid-cols-2">
+      <div>
+        <p className="flex items-center gap-1.5 text-sm font-medium text-white"><Bot size={14} className="text-gold-400" /> Automated controls <span className="font-normal text-slate-500">{automated}</span></p>
+        <p className="mt-1 text-[13px] leading-5 text-slate-400">
+          SecureGraph collected evidence from your monitoring, connectors or findings and suggests a result. Read why, then accept it or pick a different one. The evidence is already attached.
+        </p>
+      </div>
+      <div>
+        <p className="flex items-center gap-1.5 text-sm font-medium text-white"><Hand size={14} className="text-gold-400" /> Manual controls <span className="font-normal text-slate-500">{manual}</span></p>
+        <p className="mt-1 text-[13px] leading-5 text-slate-400">
+          Nothing automated covers these, so a person decides. Check the evidence the control owner provided on the Evidence tab, follow the "How to test" step, then pick a result.
+        </p>
+      </div>
+      <p className="text-[12px] leading-5 text-slate-500 md:col-span-2">
+        Is evidence required? SecureGraph will record a result without it, but a manual result should rest on evidence you inspected. Auditees provide it on the Evidence tab. A result of "Not effective" or "Partly" needs a short note, and a finding is raised for you with the details filled in.
+      </p>
+    </div>
+  );
+}
+
 function Controls({ e }: { e: EngagementSummary }) {
   const { data: view, reload } = useResource(() => loadControls(e.id), emptyControls(e.id), `assurance-${e.id}-controls`);
   const { data: tests, reload: reloadTests } = useResource(() => loadTests(e.id), [] as ControlTest[], `assurance-${e.id}-tests`);
-  const { data: team } = useResource(() => loadTeam(e.id), [], `assurance-${e.id}-team`);
   const { toast, requireDualControl } = useStore();
   const me = useMe();
-  const can = useCan();
+  const access = useAccess();
   const [filter, setFilter] = useState<ControlFilter>("todo");
   const [busy, setBusy] = useState<string | null>(null);
   const [noting, setNoting] = useState<{ key: string; result: TestResult; text: string } | null>(null);
   const [recording, setRecording] = useState<EngagementControl | true | null>(null);
-  const isAuditee = team.some((m) => m.role === "auditee" && !!m.principal_email && m.principal_email.toLowerCase() === me.email);
   const selfAssessed = (view.assurance_mode ?? e.assurance_mode) === "self_assessment";
-  const canTest = can.can_audit && !isAuditee;
+  const canTest = access.record;
 
   const key = (c: EngagementControl) => `${c.framework_id}:${c.control_id}`;
   const todo = view.controls.filter((c) => !!c.proposal);
   const suggested = todo.filter((c) => c.proposal?.result);
+  const automatedTodo = todo.filter(isAutomated);
+  const manualTodo = todo.filter((c) => !isAutomated(c));
   const shown = view.controls.filter((c) =>
-    filter === "all" ? true : filter === "done" ? !c.proposal : filter === "suggested" ? !!c.proposal?.result : filter === "judge" ? !!c.proposal && !c.proposal.result : !!c.proposal);
+    filter === "all" ? true : filter === "done" ? !c.proposal : filter === "automated" ? !!c.proposal && isAutomated(c) : filter === "manual" ? !!c.proposal && !isAutomated(c) : !!c.proposal);
   const refresh = () => { reload(); reloadTests(); };
 
   const record = async (batch: ControlTestInput[], label: string) => {
@@ -717,10 +784,10 @@ function Controls({ e }: { e: EngagementSummary }) {
           <div className="min-w-[14rem] flex-1">
             <p className="font-display text-lg text-white">{view.tested} of {view.total} controls tested</p>
             <p className="mt-0.5 text-sm text-slate-400">
-              {suggested.length
-                ? `${suggested.length} have a suggested result from your monitoring, connectors and findings. `
-                : ""}
-              {view.needs_judgement ? `${view.needs_judgement} need your judgement: pick a result on each row.` : todo.length ? "" : "Every control has a result."}
+              {todo.length === 0
+                ? "Every control has a result."
+                : `${automatedTodo.length} automated and ${manualTodo.length} manual left to test.${
+                  canTest ? (manualTodo.length ? " Pick a result on each row." : "") : access.orgBlock && (access.standing === "lead" || access.standing === "auditor" || access.standing === "no_team") ? " You can't record results yet: see the note above." : " Auditors record the results."}`}
             </p>
           </div>
           {canTest && suggested.length > 0 && (
@@ -730,13 +797,12 @@ function Controls({ e }: { e: EngagementSummary }) {
           )}
           {canTest && <button className="btn-secondary !py-2 text-xs" onClick={() => setRecording(true)}><FlaskConical size={13} /> Detailed test</button>}
         </div>
-        {isAuditee && <p className="mt-3 text-xs text-slate-500">You're an auditee on this audit, so recording results is left to the auditors.</p>}
-        {canTest && suggested.length > 0 && <p className="mt-3 text-xs text-slate-500">Controls that aren't effective get a finding with the condition, criteria, effect and recommendation filled in.</p>}
+        {todo.length > 0 && <ControlsGuide automated={automatedTodo.length} manual={manualTodo.length} />}
       </Card>
 
       <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filter controls">
         {(Object.keys(FILTER_LABEL) as ControlFilter[]).map((f) => {
-          const n = f === "all" ? view.total : f === "done" ? view.tested : f === "suggested" ? suggested.length : f === "judge" ? view.needs_judgement : todo.length;
+          const n = f === "all" ? view.total : f === "done" ? view.tested : f === "automated" ? automatedTodo.length : f === "manual" ? manualTodo.length : todo.length;
           return (
             <button key={f} role="tab" aria-selected={filter === f} onClick={() => setFilter(f)}
               className={cx("rounded-full border px-3 py-1 text-xs", filter === f ? "border-gold-400/50 bg-gold-400/10 text-gold-300" : "border-phantix-700 text-slate-400 hover:text-slate-200")}>
@@ -756,20 +822,40 @@ function Controls({ e }: { e: EngagementSummary }) {
             {shown.map((c) => {
               const k = key(c);
               const p = c.proposal;
+              const auto = isAutomated(c);
               return (
                 <li key={k} className="px-4 py-3">
                   <div className="flex flex-wrap items-start gap-3">
                     <div className="min-w-[14rem] flex-1">
-                      <p className="text-sm text-white">{c.title || c.control_id}</p>
+                      <p className="flex flex-wrap items-center gap-2 text-sm text-white">
+                        {c.title || c.control_id}
+                        {p && (
+                          <span className={cx("inline-flex items-center gap-1 rounded border px-1.5 py-px text-[10px] font-medium uppercase tracking-wider",
+                            auto ? "border-gold-400/40 text-gold-300" : "border-phantix-600 text-slate-400")}>
+                            {auto ? <Bot size={10} /> : <Hand size={10} />}{auto ? "Automated" : "Manual"}
+                          </span>
+                        )}
+                      </p>
                       <p className="font-mono text-[11px] text-slate-500">
                         {c.framework_id} · {c.control_id}
                         {c.risk && <span className={cx("ml-2 font-sans capitalize", RISK_CLS[c.risk] ?? "text-slate-400")}>{c.risk} risk</span>}
-                        {c.request_status && <span className="ml-2 font-sans text-slate-500">· evidence {REQUEST_STATUS_LABEL[c.request_status].toLowerCase()}</span>}
                       </p>
                       {p && p.basis.length > 0 && (
                         <ul className="mt-1.5 space-y-0.5">
                           {p.basis.slice(0, 3).map((b) => <li key={b} className="text-xs text-slate-400">· {b}</li>)}
                         </ul>
+                      )}
+                      {p && !auto && (
+                        <div className="mt-1.5 space-y-1 text-xs">
+                          {p.procedure && <p className="text-slate-400"><span className="text-slate-300">How to test:</span> {asInstruction(p.procedure)}</p>}
+                          <p className="flex flex-wrap items-center gap-x-2 text-slate-500">
+                            <ClipboardList size={12} className="shrink-0" />
+                            {c.request_status ? EVIDENCE_STEP[c.request_status] : "No evidence requested yet"}
+                            <Link to={{ search: "?tab=evidence" }} className="inline-flex items-center gap-0.5 text-gold-400 hover:text-gold-300">
+                              Evidence tab <ArrowRight size={11} />
+                            </Link>
+                          </p>
+                        </div>
                       )}
                     </div>
                     {!p && c.result && (
@@ -780,7 +866,7 @@ function Controls({ e }: { e: EngagementSummary }) {
                         {p.result ? (
                           <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><Sparkles size={11} className="text-gold-400" /> Suggested <ResultChip result={p.result} /></span>
                         ) : (
-                          <span className="text-[11px] text-slate-500">No automated signal: your call</span>
+                          <span className="text-[11px] text-slate-500">{canTest ? "Your call after checking the evidence" : "Waiting for an auditor's result"}</span>
                         )}
                         {canTest && (
                           <div className="flex flex-wrap justify-end gap-1">
@@ -816,7 +902,7 @@ function Controls({ e }: { e: EngagementSummary }) {
         <Card className="!p-0">
           <div className="flex flex-wrap items-center gap-3 px-4 py-3">
             <h3 className="flex-1 text-sm font-semibold text-white">Recorded tests <span className="font-normal text-slate-500">{tests.length}</span></h3>
-            {!selfAssessed && can.can_audit && signable.length > 0 && (
+            {!selfAssessed && access.signOff && signable.length > 0 && (
               <button className="btn-secondary !py-1.5 text-xs" disabled={!!busy} onClick={() => void signAll()}><CheckCheck size={13} /> Sign off {signable.length} I didn't test</button>
             )}
           </div>
@@ -841,7 +927,7 @@ function Controls({ e }: { e: EngagementSummary }) {
                     <td className="px-4 py-3 text-xs text-slate-400">{t.tested_by || "Unknown"}<span className="block text-slate-600">{fmtDate(t.tested_at)}</span></td>
                     {!selfAssessed && (
                       <td className="px-4 py-3 text-xs">
-                        {t.reviewed_by ? <span className="text-emerald-300">{t.reviewed_by}</span> : !can.can_audit ? <span className="text-slate-500">Awaiting review</span> : me.is(t.tested_by) ? (
+                        {t.reviewed_by ? <span className="text-emerald-300">{t.reviewed_by}</span> : !access.signOff ? <span className="text-slate-500">Awaiting review</span> : me.is(t.tested_by) ? (
                           <span className="text-slate-500" title="You tested this control, so someone else reviews it.">Needs another reviewer</span>
                         ) : (
                           <button className="text-gold-400 hover:text-gold-300" onClick={() => void signOne(t)}>Sign off</button>
@@ -961,7 +1047,7 @@ const SEVERITIES: FindingSeverity[] = ["critical", "high", "medium", "low"];
 function Findings({ e }: { e: EngagementSummary }) {
   const { data: findings, reload } = useResource(() => loadFindings(e.id), [] as AuditFinding[], `assurance-${e.id}-findings`);
   const [params] = useSearchParams();
-  const can = useCan();
+  const access = useAccess();
   const [open, setOpen] = useState<number | null>(() => Number(params.get("finding")) || null);
   const [responding, setResponding] = useState<AuditFinding | null>(null);
   const [retesting, setRetesting] = useState<AuditFinding | null>(null);
@@ -971,7 +1057,7 @@ function Findings({ e }: { e: EngagementSummary }) {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <p className="min-w-[12rem] flex-1 text-sm text-slate-400">Audit findings also appear in the risk register and the findings tracker.</p>
-        {can.can_audit && <button className="btn-secondary !py-1.5 text-xs" onClick={() => setRaising(true)}><Plus size={13} /> Raise finding</button>}
+        {access.raiseFinding && <button className="btn-secondary !py-1.5 text-xs" onClick={() => setRaising(true)}><Plus size={13} /> Raise finding</button>}
       </div>
       {findings.length === 0 ? (
         <Card><EmptyState icon={<ShieldAlert size={20} />} title="No findings" body="When a test finds an exception, raise it here with a recommendation." /></Card>
@@ -1006,8 +1092,8 @@ function Findings({ e }: { e: EngagementSummary }) {
                         </div>
                         {f.status !== "closed" && (
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <button className="btn-secondary !py-1 text-xs" onClick={() => setResponding(f)}><MessageSquare size={12} /> {f.management_response ? "Update response" : "Respond"}</button>
-                            {can.can_audit && <button className="btn-secondary !py-1 text-xs" onClick={() => setRetesting(f)}><RefreshCw size={12} /> Retest</button>}
+                            {access.respond && <button className="btn-secondary !py-1 text-xs" onClick={() => setResponding(f)}><MessageSquare size={12} /> {f.management_response ? "Update response" : "Respond"}</button>}
+                            {access.raiseFinding && <button className="btn-secondary !py-1 text-xs" onClick={() => setRetesting(f)}><RefreshCw size={12} /> Retest</button>}
                           </div>
                         )}
                       </div>
@@ -1238,7 +1324,7 @@ function Workpapers({ id }: { id: number }) {
   const { data: papers, reload } = useResource(() => loadWorkpapers(id), [] as Workpaper[], `assurance-${id}-wp`);
   const { requireDualControl } = useStore();
   const me = useMe();
-  const can = useCan();
+  const access = useAccess();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [edit, setEdit] = useState<{ section: string; title: string; body: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -1272,7 +1358,7 @@ function Workpapers({ id }: { id: number }) {
       <Card className="!p-0">
         <div className="flex items-center justify-between border-b border-phantix-700/40 px-4 py-3">
           <span className="text-sm font-semibold text-white">Workpapers</span>
-          {can.can_audit && <button className="btn-secondary !px-2 !py-1 text-xs" onClick={() => { setSelectedId(null); setEdit({ section: "general", title: "", body: "" }); setErr(null); }}><Plus size={12} /> New</button>}
+          {access.workpapers && <button className="btn-secondary !px-2 !py-1 text-xs" onClick={() => { setSelectedId(null); setEdit({ section: "general", title: "", body: "" }); setErr(null); }}><Plus size={12} /> New</button>}
         </div>
         {papers.length === 0 ? <p className="px-4 py-6 text-sm text-slate-500">No workpapers yet.</p> : sections.map((s) => (
           <div key={s}>
@@ -1312,10 +1398,10 @@ function Workpapers({ id }: { id: number }) {
                   {selected.prepared_by ? ` · prepared by ${selected.prepared_by}` : ""}{selected.reviewed_by ? ` · reviewed by ${selected.reviewed_by}` : ""}
                 </p>
               </div>
-              {can.can_audit && <button className="btn-ghost !py-1 text-xs" onClick={() => setEdit({ section: selected.section, title: selected.title, body: selected.body ?? "" })}><NotebookPen size={13} /> Edit</button>}
+              {access.workpapers && <button className="btn-ghost !py-1 text-xs" onClick={() => setEdit({ section: selected.section, title: selected.title, body: selected.body ?? "" })}><NotebookPen size={13} /> Edit</button>}
               {(() => {
                 const step = NEXT_SIGN_OFF[selected.sign_off_status];
-                if (!step || !can.can_audit) return null;
+                if (!step || !access.workpapers) return null;
                 const blocked = step.needsOther && me.is(selected.prepared_by);
                 return (
                   <span title={blocked ? "You prepared this, so someone else reviews and signs it off." : undefined}>
@@ -1348,7 +1434,7 @@ function ReportsTab({ id, onPublished }: { id: number; onPublished: () => void }
   const [type, setType] = useState<ReportType>("readiness");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const can = useCan();
+  const access = useAccess();
 
   const generate = async () => {
     if (!(await requireDualControl("Publishing an audit report is a recorded change."))) return;
@@ -1362,7 +1448,7 @@ function ReportsTab({ id, onPublished }: { id: number; onPublished: () => void }
 
   return (
     <div className="space-y-4">
-      {can.can_audit && <Card className="flex flex-wrap items-end gap-3">
+      {access.report && <Card className="flex flex-wrap items-end gap-3">
         <div><label className="label" htmlFor="rp-type">Report</label>
           <select id="rp-type" className="input" value={type} onChange={(ev) => setType(ev.target.value as ReportType)}>{REPORT_TYPES.map((t) => <option key={t} value={t}>{REPORT_TYPE_LABEL[t]}</option>)}</select></div>
         <button className="btn-primary" disabled={busy} onClick={() => void generate()}><FileText size={14} /> {busy ? "Generating..." : "Generate and publish"}</button>
