@@ -443,13 +443,19 @@ export function isSignInPath(path: string): boolean {
   return SIGN_IN_PATHS.some((re) => re.test(bare));
 }
 
+/** Server copy about a session (expired, revoked, re-login) is never right before sign-in finishes. */
+const SESSION_WORDING = /\bsession\b|re-?login/i;
+
 /** What a failed sign-in step says: the API's reason when safe, else a sign-in specific fallback. */
 function signInFailureCopy(path: string, detail: unknown): string {
   const candidate = detailCandidate(detail);
   const fromServer = candidate ? sanitizeDetailCopy(candidate) : null;
-  if (fromServer && !/session (has )?expired/i.test(fromServer)) return fromServer;
+  // No session exists yet on these screens, so no server wording about one
+  // ("Session revoked (idle_timeout) — re-login required") ever reaches the person.
+  if (fromServer && !SESSION_WORDING.test(fromServer)) return fromServer;
   const bare = path.split("?")[0];
-  if (/\/(otp|mfa|challenge|device-confirm)(\/|$)/.test(bare)) return "That code is incorrect or has expired. Request a new one and try again.";
+  if (/device-confirm/.test(bare)) return "This confirmation link has expired or was already used. Sign in again and use the new link we email you.";
+  if (/\/(otp|mfa|challenge)(\/|$)/.test(bare)) return "That code is incorrect or has expired. Request a new one and try again.";
   if (/\/firebase$/.test(bare)) return "We couldn't verify that sign-in. Try again, or sign in with your email.";
   if (/password-reset|set-password/.test(bare)) return "That link is invalid or has expired. Request a new one.";
   return "Incorrect email or password.";
