@@ -162,6 +162,39 @@ function blockerGuidance(code: string): string | null {
   }
 }
 
+// The runner's loop stop reasons are internal codes ("blocked_info", "idle"),
+// so the banner says what happened and what the operator can do instead.
+function loopStopCopy(reason: string): string {
+  if (reason.startsWith("job_status:")) return "The agent finished its job objectives.";
+  switch (reason) {
+    case "blocked_info":
+    case "awaiting_info":
+      return "The agent is waiting for information from you. Reply below and it will carry on.";
+    case "awaiting_clarification":
+      return "The agent asked a question. Answer it below and it will carry on.";
+    case "pending_gate":
+      return "A step needs your approval before the agent continues.";
+    case "max_turns":
+    case "max_tools":
+      return "The agent reached this run's step limit. Send a message to keep going.";
+    case "idle":
+      return "The agent ran out of next steps. Send a message to point it somewhere new.";
+    case "hard_stop":
+      return "The session's time limit was reached.";
+    default:
+      return "The agent paused. Send a message to continue where it left off, or start a new session.";
+  }
+}
+
+/** Open info requests the runner published in the job view. */
+function openInfoRequests(job: unknown): { key: string; description: string }[] {
+  const reqs = (job as { open_info_requests?: unknown } | null | undefined)?.open_info_requests;
+  if (!Array.isArray(reqs)) return [];
+  return reqs
+    .map((r) => ({ key: String(r?.key ?? ""), description: String(r?.description ?? "") }))
+    .filter((r) => r.key || r.description);
+}
+
 /** A turn brief is only worth painting when it describes a real turn.
  *
  *  The backend contract exposes an always-complete brief (safe for rendering),
@@ -1535,7 +1568,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
               <div className="flex items-center gap-1.5 border-b border-phantix-700/40 px-3 py-2">
                 <span className={cx("chip !px-2 !py-0.5 wb-2xs", loopStopped ? "border-severity-medium/30 bg-severity-medium/10 text-severity-medium" : running ? "border-gold-400/30 bg-gold-400/10 text-gold-300" : "border-phantix-600/40 bg-phantix-800/50 text-slate-400")}>
                   {loopStopped
-                    ? <span className="flex items-center gap-1" title={`Autonomous loop stopped: ${loopStopped}`}><span className="h-1.5 w-1.5 rounded-full bg-severity-medium" /> loop stopped</span>
+                    ? <span className="flex items-center gap-1" title={loopStopCopy(loopStopped)}><span className="h-1.5 w-1.5 rounded-full bg-severity-medium" /> loop stopped</span>
                     : running ? <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-gold-400" /> running</span> : "stopped"}
                 </span>
                 <span className="chip !px-2 !py-0.5 wb-2xs min-w-0 truncate text-slate-500">{selected?.name}</span>
@@ -1792,7 +1825,16 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                 {loopStopped && (
                   <div className="mb-2 flex items-start gap-2 rounded-lg border border-severity-medium/30 bg-severity-medium/10 px-3 py-2 text-[12px] text-severity-medium">
                     <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                    <span>Autonomous loop stopped (<span className="font-mono">{loopStopped}</span>). Send a message to continue where it left off, or start a new session.</span>
+                    <div className="min-w-0">
+                      <p>{loopStopCopy(loopStopped)}</p>
+                      {openInfoRequests(session?.job).length > 0 && (
+                        <ul className="mt-1 list-disc pl-4 text-slate-300">
+                          {openInfoRequests(session?.job).map((r) => (
+                            <li key={r.key || r.description}>{r.description || r.key}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   </div>
                 )}
                 <div className="flex items-center gap-2 rounded-xl border border-phantix-700/50 bg-phantix-950/60 px-3 py-2 transition-colors focus-within:border-gold-400/40">
