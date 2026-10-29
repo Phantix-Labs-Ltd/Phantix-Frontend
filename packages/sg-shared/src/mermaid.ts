@@ -58,7 +58,7 @@ async function getMermaid(): Promise<typeof Mermaid> {
     // Diagram source comes from model output: "strict" encodes HTML in labels
     // and disables click callbacks.
     securityLevel: "strict",
-    fontFamily: "'Geist Variable', 'Space Grotesk', system-ui, sans-serif",
+    fontFamily: "'Geist Variable', 'Space Grotesk Variable', system-ui, sans-serif",
     themeVariables: themeVars(),
   });
   return mermaid;
