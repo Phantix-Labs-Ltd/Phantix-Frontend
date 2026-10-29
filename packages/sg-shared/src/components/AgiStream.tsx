@@ -1179,6 +1179,12 @@ export interface AgentActivity {
   sessionStatus?: string;
   /** Session start (ISO) — drives the overall pentest runtime timer. */
   startedAt?: string | null;
+  /** Epoch ms of the last real progress (new transcript activity). Lets the
+   *  line detect a stall and stop the runtime clock when nothing is happening. */
+  lastActivityAt?: number | null;
+  /** When the loop is blocked waiting on operator input, the reason to show
+   *  (e.g. an open info request) instead of a counting "Waiting for response". */
+  blockedReason?: string | null;
 }
 
 /** Live-ticking overall pentest runtime (start → now), bold and prominent —
@@ -1270,9 +1276,31 @@ export function AgentActivityLine({ activity, dense = false }: { activity: Agent
   }, [streaming]);
   const primary = streaming ? pool[step % pool.length] : "Waiting for response";
 
-  // Anything agent-side that is actively running gets the animated "…";
-  // states waiting on the operator (or ended) keep a quiet, static state dot.
-  const busy = (working || activity.thinking) && !activity.connError;
+  // Stall watchdog: when the agent is "working" but no new activity has landed
+  // for a while — and it is not waiting on an approval/clarification — the loop
+  // is silently stuck. Surface that instead of counting time with no work.
+  const STALL_MS = 75000;
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!((working || activity.thinking) && !activity.paused)) return;
+    const t = window.setInterval(() => setNowTs(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [working, activity.thinking, activity.paused]);
+  const blockedReason = (activity.blockedReason ?? "").trim();
+  const stalled =
+    (working || activity.thinking) &&
+    !activity.connError &&
+    !activity.paused &&
+    (activity.approvals ?? 0) === 0 &&
+    !activity.clarification &&
+    !blockedReason &&
+    Boolean(activity.lastActivityAt) &&
+    nowTs - (activity.lastActivityAt as number) > STALL_MS;
+  const stallSecs = activity.lastActivityAt ? Math.floor((nowTs - activity.lastActivityAt) / 1000) : 0;
+
+  // Anything agent-side that is actively running gets the animated "…"; states
+  // waiting on the operator, ended, blocked, or stalled keep a quiet state dot.
+  const busy = (working || activity.thinking) && !activity.connError && !blockedReason && !stalled;
 
   let dot: string = "bg-slate-600";
   let label: React.ReactNode;
@@ -1290,6 +1318,12 @@ export function AgentActivityLine({ activity, dense = false }: { activity: Agent
   } else if ((activity.approvals ?? 0) > 0) {
     dot = "bg-severity-medium";
     label = `Waiting for your approval: ${activity.approvals} step${(activity.approvals ?? 0) > 1 ? "s" : ""} in the Human gate`;
+  } else if (blockedReason) {
+    dot = "bg-gold-400";
+    label = <>Needs your input<span className="text-slate-500"> · {blockedReason}</span></>;
+  } else if (stalled) {
+    dot = "bg-severity-medium";
+    label = `No new activity for ${stallSecs}s — the agent may be waiting on input or a gated step. Send guidance below or check the latest turn.`;
   } else if (working || activity.thinking) {
     shimmer = streaming;
     label = detail ? <>{primary}<span className="text-slate-500"> · {detail}</span></> : primary;
@@ -1349,7 +1383,7 @@ export function AgentActivityLine({ activity, dense = false }: { activity: Agent
           )}
         </motion.span>
       </span>
-      <RuntimeClock since={activity.startedAt} live={busy || working} dense={dense} />
+      <RuntimeClock since={activity.startedAt} live={(busy || working) && !blockedReason && !stalled} dense={dense} />
     </div>
   );
 }
