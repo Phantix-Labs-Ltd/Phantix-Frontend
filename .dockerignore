@@ -1,0 +1,28 @@
+# Build context hygiene — keep the image small and fast on a self-hosted box.
+# Everything the apps need is copied explicitly in the Dockerfile; this just stops
+# multi-hundred-MB local folders travelling to the daemon.
+
+.git
+.github
+node_modules
+**/node_modules
+**/dist
+dist
+*.tsbuildinfo
+.dev-logs
+.vscode
+.agents
+.claude
+graphify-out
+brag-output*
+brag-series-*
+pitch-deck
+QA-Analysis
+Inception Badges
+Phantix Architecture Vault
+svgl-tmp.json
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
