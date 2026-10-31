@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { Post, PostSummary } from "./types";
+import { findAuthor } from "./authors";
 
 /*
  * usePostSeo — per-post SEO / GEO / AEO head management.
@@ -19,6 +20,7 @@ import type { Post, PostSummary } from "./types";
 const ORIGIN = "https://blog.phantixlabs.com";
 const ORG_ID = "https://phantixlabs.com/#organization";
 const BLOG_ID = "https://blog.phantixlabs.com/#blog";
+const PRODUCT_ID = "https://phantixlabs.com/#product";
 const DEFAULT_IMAGE = `${ORIGIN}/og-weekly.png`;
 
 const MONTHS = [
@@ -75,6 +77,39 @@ function upsertCanonical(href: string): () => void {
  * browser; prerender.mjs bakes the same graph into /posts/<slug>/index.html so
  * a crawler that does not run JavaScript reads it too.
  */
+/**
+ * The people who wrote the post, as schema.org Person nodes. Answer engines
+ * trust a named, verifiable author over a company byline, so a name that
+ * matches the team directory carries its role and profiles. With no bylines the
+ * company is the author, as before.
+ */
+function authorsOf(post: PostSummary): Record<string, unknown> | Record<string, unknown>[] {
+  const people = (post.contributors ?? [])
+    .filter((c) => c.name && c.name !== "SecureGraph")
+    .map((c) => {
+      const known = findAuthor(c.name);
+      const person: Record<string, unknown> = {
+        "@type": "Person",
+        name: known?.name ?? c.name,
+        worksFor: { "@id": ORG_ID },
+      };
+      if (known) {
+        person.jobTitle = known.role;
+        person.sameAs = known.sameAs;
+      }
+      return person;
+    });
+  return people.length ? people : { "@id": ORG_ID };
+}
+
+/** The latest real edit by a contributor, as an ISO date. */
+function lastEdited(post: PostSummary): string | undefined {
+  const times = (post.contributors ?? [])
+    .map((c) => (c.last_at ? Date.parse(c.last_at) : NaN))
+    .filter((t) => Number.isFinite(t));
+  return times.length ? new Date(Math.max(...times)).toISOString().slice(0, 10) : undefined;
+}
+
 export function postJsonLd(post: PostSummary): Record<string, unknown> {
   const url = `${ORIGIN}/posts/${post.slug}`;
   const description =
@@ -87,9 +122,11 @@ export function postJsonLd(post: PostSummary): Record<string, unknown> {
     headline: post.title,
     description,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    author: { "@id": ORG_ID },
+    author: authorsOf(post),
     publisher: { "@id": ORG_ID },
     isPartOf: { "@id": BLOG_ID },
+    // Every essay is written from SecureGraph's work, so it names the product.
+    mentions: [{ "@id": PRODUCT_ID }],
     image: DEFAULT_IMAGE,
     inLanguage: "en",
     speakable: {
@@ -99,7 +136,8 @@ export function postJsonLd(post: PostSummary): Record<string, unknown> {
   };
   if (published) {
     article.datePublished = published;
-    article.dateModified = published;
+    const edited = lastEdited(post);
+    article.dateModified = edited && edited > published ? edited : published;
   }
   if (post.kicker) article.articleSection = post.kicker;
 
