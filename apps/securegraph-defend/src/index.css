@@ -411,6 +411,23 @@
     /* Flat dark workspace — no radial navy/gold glow. */
     background-image: none;
     transition: color 0.3s ease;
+    /* Scanner output (package names, hashes, URLs, keys) arrives as long
+       unbroken strings. They break only when they cannot otherwise fit, so they
+       wrap inside their box instead of pushing it wider. `anywhere`, not
+       `break-word`: it also lowers min-content width, which is what lets a flex
+       or grid item shrink to its column. Inherited by everything below. */
+    overflow-wrap: anywhere;
+  }
+
+  /* Tables keep normal wrapping so a wide table still scrolls in its wrapper
+     rather than squeezing every column down to a character. Short labels keep
+     whole words too: a badge or button beside a long value must not be squeezed
+     into one letter per line. */
+  table,
+  button,
+  label,
+  .chip {
+    overflow-wrap: normal;
   }
 
   :root[data-theme="light"] body {

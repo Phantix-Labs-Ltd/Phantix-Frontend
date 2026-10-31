@@ -67,7 +67,8 @@ export default function PostureDonut({
       tableRows={surfaces.map((s) => [
         SURFACE_LABELS[s.surface] ?? s.surface,
         Number(s.total) || 0,
-        Number(s.score ?? 0),
+        // An unassessed surface is "Not set", not a score of 0.
+        s.score == null ? "Not set" : Number(s.score),
       ])}
     >
       <div className="relative" style={{ height }}>
