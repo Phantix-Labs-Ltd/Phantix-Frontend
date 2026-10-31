@@ -45,6 +45,7 @@ import SessionExpiredOverlay from "../components/SessionExpiredOverlay";
 import { openFeedbackReporter } from "../feedback";
 import { OperationsProvider } from "../operations";
 import SandboxBanner from "../components/SandboxBanner";
+import ActingBanner from "../components/ActingBanner";
 import { onSignedIn } from "../analytics";
 import { useStore } from "../store";
 import { shortName } from "../utils";
@@ -1095,6 +1096,7 @@ export function ApplicationShell({
                 shell cannot drift apart. 1600px is a backstop: an ultrawide
                 display should not stretch a table across a metre of glass. */}
             <div className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-1 flex-col">
+              {!demoActive && <ActingBanner ready={authReady} />}
               {session?.authenticated && !demoActive && <SandboxBanner />}
               {/* Page-level Suspense boundary. Moving between pages inside an
                   application only re-mounts the page at the <Outlet/>, so it

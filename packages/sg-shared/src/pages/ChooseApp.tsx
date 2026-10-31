@@ -186,10 +186,17 @@ export default function ChooseApp() {
     };
   }, []);
 
-  const all = useMemo(
-    () => (snap?.applications || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [snap],
-  );
+  const all = useMemo(() => {
+    const list = (snap?.applications || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    // Entering a client: only the applications that client granted can be opened.
+    const client = clients.find((c) => c.client_organization_id === clientId);
+    if (!client) return list;
+    return list.map((a) =>
+      a.key === "core" || client.applications.includes(a.key)
+        ? a
+        : { ...a, accessible: false, reason: `${client.client_name} has not granted access to ${a.label}` },
+    );
+  }, [snap, clients, clientId]);
   const core = all.find((a) => a.key === "core") || null;
   const specialized = all.filter((a) => a.key !== "core");
   const last = lastApp();
@@ -207,12 +214,12 @@ export default function ChooseApp() {
       if (!app.accessible || opening) return;
       if (mustPickClient) return;
       rememberApp(app.key);
-      // Carry the chosen client into the application. Ignored by the app until the
-      // delegated acting session exists; harmless when absent.
-      const withClient =
-        chosenClient && path != null
-          ? `${path}${path.includes("?") ? "&" : "?"}act_for=${chosenClient.client_organization_id}`
-          : path;
+      // Carry the chosen client into the application, which opens a delegated
+      // session for itself on arrival (see ActingBanner / actingSession.ts).
+      const base = path ?? "/dashboard";
+      const withClient = chosenClient
+        ? `${base}${base.includes("?") ? "&" : "?"}act_for=${chosenClient.client_organization_id}&delegation=${chosenClient.delegation_id}`
+        : path;
       const target = applicationTarget(app.key, withClient);
       if (!target.external) {
         navigate(target.href, { replace: true });
@@ -233,7 +240,7 @@ export default function ChooseApp() {
         );
       }
     },
-    [navigate, opening, mustPickClient],
+    [navigate, opening, mustPickClient, chosenClient],
   );
 
   // Sent here to sign in on the way to an application (`?next=attack&path=/vapt`):
