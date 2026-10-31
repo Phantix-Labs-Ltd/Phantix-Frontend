@@ -1,11 +1,10 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Smartphone, Upload, Loader2, ShieldCheck, FileWarning, ScanSearch } from "lucide-react";
-import { PageHeader, Card, CardHeader } from "@sg/ui";
+import { PageHeader, Card, CardHeader, SeverityBadge } from "@sg/ui";
 import { api, publicErrorMessage } from "@sg/api";
 import { sanitizeSingleLine, validateUploadFile } from "@sg/uploadValidation";
 import { useStore } from "@sg/store";
-import { cx } from "@sg/utils";
 import DocLink from "@sg/components/DocLink";
 import MobileHandoffCard from "@sg/components/MobileHandoffCard";
 import { UpsellBanner } from "@sg/components/UpgradeGate";
@@ -111,7 +110,7 @@ export default function Mobile() {
       <UpsellBanner feature="dynamic_mobile" />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="min-w-0">
           <Card>
             <CardHeader
               title="Analyze a package"
@@ -165,7 +164,7 @@ export default function Mobile() {
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="min-w-0">
           <Card>
             <CardHeader
               title="Analyze a stored package"
@@ -203,23 +202,52 @@ export default function Mobile() {
   );
 }
 
+const METHOD_LABELS: Record<string, string> = {
+  "zip+axml": "Manifest read",
+  "zip+axml+aapt": "Manifest read, build tools",
+  "zip+axml_strings": "Strings scan",
+  "zip+axml_strings+aapt": "Strings scan, build tools",
+};
+
 function AnalysisSummary({ result }: { result: UploadResult }) {
   const findings = result.findings_count ?? result.findings_preview?.length ?? 0;
+  const preview = (result.findings_preview ?? []) as Array<{ title?: string; name?: string; message?: string; severity?: string }>;
+  // Package names, hashes and messages are long unbroken strings. Every line
+  // wraps inside the box (min-w-0 + break-anywhere) instead of running past it.
   return (
-    <div className="rounded-md border border-phantix-700/40 bg-phantix-900/40 p-3 text-xs leading-5">
-      <p className="flex items-center gap-1.5 text-slate-200">
-        {findings > 0 ? <FileWarning size={13} className="text-amber-300" /> : <ShieldCheck size={13} className="text-emerald-400" />}
-        {result.package_name || "Package"} · {findings} finding{findings === 1 ? "" : "s"}
+    <div className="min-w-0 overflow-hidden rounded-md border border-phantix-700/40 bg-phantix-900/40 p-3 text-xs leading-5 [overflow-wrap:anywhere]">
+      <p className="flex min-w-0 items-start gap-1.5 text-slate-200">
+        {findings > 0 ? (
+          <FileWarning size={13} className="mt-1 shrink-0 text-amber-300" />
+        ) : (
+          <ShieldCheck size={13} className="mt-1 shrink-0 text-emerald-400" />
+        )}
+        <span className="min-w-0">
+          <span className="font-medium">{result.package_name || "Package"}</span>
+          <span className="text-slate-400"> · {findings} finding{findings === 1 ? "" : "s"}</span>
+        </span>
       </p>
-      {result.sha256 && <p className="mt-1 truncate font-mono text-[12px] text-slate-500">sha256: {result.sha256}</p>}
-      {result.analysis_method && <p className="text-[12px] text-slate-500">method: {result.analysis_method}</p>}
-      {result.message && <p className="mt-1 text-slate-400">{result.message}</p>}
-      {result.scan_hint && <p className="mt-1 font-mono text-[12px] text-slate-500">{result.scan_hint}</p>}
-      {findings > 0 && result.findings_preview?.length ? (
+      <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-[12px]">
+        {result.sha256 && (
+          <>
+            <dt className="text-slate-500">SHA-256</dt>
+            <dd className="min-w-0 font-mono text-slate-400">{result.sha256}</dd>
+          </>
+        )}
+        {result.analysis_method && (
+          <>
+            <dt className="text-slate-500">Method</dt>
+            <dd className="min-w-0 text-slate-400">{METHOD_LABELS[result.analysis_method] ?? result.analysis_method}</dd>
+          </>
+        )}
+      </dl>
+      {result.message && <p className="mt-2 text-slate-400">{result.message}</p>}
+      {findings > 0 && preview.length ? (
         <ul className="mt-2 space-y-1">
-          {result.findings_preview.slice(0, 5).map((f, i) => (
-            <li key={i} className={cx("truncate text-[12px] text-slate-400")}>
-              • {String((f as { title?: string; name?: string; message?: string }).title ?? (f as { name?: string }).name ?? (f as { message?: string }).message ?? JSON.stringify(f))}
+          {preview.slice(0, 5).map((f, i) => (
+            <li key={i} className="flex min-w-0 items-start gap-2 text-[12px] text-slate-300">
+              {f.severity ? <SeverityBadge severity={f.severity as any} className="shrink-0" /> : <span aria-hidden>•</span>}
+              <span className="min-w-0 pt-px">{String(f.title ?? f.name ?? f.message ?? "Finding")}</span>
             </li>
           ))}
         </ul>

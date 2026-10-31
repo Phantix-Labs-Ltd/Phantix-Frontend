@@ -57,6 +57,42 @@ export async function saveNotificationPreferences(changes: PreferenceChanges): P
   return api.put<NotificationPreferences>(`${P}/notifications`, { preferences: changes });
 }
 
+// ── Security overview emails (organization-wide) ─────────────────────────────
+
+export interface SecurityDigestPreferences {
+  weekly: boolean;
+  monthly: boolean;
+  /** Everyone the emails go to: the account admin, organization admins, the security mailbox. */
+  recipients: string[];
+  security_mailbox: string | null;
+  schedule: { weekly: string; monthly: string };
+  link_days: number;
+}
+
+const demoDigest: SecurityDigestPreferences = {
+  weekly: true,
+  monthly: true,
+  recipients: ["admin@demo-org.example", "security@demo-org.example"],
+  security_mailbox: "security@demo-org.example",
+  schedule: {
+    weekly: "Mondays at 07:00 Lagos time, covering the week before",
+    monthly: "The 1st of each month at 07:00 Lagos time, covering the month before",
+  },
+  link_days: 30,
+};
+
+export async function loadSecurityDigestPreferences(): Promise<SecurityDigestPreferences> {
+  if (isDemoMode()) { await delay(200); return { ...demoDigest }; }
+  return api.get<SecurityDigestPreferences>(`${P}/security-digest`);
+}
+
+export async function saveSecurityDigestPreferences(
+  changes: Partial<Pick<SecurityDigestPreferences, "weekly" | "monthly">>,
+): Promise<SecurityDigestPreferences> {
+  if (isDemoMode()) { await delay(250); Object.assign(demoDigest, changes); return { ...demoDigest }; }
+  return api.put<SecurityDigestPreferences>(`${P}/security-digest`, changes);
+}
+
 // ── Overview layout ──────────────────────────────────────────────────────────
 
 export type RangePreset = "today" | "7d" | "30d" | "3m" | "6m" | "1y" | "custom";

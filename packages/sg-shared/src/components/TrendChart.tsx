@@ -1,4 +1,5 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { compactNumber, niceTicks, shortDate, sparseTicks, useDashTheme } from "./DashboardWidgets";
 
 export interface TrendPoint {
   label: string;
@@ -9,22 +10,23 @@ export interface TrendPoint {
 interface Props {
   /** Time series ordered oldest → newest (natural x-axis direction). */
   points: TrendPoint[];
+  /** Defaults to the dashboard blue. */
   color?: string;
   secondaryColor?: string;
   height?: number;
 }
 
-const MONO = "'Geist Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
-
-/** Compact dark-themed line time-series used across dashboards.
- *  Flat dev-tool styling: thin high-contrast plots, no area-fill glow. */
-export default function TrendChart({ points, color = "#E8B54D", secondaryColor = "#F43F5E", height = 180 }: Props) {
+/** Time series in the dashboard look: a smooth filled area, three y-ticks,
+ *  sparse date labels. An optional secondary series draws as a dashed line. */
+export default function TrendChart({ points, color, secondaryColor = "#F43F5E", height = 180 }: Props) {
+  const { d, tip } = useDashTheme();
+  const stroke = color ?? d.line;
   const data = points.map((p) => ({
     label: p.label,
     value: p.value,
     ...(p.secondary != null ? { secondary: p.secondary } : {}),
   }));
-  const hasSecondary = data.some((d) => d.secondary != null);
+  const hasSecondary = data.some((p) => p.secondary != null);
 
   if (!data.length) {
     return (
@@ -34,47 +36,44 @@ export default function TrendChart({ points, color = "#E8B54D", secondaryColor =
     );
   }
 
+  const max = data.reduce((m, p) => Math.max(m, Number(p.value) || 0, Number(p.secondary) || 0), 0);
+  const ticks = niceTicks(max);
+  const tick = { fill: d.axis, fontSize: 12 };
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
-        <CartesianGrid stroke="rgba(113,113,122,0.12)" vertical={false} />
+      <AreaChart data={data} margin={{ top: 6, right: 18, bottom: 0, left: -8 }}>
+        <CartesianGrid stroke={d.grid} vertical={false} />
         <XAxis
           dataKey="label"
-          tick={{ fill: "#71717A", fontSize: 12, fontFamily: MONO }}
-          axisLine={{ stroke: "#3F3F46" }}
-          tickLine={false}
-          interval="preserveStartEnd"
-          minTickGap={28}
-        />
-        <YAxis
-          tick={{ fill: "#71717A", fontSize: 12, fontFamily: MONO }}
+          ticks={sparseTicks(data.map((p) => p.label))}
+          interval={0}
+          tickFormatter={shortDate}
+          tick={tick}
           axisLine={false}
           tickLine={false}
-          width={42}
-          domain={["auto", "auto"]}
+          tickMargin={8}
         />
-        <Tooltip
-          cursor={{ stroke: "rgba(232,181,77,0.4)", strokeWidth: 1 }}
-          contentStyle={{
-            background: "#0A0A0A",
-            border: "1px solid #27272A",
-            borderRadius: 6,
-            fontSize: 12,
-            padding: "6px 10px",
-            fontFamily: MONO,
-          }}
-          labelStyle={{ color: "#A1A1AA", fontSize: 12, marginBottom: 2 }}
-          itemStyle={{ color: "#E4E4E7" }}
+        <YAxis
+          domain={[0, ticks[ticks.length - 1]]}
+          ticks={ticks}
+          tickFormatter={compactNumber}
+          tick={tick}
+          axisLine={false}
+          tickLine={false}
+          width={44}
         />
+        <Tooltip {...tip} cursor={{ stroke: d.axis, strokeDasharray: "3 3" }} labelFormatter={(l: string) => shortDate(l)} />
         <Area
           type="monotone"
           dataKey="value"
           name="value"
-          stroke={color}
-          strokeWidth={1.5}
-          fill="none"
+          stroke={stroke}
+          strokeWidth={2}
+          fill={stroke}
+          fillOpacity={d.fillOpacity}
           dot={false}
-          activeDot={{ r: 3, fill: color, stroke: "#000000" }}
+          activeDot={{ r: 4, fill: stroke, stroke: d.card, strokeWidth: 2 }}
         />
         {hasSecondary && (
           <Area
@@ -82,11 +81,11 @@ export default function TrendChart({ points, color = "#E8B54D", secondaryColor =
             dataKey="secondary"
             name="critical+high"
             stroke={secondaryColor}
-            strokeWidth={1.25}
+            strokeWidth={1.5}
             strokeDasharray="4 3"
             fill="none"
             dot={false}
-            activeDot={{ r: 2.5, fill: secondaryColor, stroke: "#000000" }}
+            activeDot={{ r: 3, fill: secondaryColor, stroke: d.card }}
           />
         )}
       </AreaChart>

@@ -7,9 +7,10 @@ import { cx } from "../utils";
 import { PLATFORM_URL } from "../config";
 import { useNotifications } from "./AlertNotifications";
 import {
-  loadNotificationPreferences, saveNotificationPreferences,
-  type NotificationChannel, type NotificationPreferences as Prefs, type PreferenceChanges,
+  loadNotificationPreferences, loadSecurityDigestPreferences, saveNotificationPreferences, saveSecurityDigestPreferences,
+  type NotificationChannel, type NotificationPreferences as Prefs, type PreferenceChanges, type SecurityDigestPreferences,
 } from "../preferences";
+import { ApiError } from "../api";
 
 const CHANNEL_ICON: Record<NotificationChannel, React.ReactNode> = {
   in_app: <Bell size={14} />,
@@ -202,6 +203,95 @@ export default function NotificationPreferences() {
           </button>
         </div>
       </div>
+
+      <SecurityDigestCard />
     </div>
+  );
+}
+
+/**
+ * The weekly and monthly security overview emails. Organization-wide, unlike the
+ * table above: one switch each, and it changes what every recipient gets, so
+ * only an administrator can change it. Each switch saves as it is flipped.
+ */
+function SecurityDigestCard() {
+  const { data, loading, setData } = useResource<SecurityDigestPreferences | null>(
+    () => loadSecurityDigestPreferences().catch(() => null),
+    null,
+    "security-digest-preferences",
+  );
+  const { toast } = useStore();
+  const [busy, setBusy] = useState<"weekly" | "monthly" | null>(null);
+
+  if (loading && !data) return <div className="skeleton mt-8 h-40 rounded-xl" />;
+  if (!data) return null;
+
+  const flip = async (key: "weekly" | "monthly", value: boolean) => {
+    setBusy(key);
+    try {
+      setData(await saveSecurityDigestPreferences({ [key]: value }));
+      toast(
+        "success",
+        `${key === "weekly" ? "Weekly" : "Monthly"} email ${value ? "on" : "off"}`,
+        value ? "The next one goes out on schedule." : "No more of these until it is turned back on.",
+      );
+    } catch (err) {
+      const forbidden = err instanceof ApiError && err.status === 403;
+      toast(
+        "error",
+        "Couldn't change the email",
+        forbidden ? "Only an organization administrator can change these emails." : err instanceof Error ? err.message : undefined,
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const rows: { key: "weekly" | "monthly"; label: string }[] = [
+    { key: "weekly", label: "Weekly security overview" },
+    { key: "monthly", label: "Monthly security overview" },
+  ];
+
+  return (
+    <section className="mt-8 overflow-hidden rounded-xl border border-phantix-700 bg-phantix-900">
+      <header className="border-b border-phantix-700/60 px-5 py-4">
+        <h2 className="flex items-center gap-2 font-medium text-white">
+          <Mail size={15} className="text-gold-400" /> Security overview emails
+        </h2>
+        <p className="mt-1 text-[13px] text-slate-400">
+          A summary of the period with a link to the full report, which can be read in the browser and downloaded as a
+          PDF. The link works for {data.link_days} days. These settings apply to the whole organization.
+        </p>
+      </header>
+      <ul className="divide-y divide-phantix-700/40">
+        {rows.map((r) => (
+          <li key={r.key} className="flex items-center justify-between gap-4 px-5 py-4">
+            <div className="min-w-0">
+              <p className="font-medium text-white">{r.label}</p>
+              <p className="mt-0.5 text-[13px] text-slate-400">{data.schedule[r.key]}</p>
+            </div>
+            <Toggle checked={data[r.key]} onChange={(v) => void flip(r.key, v)} label={r.label} disabled={busy !== null} />
+          </li>
+        ))}
+      </ul>
+      <div className="border-t border-phantix-700/60 px-5 py-3 text-[13px] text-slate-500 [overflow-wrap:anywhere]">
+        {data.recipients.length ? (
+          <p>
+            Sent to <span className="text-slate-300">{data.recipients.join(", ")}</span>.
+          </p>
+        ) : (
+          <p>No one would receive these yet. Add an organization administrator or a security mailbox.</p>
+        )}
+        {!data.security_mailbox && (
+          <p className="mt-1">
+            No security mailbox is set. Add one in{" "}
+            <a href={`${PLATFORM_URL}/identity`} className="inline-flex items-center gap-1 text-gold-400 hover:text-gold-300">
+              organization identity <ExternalLink size={11} />
+            </a>{" "}
+            so your security team receives them too.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }

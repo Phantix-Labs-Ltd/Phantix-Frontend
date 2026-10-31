@@ -427,13 +427,18 @@ export default function Dashboard() {
   const orgName = cc?.org?.name || storeOrg.name;
   const firstName = (session?.userName || "").trim().split(/\s+/)[0] || "";
   const lab = cc?.lab;
-  // Canonical posture first; the command centre's asset-risk index only until
-  // the API serves the canonical score.
+  // The canonical posture score only (GET /posture), the number Analytics and
+  // Defend show. It used to fall back to the command centre's asset-risk index
+  // when no surface was assessed yet, so the dashboard read 64 while Analytics
+  // read "Not set" for the same organization.
   const canonicalScore = postureRes.data?.overall_score;
-  const postureScore = num(canonicalScore ?? cc?.posture?.postureScore, 0);
+  const postureScore = num(canonicalScore, 0);
   // Distinguish "no posture yet" from a genuine 0 so a transient/blocked load
   // does not read as a confident zero (the dashboard-shows-0 bug).
-  const postureKnown = (canonicalScore ?? cc?.posture?.postureScore) != null;
+  const postureKnown = canonicalScore != null;
+  const postureHint = postureRes.data
+    ? "No surface assessed yet. Run a scan to score one"
+    : "Posture unavailable";
   // Every findings number on this page comes from the verified findings board
   // (the same population as the severity chart, the tracker and the app
   // overviews). "Open" means not fixed or accepted, as on the tracker. It used to
@@ -453,8 +458,12 @@ export default function Dashboard() {
   const href = (key: string, fallback: string) => str(pages[key], fallback);
 
   const trend = withinRange(trendRes.data ?? [], resolved, (p) => p.day);
-  const scorePoints = trend.map((p) => ({ label: p.day.slice(5) || p.day, value: Math.round(Number(p.score ?? 0)) }));
-  const hasTrend = trend.length > 1;
+  // Days without a score are dropped, not drawn as 0: a 0 there made the delta
+  // and the line claim a collapse that never happened.
+  const scorePoints = trend
+    .filter((p) => p.score != null && Number.isFinite(Number(p.score)))
+    .map((p) => ({ label: p.day, value: Math.round(Number(p.score)) }));
+  const hasTrend = scorePoints.length > 1;
   const scoreDelta = hasTrend ? scorePoints[scorePoints.length - 1].value - scorePoints[0].value : null;
   // Open-per-day comes from the tracker's own daily series (the posture trend
   // counted raw scanner results, a different population). It is asked for
@@ -463,7 +472,7 @@ export default function Dashboard() {
   // then says so rather than implying the two should match.
   const timeline = withinRange(timelineRes.data?.series ?? [], resolved, (p) => p.day);
   const timelineVerified = timelineRes.data?.verification === "verified";
-  const findingPoints = timeline.map((p) => ({ label: p.day.slice(5), value: Number(p.cumulative_open ?? 0) }));
+  const findingPoints = timeline.map((p) => ({ label: p.day, value: Number(p.cumulative_open ?? 0) }));
   const hasFindingTrend = findingPoints.length > 1;
   const findingsDelta = hasFindingTrend
     ? pctChange(findingPoints[0].value, findingPoints[findingPoints.length - 1].value)
@@ -596,8 +605,8 @@ export default function Dashboard() {
         label="Posture score"
         value={postureKnown ? postureScore : null}
         suffix="/100"
-        delta={<Delta value={scoreDelta} unit=" pts" goodWhen="up" />}
-        hint={scoreDelta != null ? sinceLabel : `${activeAssets} active assets`}
+        delta={postureKnown ? <Delta value={scoreDelta} unit=" pts" goodWhen="up" /> : null}
+        hint={!postureKnown ? postureHint : scoreDelta != null ? sinceLabel : "Average of the assessed surfaces"}
         to="/analytics"
       />
     ),
@@ -631,13 +640,23 @@ export default function Dashboard() {
       <KpiTile icon={<Wrench size={22} />} label="Fixed in range" value={fixedInRange} hint={`Fixed ${resolved.label.toLowerCase()}`} to={href("tracker", "/tracker")} />
     ),
     posture_trend: (
-      <Panel title="Posture overview" subtitle="Daily composite score" action={rangeChip}>
-        <div className="mb-2 flex items-baseline gap-2">
-          <span className="font-mono text-[26px] font-semibold text-white">{postureKnown ? postureScore : "Not set"}</span>
-          <Delta value={scoreDelta} unit=" pts" goodWhen="up" />
-        </div>
+      <Panel
+        title="Posture score"
+        figure={
+          postureKnown ? (
+            <>
+              {postureScore}/100
+              <Delta value={scoreDelta} unit=" pts" goodWhen="up" />
+            </>
+          ) : (
+            "Not set"
+          )
+        }
+        subtitle="Daily composite score"
+        action={rangeChip}
+      >
         {trendRes.loading && !hasTrend ? (
-          <div className="skeleton h-[170px] rounded-md" />
+          <div className="skeleton h-[200px] rounded-md" />
         ) : hasTrend ? (
           <AreaTrend points={scorePoints} name="Posture score" />
         ) : (
@@ -669,6 +688,7 @@ export default function Dashboard() {
     open_per_day: (
       <Panel
         title="Open findings per day"
+        figure={hasFindingTrend ? `${findingPoints[findingPoints.length - 1].value} open now` : undefined}
         subtitle={
           timelineVerified
             ? "Verified findings still open at the end of each day"
@@ -677,7 +697,7 @@ export default function Dashboard() {
         action={<Delta value={findingsDelta} goodWhen="down" />}
       >
         {timelineRes.loading && !hasFindingTrend ? (
-          <div className="skeleton h-[170px] rounded-md" />
+          <div className="skeleton h-[200px] rounded-md" />
         ) : hasFindingTrend ? (
           <ColumnTrend points={findingPoints} name="Open findings" />
         ) : (

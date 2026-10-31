@@ -763,7 +763,10 @@ function onSignInRoute(): boolean {
     path.startsWith("/login") ||
     path.startsWith("/password-reset") ||
     path.startsWith("/reset-password") ||
-    path.startsWith("/device-confirm")
+    path.startsWith("/device-confirm") ||
+    // Opened from an email by someone who may have no account: a stale session
+    // in this browser must not reload the page away from the report.
+    path.startsWith("/shared-report")
   );
 }
 

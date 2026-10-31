@@ -8,7 +8,7 @@ import { useSseStream } from "../useSse";
 import { isDemoMode } from "../api";
 import {
   loadAlertsBundle, loadPostureTrend, loadRisksBundle, loadScansBundle, loadSocDetectionTrend,
-  loadTrackerSummary, loadVaptBundle,
+  loadTrackerSummary, loadTrackerTimeline, loadVaptBundle,
 } from "../data";
 import { loadPostureSnapshot } from "../vaptOps";
 import { loadCodeFindings, loadGithubRepositories } from "../codeOps";
@@ -17,7 +17,7 @@ import { titleCase } from "../utils";
 import type { ApplicationKey } from "../shell/types";
 import {
   AreaTrend, ColumnTrend, Delta, Donut, KpiTile, MiniTable, Panel, PanelEmpty, RankedBars, ViewAll,
-  type Column, type Slice,
+  type Column, type SeriesPoint, type Slice,
 } from "./DashboardWidgets";
 
 // A compact dashboard at the top of the Attack / Defend / Code overview: the
@@ -63,16 +63,36 @@ function Skeleton() {
 }
 
 const KPI_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4";
+const TREND_GRID = "mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2";
 const PANEL_GRID = "mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3";
+const TREND_DAYS = 30;
+
+/** One point per day for the last `days` days (ISO labels), counting `dates`. */
+function dailyCounts(dates: (string | null | undefined)[], days = TREND_DAYS): SeriesPoint[] {
+  const counts = countBy(
+    dates.filter((d): d is string => Boolean(d)),
+    (d) => String(d).slice(0, 10),
+  );
+  const out: SeriesPoint[] = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - i))
+      .toISOString()
+      .slice(0, 10);
+    out.push({ label: day, value: counts[day] ?? 0 });
+  }
+  return out;
+}
 
 // ── Attack ────────────────────────────────────────────────────────────────────
 async function loadAttack() {
-  const [vapt, scans, tracker] = await Promise.all([
+  const [vapt, scans, tracker, timeline] = await Promise.all([
     soft(loadVaptBundle()),
     soft(loadScansBundle()),
     soft(loadTrackerSummary()),
+    soft(loadTrackerTimeline(TREND_DAYS, { verified: true })),
   ]);
-  return { vapt, scans, tracker };
+  return { vapt, scans, tracker, timeline };
 }
 
 function AttackDashboard() {
@@ -122,6 +142,11 @@ function AttackDashboard() {
   const statusRows = Object.entries(byStatus)
     .map(([k, v]) => ({ key: k, label: titleCase(k.replace(/_/g, " ")), value: v }))
     .sort((a, b) => b.value - a.value);
+  // The last 30 days only, whatever window the API answered with.
+  const series = (data?.timeline?.series ?? []).slice(-TREND_DAYS);
+  const openSeries = series.map((p) => ({ label: p.day, value: Number(p.cumulative_open ?? 0) }));
+  const detectedSeries = series.map((p) => ({ label: p.day, value: Number(p.detected ?? 0) }));
+  const detectedTotal = detectedSeries.reduce((n, p) => n + (p.value ?? 0), 0);
 
   const cols: Column<Row>[] = [
     { key: "name", header: "Campaign", render: (c) => <span className="text-slate-200">{String(c.name ?? `#${c.id}`)}</span> },
@@ -136,6 +161,14 @@ function AttackDashboard() {
         <KpiTile icon={<CheckCircle2 size={22} />} label="Verified findings" value={verified} hint={`${fromCampaigns} from campaigns · all sources`} to="/tracker" delay={0.04} />
         <KpiTile icon={<Radar size={22} />} label="Scan jobs" value={jobs.length} hint={`${doneJobs} completed`} to="/scans" delay={0.08} />
         <KpiTile icon={<Bug size={22} />} label="Open verified findings" value={testOpen} hint="Verified work awaiting a fix" to="/tracker" delay={0.12} />
+      </div>
+      <div className={TREND_GRID}>
+        <Panel title="Open verified findings" figure={testOpen.toLocaleString()} subtitle={`Still open at the end of each day, last ${TREND_DAYS} days`} delay={0.06} action={<ViewAll to="/tracker" />}>
+          {openSeries.length > 1 ? <AreaTrend points={openSeries} name="Open" scale="auto" /> : <PanelEmpty>Daily counts appear once findings are verified.</PanelEmpty>}
+        </Panel>
+        <Panel title="Findings detected" figure={detectedTotal.toLocaleString()} subtitle={`Newly verified per day, last ${TREND_DAYS} days`} delay={0.08} action={<ViewAll to="/tracker" />}>
+          {detectedTotal > 0 ? <ColumnTrend points={detectedSeries} name="Detected" /> : <PanelEmpty>Nothing verified in the last {TREND_DAYS} days.</PanelEmpty>}
+        </Panel>
       </div>
       <div className={PANEL_GRID}>
         <Panel title="Verified findings by severity" delay={0.1} action={<ViewAll to="/tracker" />}>
@@ -167,8 +200,13 @@ async function loadDefend() {
 function DefendDashboard() {
   const { data, loading } = useResource(loadDefend, null as Awaited<ReturnType<typeof loadDefend>> | null, "mini-defend");
   if (loading && !data) return <Skeleton />;
-  const trend = (data?.trend ?? []).map((p) => ({ label: p.day, value: Math.round(Number(p.score ?? 0)) }));
-  const score = data?.snapshot?.overall_score ?? (trend.length ? trend[trend.length - 1].value : null);
+  const trend = (data?.trend ?? [])
+    .filter((p) => p.score != null && Number.isFinite(Number(p.score)))
+    .map((p) => ({ label: p.day, value: Math.round(Number(p.score)) }));
+  // GET /posture is the one score; the trend only stands in when that call failed.
+  const score = data?.snapshot
+    ? data.snapshot.overall_score ?? null
+    : trend.length ? trend[trend.length - 1].value : null;
   const delta = trend.length > 1 ? trend[trend.length - 1].value - trend[0].value : null;
   const risks = (data?.risks ?? []) as Row[];
   const openRisks = risks.filter((r) => !["closed", "accepted"].includes(String(r.status)));
@@ -186,7 +224,7 @@ function DefendDashboard() {
   return (
     <div className="mb-6">
       <div className={KPI_GRID}>
-        <KpiTile icon={<Gauge size={22} />} label="Posture score" value={score == null ? null : Math.round(score)} suffix="/100" delta={<Delta value={delta} unit=" pts" />} hint={delta != null ? "vs 14 days ago" : "Composite posture"} to="/posture" />
+        <KpiTile icon={<Gauge size={22} />} label="Posture score" value={score == null ? null : Math.round(score)} suffix="/100" delta={score == null ? null : <Delta value={delta} unit=" pts" />} hint={score == null ? "No surface assessed yet" : delta != null ? "vs 14 days ago" : "Average of the assessed surfaces"} to="/posture" />
         <KpiTile icon={<ShieldAlert size={22} />} label="Open risks" value={openRisks.length} hint={`${critical} critical`} to="/risks" delay={0.04} />
         <KpiTile icon={<Siren size={22} />} label="SOC detections" value={detectionTotal} hint="Last 14 days" to="/soc" delay={0.08} />
         {/* Alert notifications (the delivery log), not incidents: the card was
@@ -194,10 +232,10 @@ function DefendDashboard() {
         <KpiTile icon={<AlertTriangle size={22} />} label="Alerts sent" value={alerts.length} hint={`${alerts.filter((a) => a.status === "failed").length} failed deliveries`} to="/alerts" delay={0.12} />
       </div>
       <div className={PANEL_GRID}>
-        <Panel title="Posture over time" subtitle="Daily composite score" delay={0.1} action={<ViewAll to="/posture" />}>
+        <Panel title="Posture over time" figure={score == null ? "Not set" : `${Math.round(score)}/100`} subtitle="Daily composite score" delay={0.1} action={<ViewAll to="/posture" />}>
           {trend.length > 1 ? <AreaTrend points={trend} name="Posture score" /> : <PanelEmpty>Posture history builds up as scans run.</PanelEmpty>}
         </Panel>
-        <Panel title="SOC detections per day" subtitle="Last 14 days" delay={0.14} action={<ViewAll to="/soc" />}>
+        <Panel title="SOC detections" figure={detectionTotal.toLocaleString()} subtitle="Per day, last 14 days" delay={0.14} action={<ViewAll to="/soc" />}>
           {detectionTotal > 0 ? <ColumnTrend points={detections} name="Detections" /> : <PanelEmpty>No detections in the last 14 days.</PanelEmpty>}
         </Panel>
         <Panel title="Top open risks" delay={0.18} action={<ViewAll to="/risks" />} className="lg:col-span-2 2xl:col-span-1">
@@ -233,6 +271,8 @@ function CodeDashboard() {
     .map(([k, v]) => ({ key: k, label: k.split("/").pop() || k, value: v, icon: <GitBranch size={14} /> }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5);
+  const perDay = dailyCounts(findings.map((f) => f.created_at as string | undefined));
+  const inRange = perDay.reduce((n, p) => n + (p.value ?? 0), 0);
 
   const cols: Column<Row>[] = [
     {
@@ -258,6 +298,17 @@ function CodeDashboard() {
         <KpiTile icon={<Bug size={22} />} label="Code findings" value={total} hint="Across reviewed repositories" to="/code-review" delay={0.04} />
         <KpiTile icon={<ShieldAlert size={22} />} label="Critical + high" value={urgent} hint={total ? `${Math.round((urgent / total) * 100)}% of findings` : "Nothing urgent"} to="/code-review" delay={0.08} />
         <KpiTile icon={<GitPullRequest size={22} />} label="Repositories with findings" value={Object.keys(byRepo).length} hint={partial ? `In the latest ${findings.length} findings` : "Open the pull-request queue"} to="/code-review/pull-requests" delay={0.12} />
+      </div>
+      <div className="mt-4">
+        <Panel
+          title="Code findings found"
+          figure={inRange.toLocaleString()}
+          subtitle={partial ? `Per day, last ${TREND_DAYS} days, from the latest ${findings.length} findings` : `Per day, last ${TREND_DAYS} days`}
+          delay={0.06}
+          action={<ViewAll to="/code-review" />}
+        >
+          {inRange > 0 ? <ColumnTrend points={perDay} name="Findings" /> : <PanelEmpty>No code findings in the last {TREND_DAYS} days.</PanelEmpty>}
+        </Panel>
       </div>
       <div className={PANEL_GRID}>
         <Panel title="Findings by severity" delay={0.1}>
