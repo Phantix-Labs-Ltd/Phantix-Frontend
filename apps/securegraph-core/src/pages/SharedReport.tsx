@@ -117,7 +117,7 @@ export default function SharedReport() {
   return (
     <div className="flex min-h-screen flex-col bg-phantix-950">
       <header className="flex items-center justify-between gap-3 border-b border-phantix-800 px-4 py-3 sm:px-6">
-        <BrandWordmark />
+        <BrandWordmark className="h-8 self-start" />
         <ThemeToggle />
       </header>
 
