@@ -83,8 +83,8 @@ export default function App() {
           <Route path="/vapt/procedures" element={<VaptProcedures />} />
           <Route path="/vapt/settings" element={<VaptSettings />} />
           <Route path="/scans" element={<Scans />} />
-          <Route path="/api-endpoints" element={<ApiEndpoints />} />
-          <Route path="/api-endpoints/:id" element={<ApiEndpoints />} />
+          <Route path="/endpoints" element={<ApiEndpoints />} />
+          <Route path="/endpoints/:id" element={<ApiEndpoints />} />
           <Route
             path="/tracker"
             element={<Tracker reportHref={`${APP_URL}/reports`} assetBase={`${APP_URL}/assets`} />}

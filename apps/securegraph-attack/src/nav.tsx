@@ -39,7 +39,7 @@ export const NAV: NavSection[] = [
     items: [
       { to: "/scans", label: "Scans", icon: <Radar size={17} /> },
       // Endpoint inventory from each API's spec; new endpoints are flagged for testing.
-      { to: "/api-endpoints", label: "API endpoints", icon: <Braces size={17} /> },
+      { to: "/endpoints", label: "API endpoints", icon: <Braces size={17} /> },
       { to: "/mobile", label: "Mobile", icon: <Smartphone size={17} /> },
       // The remediation queue is the tracker with fix guidance embedded.
       { to: "/tracker", label: "Tracker", icon: <KanbanSquare size={17} /> },

@@ -37,6 +37,7 @@ export default defineConfig(({ mode, isSsrBuild }) => {
           "/mobile",
           "/vapt",
           "/scans",
+          "/endpoints",
           "/tracker",
           "/remediation",
           "/assistant",

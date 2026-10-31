@@ -270,7 +270,7 @@ function ApiList() {
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {data.map((a) => (
-            <button key={a.id} type="button" onClick={() => navigate(`/api-endpoints/${a.id}`)} className="card min-w-0 p-4 text-left transition-colors hover:border-phantix-600">
+            <button key={a.id} type="button" onClick={() => navigate(`/endpoints/${a.id}`)} className="card min-w-0 p-4 text-left transition-colors hover:border-phantix-600">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-medium text-white">{a.name}</p>
@@ -293,7 +293,7 @@ function ApiList() {
           ))}
         </div>
       )}
-      <AddApiModal open={adding} onClose={() => setAdding(false)} onAdded={(api) => { setAdding(false); void reload(); navigate(`/api-endpoints/${api.id}`); }} />
+      <AddApiModal open={adding} onClose={() => setAdding(false)} onAdded={(api) => { setAdding(false); void reload(); navigate(`/endpoints/${api.id}`); }} />
     </div>
   );
 }
@@ -366,7 +366,10 @@ function TestModal({ api, endpoints, onClose, onStarted }: { api: ApiSpec; endpo
           {writes.length > 0 && (
             <div className={cx("rounded-lg border px-3 py-3 text-[13px]", production ? "border-severity-critical/40 bg-severity-critical/10" : "border-amber-400/30 bg-amber-400/5")}>
               <p className="flex items-center gap-2 font-medium text-amber-200">
-                <ShieldAlert size={15} /> {writes.length} of these endpoint{writes.length === 1 ? "" : "s"} change data
+                <ShieldAlert size={15} />{" "}
+                {endpoints.length === 1
+                  ? "This endpoint changes data"
+                  : `${writes.length} of these endpoints ${writes.length === 1 ? "changes" : "change"} data`}
               </p>
               <p className="mt-1 text-slate-300">
                 Testing {writes.map((w) => w.method).filter((m, i, a) => a.indexOf(m) === i).join(", ")} sends generated data, which can create, change or delete records{production ? " in production" : ""}.
@@ -492,7 +495,7 @@ function SettingsModal({ api, onClose, onSaved }: { api: ApiSpec; onClose: () =>
         <div className="border-t border-phantix-700/60 pt-4">
           <p className="flex items-center gap-2 text-sm font-medium text-white"><KeyRound size={14} /> Authentication for tests</p>
           <p className="mt-1 text-[12px] text-slate-500">
-            {api.auth_header ? <>A <span className="font-mono">{api.auth_header.name}</span> header is set. Enter a new value to replace it.</> : "No header is set, so authenticated endpoints are tested without credentials."}
+            {api.auth_header ? <>The <span className="font-mono">{api.auth_header.name}</span> header is set. Enter a new value to replace it.</> : "No header is set, so authenticated endpoints are tested without credentials."}
           </p>
           <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-[10rem_1fr]">
             <input className="input" value={authName} onChange={(e) => setAuthName(e.target.value)} placeholder="Authorization" aria-label="Header name" />
@@ -599,7 +602,7 @@ function ApiDetail({ id }: { id: number }) {
 
   return (
     <div>
-      <Link to="/api-endpoints" className="mb-3 inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200"><ArrowLeft size={13} /> All APIs</Link>
+      <Link to="/endpoints" className="mb-3 inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200"><ArrowLeft size={13} /> All APIs</Link>
       <PageHeader
         title={data.name}
         description={[
@@ -693,7 +696,8 @@ function ApiDetail({ id }: { id: number }) {
                     <td className="px-4 py-3">
                       <input type="checkbox" aria-label={`Select ${e.key}`} checked={selected.has(e.key)} disabled={e.state === "removed"} onChange={() => toggle(e.key)} />
                     </td>
-                    <td className="max-w-0 px-2 py-3">
+                    {/* Takes the spare width; long paths wrap inside it rather than widening the table. */}
+                    <td className="w-full min-w-[18rem] max-w-0 px-2 py-3">
                       <div className="flex min-w-0 items-start gap-2">
                         <MethodBadge method={e.method} />
                         <div className="min-w-0">
@@ -734,7 +738,9 @@ function ApiDetail({ id }: { id: number }) {
               <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-[13px]">
                 <span className="text-slate-300">{TRIGGER_LABEL[h.trigger] ?? h.trigger} <span className="text-slate-500">· {timeAgo(h.at)}</span></span>
                 {h.ok ? (
-                  <span className="font-mono text-[12px] text-slate-400">+{h.added ?? 0} new · {h.changed ?? 0} changed · −{h.removed ?? 0} removed</span>
+                  <span className="text-[12px] text-slate-400">
+                    {[h.added && `${h.added} new`, h.changed && `${h.changed} changed`, h.removed && `${h.removed} removed`].filter(Boolean).join(" · ") || "No changes"}
+                  </span>
                 ) : (
                   <span className="text-[12px] text-amber-300 [overflow-wrap:anywhere]">{h.error}</span>
                 )}

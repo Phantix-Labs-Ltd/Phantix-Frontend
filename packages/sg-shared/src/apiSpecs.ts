@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, delay, isDemoMode } from "./api";
 
 /*
  * API endpoint inventory (`/api/v1/api-specs`).
@@ -108,11 +108,96 @@ export interface ApiSpecSettings {
 
 const P = "/api-specs";
 
+// ── Demo tenant: one staging API with every endpoint state ──────────────────
+
+function demoAgo(hours: number): string {
+  return new Date(Date.now() - hours * 3600_000).toISOString();
+}
+
+function demoEndpoint(
+  method: string,
+  path: string,
+  summary: string,
+  state: EndpointState,
+  extra: Partial<ApiEndpoint> = {},
+): ApiEndpoint {
+  return {
+    key: `${method} ${path}`,
+    method,
+    path,
+    operation_id: null,
+    summary,
+    tags: [path.split("/")[2] ?? "api"],
+    deprecated: false,
+    auth: true,
+    writes: ["POST", "PUT", "PATCH", "DELETE"].includes(method),
+    first_seen_at: state === "new" ? demoAgo(20) : demoAgo(24 * 30),
+    changed_at: state === "changed" ? demoAgo(20) : null,
+    removed_at: state === "removed" ? demoAgo(20) : null,
+    state,
+    last_test: null,
+    ...extra,
+  };
+}
+
+function demoApi(): ApiSpec {
+  const endpoints: ApiEndpoint[] = [
+    demoEndpoint("GET", "/v1/orders", "List orders", "tested", {
+      last_test: { status: "passed", at: demoAgo(48), cases: 31, failures: 0, codes: [] },
+    }),
+    demoEndpoint("POST", "/v1/orders", "Create an order", "tested", {
+      last_test: { status: "failed", at: demoAgo(48), cases: 30, failures: 2, codes: ["ST101", "ST201"] },
+    }),
+    demoEndpoint("GET", "/v1/orders/{orderId}/refunds", "List refunds for an order", "new"),
+    demoEndpoint("POST", "/v1/orders/{orderId}/refunds", "Refund part or all of an order", "new"),
+    demoEndpoint("PATCH", "/v1/customers/{customerId}", "Update a customer", "changed", {
+      last_test: { status: "passed", at: demoAgo(24 * 9), cases: 28, failures: 0, codes: [] },
+    }),
+    demoEndpoint("GET", "/v1/admin/reports/settlements", "Settlement report (admin)", "untested"),
+    demoEndpoint("DELETE", "/v1/sessions/{sessionId}", "Revoke a session", "removed"),
+  ];
+  return {
+    id: 1,
+    name: "Payments API",
+    base_url: "https://staging-api.demo-org.example",
+    environment: "staging",
+    is_verified: true,
+    spec_url: "https://staging-api.demo-org.example/openapi.json",
+    spec_source: "url",
+    title: "Payments API",
+    version: "2.14.0",
+    format: "OpenAPI 3.1.0",
+    indexed_at: demoAgo(2),
+    auto_reindex: false,
+    interval_minutes: 60,
+    hook_enabled: true,
+    auth_header: { name: "Authorization", set: true },
+    spec_uses_auth: false,
+    last_error: null,
+    counts: { total: 6, new: 2, changed: 1, removed: 1, untested: 1, failing: 1 },
+    endpoints,
+    history: [
+      { at: demoAgo(20), trigger: "ci", ok: true, added: 2, changed: 1, removed: 1 },
+      { at: demoAgo(24 * 7), trigger: "weekly", ok: true, added: 0, changed: 0, removed: 0 },
+      { at: demoAgo(24 * 30), trigger: "added", ok: true, added: 4, changed: 0, removed: 0 },
+    ],
+  };
+}
+
 export async function listApiSpecs(): Promise<ApiSpec[]> {
+  if (isDemoMode()) {
+    await delay(200);
+    const { endpoints: _e, history: _h, ...summary } = demoApi();
+    return [summary];
+  }
   return (await api.get<{ items: ApiSpec[] }>(P)).items ?? [];
 }
 
-export function getApiSpec(id: number): Promise<ApiSpec> {
+export async function getApiSpec(id: number): Promise<ApiSpec> {
+  if (isDemoMode()) {
+    await delay(200);
+    return demoApi();
+  }
   return api.get<ApiSpec>(`${P}/${id}`);
 }
 
