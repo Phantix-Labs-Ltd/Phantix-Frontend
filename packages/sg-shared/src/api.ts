@@ -172,6 +172,46 @@ function sendableBearer(value: string | null | undefined): string | null {
   return value && !isCookieSession(value) ? value : null;
 }
 
+// ── MSSP acting session (X-Act-For) ─────────────────────────────────────────
+// POST /mssp/delegations/{id}/enter mints a short-lived acting token; the app
+// presents it as X-Act-For and the backend resolves it to the *client*
+// organization, re-verifying the live grant on every request (so revocation is
+// immediate even with the tab still open). Kept per-tab: closing the tab ends
+// the session.
+export type ActingSession = {
+  token: string;
+  clientOrgId: number;
+  clientOrgName?: string;
+  application: string;
+  expiresAt?: string;
+};
+
+const ACTING_STORAGE_KEY = "sg.mssp.acting";
+
+export function getActingSession(): ActingSession | null {
+  try {
+    const raw = sessionStorage.getItem(ACTING_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ActingSession;
+    if (!parsed?.token) return null;
+    if (parsed.expiresAt && Date.parse(parsed.expiresAt) <= Date.now()) {
+      sessionStorage.removeItem(ACTING_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function startActingSession(session: ActingSession): void {
+  sessionStorage.setItem(ACTING_STORAGE_KEY, JSON.stringify(session));
+}
+
+export function clearActingSession(): void {
+  sessionStorage.removeItem(ACTING_STORAGE_KEY);
+}
+
 /** Auth headers for raw `fetch` calls (downloads, SSE) outside `request()`. */
 export function sessionAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { [SESSION_TRANSPORT_HEADER]: "cookie" };
@@ -179,6 +219,8 @@ export function sessionAuthHeaders(): Record<string, string> {
   if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
   const device = sendableBearer(tokens.device);
   if (device) headers["X-Device-Token"] = device;
+  const acting = getActingSession();
+  if (acting) headers["X-Act-For"] = acting.token;
   return headers;
 }
 
