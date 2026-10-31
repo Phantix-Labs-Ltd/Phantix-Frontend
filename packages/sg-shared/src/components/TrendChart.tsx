@@ -42,7 +42,7 @@ export default function TrendChart({ points, color, secondaryColor = "#F43F5E", 
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 6, right: 8, bottom: 0, left: -8 }}>
+      <AreaChart data={data} margin={{ top: 6, right: 18, bottom: 0, left: -8 }}>
         <CartesianGrid stroke={d.grid} vertical={false} />
         <XAxis
           dataKey="label"

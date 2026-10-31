@@ -333,32 +333,37 @@ function maxOf(points: SeriesPoint[]): number {
   return points.reduce((m, p) => (p.value != null && p.value > m ? p.value : m), 0);
 }
 
-function TrendAxes({ points, ticks, d }: { points: SeriesPoint[]; ticks: number[]; d: (typeof DASH)["dark" | "light"] }) {
+/**
+ * Grid and axes shared by the trend charts. A plain function returning the
+ * elements, not a component: Recharts finds its axes among the chart's direct
+ * children by type, and an axis wrapped in a component is silently ignored.
+ */
+function trendAxes(points: SeriesPoint[], ticks: number[], d: (typeof DASH)["dark" | "light"]) {
   const tick = { fill: d.axis, fontSize: 12 };
-  return (
-    <>
-      <CartesianGrid stroke={d.grid} vertical={false} />
-      <XAxis
-        dataKey="label"
-        ticks={sparseTicks(points.map((p) => p.label))}
-        interval={0}
-        tickFormatter={shortDate}
-        tick={tick}
-        tickLine={false}
-        axisLine={false}
-        tickMargin={8}
-      />
-      <YAxis
-        domain={[0, ticks[ticks.length - 1]]}
-        ticks={ticks}
-        tickFormatter={compactNumber}
-        tick={tick}
-        tickLine={false}
-        axisLine={false}
-        width={44}
-      />
-    </>
-  );
+  return [
+    <CartesianGrid key="grid" stroke={d.grid} vertical={false} />,
+    <XAxis
+      key="x"
+      dataKey="label"
+      ticks={sparseTicks(points.map((p) => p.label))}
+      interval={0}
+      tickFormatter={shortDate}
+      tick={tick}
+      tickLine={false}
+      axisLine={false}
+      tickMargin={8}
+    />,
+    <YAxis
+      key="y"
+      domain={[0, ticks[ticks.length - 1]]}
+      ticks={ticks}
+      tickFormatter={compactNumber}
+      tick={tick}
+      tickLine={false}
+      axisLine={false}
+      width={44}
+    />,
+  ];
 }
 
 /**
@@ -380,8 +385,8 @@ export function AreaTrend({
   const ticks = scale === "score" ? [0, 50, 100] : niceTicks(maxOf(points));
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={points} margin={{ top: 6, right: 8, bottom: 0, left: -8 }}>
-        <TrendAxes points={points} ticks={ticks} d={d} />
+      <AreaChart data={points} margin={{ top: 6, right: 18, bottom: 0, left: -8 }}>
+        {trendAxes(points, ticks, d)}
         <Tooltip
           {...tip}
           cursor={{ stroke: d.axis, strokeDasharray: "3 3" }}
@@ -410,8 +415,8 @@ export function ColumnTrend({ points, height = 200, name }: { points: SeriesPoin
   const { d, tip } = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={points} margin={{ top: 6, right: 8, bottom: 0, left: -8 }} barCategoryGap="28%">
-        <TrendAxes points={points} ticks={niceTicks(maxOf(points))} d={d} />
+      <BarChart data={points} margin={{ top: 6, right: 18, bottom: 0, left: -8 }} barCategoryGap="28%">
+        {trendAxes(points, niceTicks(maxOf(points)), d)}
         <Tooltip
           {...tip}
           cursor={{ fill: d.grid }}

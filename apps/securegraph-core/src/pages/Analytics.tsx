@@ -562,7 +562,7 @@ function PostureBreakdown({
                   <SeverityBadge severity={row.severity} />
                   <span className="min-w-0 flex-1 truncate text-slate-300" title={row.title}>{row.title}</span>
                   <span className="shrink-0 text-[12px] text-slate-500">{SURFACE_LABELS[String(row.surface ?? "")] ?? ""}</span>
-                  <span className="w-14 shrink-0 text-right font-mono text-[12px] text-slate-400">weight {weight}</span>
+                  <span className="shrink-0 whitespace-nowrap text-right font-mono text-[12px] text-slate-400">weight {weight}</span>
                 </li>
               ))}
             </ul>

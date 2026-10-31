@@ -142,10 +142,11 @@ function AttackDashboard() {
   const statusRows = Object.entries(byStatus)
     .map(([k, v]) => ({ key: k, label: titleCase(k.replace(/_/g, " ")), value: v }))
     .sort((a, b) => b.value - a.value);
-  const series = data?.timeline?.series ?? [];
+  // The last 30 days only, whatever window the API answered with.
+  const series = (data?.timeline?.series ?? []).slice(-TREND_DAYS);
   const openSeries = series.map((p) => ({ label: p.day, value: Number(p.cumulative_open ?? 0) }));
   const detectedSeries = series.map((p) => ({ label: p.day, value: Number(p.detected ?? 0) }));
-  const detectedTotal = Number(data?.timeline?.totals?.detected ?? detectedSeries.reduce((n, p) => n + (p.value ?? 0), 0));
+  const detectedTotal = detectedSeries.reduce((n, p) => n + (p.value ?? 0), 0);
 
   const cols: Column<Row>[] = [
     { key: "name", header: "Campaign", render: (c) => <span className="text-slate-200">{String(c.name ?? `#${c.id}`)}</span> },
