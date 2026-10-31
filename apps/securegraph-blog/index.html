@@ -52,6 +52,10 @@
           "identifier": "RC - 9904435",
           "alternateName": ["Phantix Labs", "Phantix", "PhantixLabs"],
           "url": "https://phantixlabs.com/",
+          "areaServed": [
+            { "@type": "Country", "name": "Nigeria" },
+            { "@type": "Place", "name": "Africa" }
+          ],
           "logo": {
             "@type": "ImageObject",
             "@id": "https://phantixlabs.com/#logo",
@@ -64,6 +68,23 @@
             "https://x.com/SecureGraph_AI",
             "https://github.com/Phantix-Labs-Ltd"
           ]
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://phantixlabs.com/#product",
+          "name": "SecureGraph Command Centre",
+          "alternateName": ["SecureGraph", "SecureGraph AI"],
+          "applicationCategory": "SecurityApplication",
+          "operatingSystem": "Web",
+          "url": "https://app.phantixlabs.com",
+          "publisher": { "@id": "https://phantixlabs.com/#organization" },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "NGN",
+            "url": "https://phantixlabs.com/pricing",
+            "description": "Start with the Free plan. Starter costs NGN 49,900 each month. Growth costs NGN 99,900 each month."
+          }
         },
         {
           "@type": "WebSite",
@@ -80,9 +101,14 @@
           "@id": "https://blog.phantixlabs.com/#blog",
           "url": "https://blog.phantixlabs.com/",
           "name": "The SecureGraph Weekly",
-          "description": "The journal of SecureGraph. Each issue publishes verified findings, attack-surface lessons, remediation that held, and security reporting for leadership.",
+          "description": "Field notes from the security graph: verified findings, attack surface lessons, fixes that held and security reporting for engineering teams in Africa.",
           "publisher": { "@id": "https://phantixlabs.com/#organization" },
+          "about": { "@id": "https://phantixlabs.com/#product" },
           "isPartOf": { "@id": "https://blog.phantixlabs.com/#website" },
+          "audience": {
+            "@type": "Audience",
+            "audienceType": "Security and engineering teams at fintech and SaaS companies"
+          },
           "inLanguage": "en"
         }
       ]
