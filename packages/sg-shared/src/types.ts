@@ -966,6 +966,13 @@ export interface AlertSettings {
   notify: Record<string, boolean>;
 }
 
+export interface AuditDescriptionPart {
+  text: string;
+  bold?: boolean;
+}
+
+export type AuditChange = "added" | "changed" | "removed" | "viewed" | "access" | "refused";
+
 export interface AuditEvent {
   id: number;
   event_uid?: string;
@@ -987,6 +994,14 @@ export interface AuditEvent {
   correlation_id?: string | null;
   resource_type?: string | null;
   resource_id?: string | null;
+  /** Product area, e.g. "Users" or "Domains". Absent from older backends. */
+  event_category?: string | null;
+  /** One past-tense sentence; `bold` parts are the names it acted on. Plain text, never markup. */
+  description?: AuditDescriptionPart[];
+  description_text?: string;
+  change?: AuditChange | null;
+  /** Who did it: an email where one is known, else the recorded name. */
+  performed_by?: string | null;
   completed_at?: string;
   category: string;
   status: string;

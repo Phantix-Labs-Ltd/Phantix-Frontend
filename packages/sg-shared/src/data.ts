@@ -1279,7 +1279,9 @@ export async function loadAuditBundle() {
     await delay();
     return { events: demo.auditEvents };
   }
-  const events = await softList<AuditEvent>("/audit/events");
+  // The page filters and searches in the browser: load the newest 500 (the
+  // API's cap per page), not its default 50.
+  const events = await softList<AuditEvent>("/audit/events?limit=500");
   return { events };
 }
 
