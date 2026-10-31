@@ -29,6 +29,7 @@ const VaptSchedules = React.lazy(() => import("./pages/VaptSchedules"));
 const VaptProcedures = React.lazy(() => import("./pages/VaptProcedures"));
 const VaptSettings = React.lazy(() => import("./pages/VaptSettings"));
 const Mobile = React.lazy(() => import("./pages/Mobile"));
+const ApiEndpoints = React.lazy(() => import("./pages/ApiEndpoints"));
 // The remediation queue is the finding tracker now, with fix guidance embedded.
 // One shared page keeps the board identical here and in Core.
 const Tracker = React.lazy(() => import("@sg/pages/Tracker"));
@@ -82,6 +83,8 @@ export default function App() {
           <Route path="/vapt/procedures" element={<VaptProcedures />} />
           <Route path="/vapt/settings" element={<VaptSettings />} />
           <Route path="/scans" element={<Scans />} />
+          <Route path="/api-endpoints" element={<ApiEndpoints />} />
+          <Route path="/api-endpoints/:id" element={<ApiEndpoints />} />
           <Route
             path="/tracker"
             element={<Tracker reportHref={`${APP_URL}/reports`} assetBase={`${APP_URL}/assets`} />}
