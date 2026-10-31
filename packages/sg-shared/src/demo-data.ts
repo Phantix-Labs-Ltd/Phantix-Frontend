@@ -9,6 +9,7 @@ import type {
   Asset,
   AssetIntelligence,
   AssetTag,
+  AuditDescriptionPart,
   AuditEvent,
   CloudConnector,
   CloudEvent,
@@ -509,6 +510,67 @@ const DEMO_AUDIT_CONTEXT: Record<number, Partial<AuditEvent>> = {
   594: { application: "core", app_route: "/login", route: "/api/v1/auth/login" },
 };
 
+/** "**name** was added." → description parts, as the API sends them. */
+function said(sentence: string): AuditDescriptionPart[] {
+  return sentence
+    .split(/(\*\*[^*]+\*\*)/)
+    .filter(Boolean)
+    .map((p) => (p.startsWith("**") ? { text: p.slice(2, -2), bold: true } : { text: p, bold: false }));
+}
+
+/** What the API says about each demo action: category, sentence, change, actor. */
+const DEMO_AUDIT_WORDING: Record<number, Partial<AuditEvent>> = {
+  603: { event_category: "Agent", description: said("Approved the authenticated scan (agi decision **#318**)."), change: "changed", performed_by: "ada@phantixlabs.com" },
+  602: { event_category: "Agent", description: said("Requested approval to run an authenticated scan (agi decision **#318**)."), change: "changed", performed_by: "Pentest agent" },
+  601: { event_category: "Risks", description: said("Risk treatment **TLS baseline remediation** was approved."), change: "changed", performed_by: "ada@phantixlabs.com" },
+  600: { event_category: "Testing", description: said("Campaign **Q3 External Assessment** was started."), change: "added", performed_by: "ada@phantixlabs.com" },
+  599: { event_category: "Assets", description: said("Viewed the asset intelligence dashboard."), change: "viewed", performed_by: "ada@phantixlabs.com" },
+  598: { event_category: "Testing", description: said("Viewed scan results."), change: "viewed", performed_by: "ada@phantixlabs.com" },
+  597: { event_category: "Compliance", description: said("Assessment **ISO 27001** was run."), change: "changed", performed_by: "ada@phantixlabs.com" },
+  596: { event_category: "Risks", description: said("Viewed the prioritized risk register."), change: "viewed", performed_by: "chidi@phantixlabs.com" },
+  595: { event_category: "Reports", description: said("Report **Q3 External Assessment** was generated."), change: "added", performed_by: "ada@phantixlabs.com" },
+  594: { event_category: "Sign-in", description: said("**chidi@phantixlabs.com** signed in."), change: "access", performed_by: "chidi@phantixlabs.com" },
+};
+
+/** Settings changes, written the way the API words them (newest first). */
+const DEMO_SETTINGS_AUDIT: AuditEvent[] = [
+  { id: 609, sentence: "**info@phantixlabs.com** was added.", category: "Users", change: "added", route: "/api/v1/org-users", method: "POST", app_route: "/settings/people", by: "ada@phantixlabs.com", at: "2026-07-23T23:10:00Z", resource_type: "org_user", resource_id: "14" },
+  { id: 608, sentence: "Tried to add **eve@outside.example**.", category: "Users", change: "refused", route: "/api/v1/org-users", method: "POST", app_route: "/settings/people", by: "chidi@phantixlabs.com", at: "2026-07-23T22:12:00Z", outcome: "denied" as const, status_code: 403 },
+  { id: 607, sentence: "The privileges of role **Security reviewer** were changed.", category: "Roles", change: "changed", route: "/api/v1/org-users/roles/{key}", method: "PATCH", app_route: "/settings/roles", by: "ada@phantixlabs.com", at: "2026-07-22T15:56:00Z", resource_type: "role", resource_id: "security_reviewer" },
+  { id: 606, sentence: "Ownership of **phantixlabs.com** was checked.", category: "Domains", change: "changed", route: "/api/v1/organizations/me/domains/{domain_id}/check", method: "POST", app_route: "/settings/domains", by: "ada@phantixlabs.com", at: "2026-07-22T15:11:00Z", resource_type: "domain", resource_id: "2" },
+  { id: 605, sentence: "Logo was changed.", category: "Organization", change: "changed", route: "/api/v1/organizations/me/logo", method: "POST", app_route: "/settings/organization", by: "ada@phantixlabs.com", at: "2026-07-22T14:46:00Z" },
+  { id: 604, sentence: "**phantixlabs.com** was added.", category: "Domains", change: "added", route: "/api/v1/organizations/me/domains", method: "POST", app_route: "/settings/domains", by: "ada@phantixlabs.com", at: "2026-07-22T11:17:00Z", resource_type: "domain", resource_id: "2" },
+].map((e) => ({
+  id: e.id,
+  action_key: `http.${e.method.toLowerCase()}`,
+  action_label: e.sentence.replace(/\*\*/g, ""),
+  application: "core",
+  app_route: e.app_route,
+  route: e.route,
+  method: e.method,
+  status_code: e.status_code ?? (e.method === "POST" ? 201 : 200),
+  outcome: e.outcome ?? ("succeeded" as const),
+  actor_type: "user" as const,
+  actor_email: e.by,
+  resource_type: e.resource_type ?? null,
+  resource_id: e.resource_id ?? null,
+  event_category: e.category,
+  description: said(e.sentence),
+  change: e.change as AuditEvent["change"],
+  performed_by: e.by,
+  category: "settings",
+  status: "completed",
+  summary: e.sentence.replace(/\*\*/g, ""),
+  details: { path: e.route, method: e.method, actor_email: e.by, passive: false },
+  source: "api_middleware",
+  ip_address: e.by.startsWith("ada") ? "79.110.54.211" : "102.89.34.13",
+  initiator_name: e.by.startsWith("ada") ? "Ada Okonkwo" : "Chidi Eze",
+  initiator_title: e.by.startsWith("ada") ? "IT Admin" : "CISO",
+  authorizer_name: null,
+  authorizer_title: null,
+  created_at: e.at,
+}));
+
 export const auditEvents: AuditEvent[] = ([
   { id: 601, action_key: "risk.treatment.approve", action_label: "Approve risk treatment", category: "risks", status: "completed", summary: "Approved treatment: TLS baseline remediation", details: { path: "/api/v1/risks/treatments/3/approve", method: "PATCH", actor_user_id: 2, actor_email: "ada@phantixlabs.com", token_type: "app_session", passive: false }, source: "api_middleware", ip_address: "102.89.34.12", initiator_name: "Ada Okonkwo", initiator_title: "IT Admin", authorizer_name: "Chidi Eze", authorizer_title: "CISO", created_at: "2026-07-20T08:05:00Z" },
   { id: 600, action_key: "vapt.campaign.start", action_label: "Start VAPT campaign", category: "vapt", status: "completed", summary: "Started campaign: Q3 External Assessment", details: { path: "/api/v1/vapt/campaigns/13/start", method: "POST", actor_user_id: 2, actor_email: "ada@phantixlabs.com", token_type: "app_session", passive: false }, source: "api_middleware", ip_address: "102.89.34.12", initiator_name: "Ada Okonkwo", initiator_title: "IT Admin", authorizer_name: "Chidi Eze", authorizer_title: "CISO", created_at: "2026-07-14T10:30:00Z" },
@@ -531,7 +593,10 @@ export const auditEvents: AuditEvent[] = ([
   // Agent activity: recorded by the agent, in Attack, chained to its session.
   { id: 602, action_key: "agent.decision", action_label: "Requested approval to run an authenticated scan", category: "agent", status: "completed", summary: "The agent paused before a state-changing step on app.acme.ng and asked for approval.", details: { actor_type: "agent", session_id: 41 }, source: "agent", ip_address: null, initiator_name: "Autonomous Pentest Agent", initiator_title: "Agent", authorizer_name: null, authorizer_title: null, created_at: "2026-07-21T09:12:00Z", application: "attack", actor_type: "agent", session_id: 41, outcome: "succeeded", resource_type: "agi_decision", resource_id: "318" },
   { id: 603, action_key: "agent.decision", action_label: "Approved the authenticated scan", category: "agent", status: "completed", summary: "Ada approved the step the agent proposed in session #41.", details: { actor_type: "user", session_id: 41 }, source: "api", ip_address: "102.89.34.12", initiator_name: "Ada Okonkwo", initiator_title: "IT Admin", authorizer_name: null, authorizer_title: null, created_at: "2026-07-21T09:14:00Z", application: "attack", app_route: "/agent", actor_type: "user", actor_email: "ada@phantixlabs.com", session_id: 41, outcome: "succeeded", resource_type: "agi_decision", resource_id: "318" },
-]).sort((a, b) => b.id - a.id);
+] as AuditEvent[])
+  .map((e) => ({ ...e, ...DEMO_AUDIT_WORDING[e.id] }))
+  .concat(DEMO_SETTINGS_AUDIT)
+  .sort((a, b) => b.id - a.id);
 
 export const pendingActions: PendingAction[] = [
   { id: 41, action_key: "risk.treatment.approve", action_label: "Approve IDOR fix compensation plan", category: "risks", initiated_by: "Ada Okonkwo", status: "pending", created_at: "2026-07-21T05:40:00Z" },
