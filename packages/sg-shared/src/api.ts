@@ -3,6 +3,7 @@
 // API base from src/lib/config.ts (no Vite env). Demo only via /demo flag.
 import { API_BASE as CONFIG_API_BASE } from "./config";
 import { dedupedRequest } from "./dedupe";
+import { ACTING_HEADER, actingHeaderFor, clearActingSession, isActingFailure } from "./acting";
 
 export const API_BASE = CONFIG_API_BASE;
 
@@ -827,6 +828,8 @@ async function request<T>(
   // The exact token each attempt carries, so a late response can be matched
   // against the session that produced it (see the 401 branch below).
   let sentBearer: string | null = null;
+  // Whether this call ran inside a delegated client session (X-Act-For).
+  let sentActing = false;
 
   // Demo mode never touches the backend: mutations resolve as a no-op success so
   // every gated action (approve/start/pause/cancel/create, decisions, etc.) passes
@@ -856,6 +859,14 @@ async function request<T>(
       headers["X-Application"] = activeApplication;
       const page = currentAppRoute();
       if (page) headers[APP_ROUTE_HEADER] = page;
+    }
+    // An MSSP analyst working in a client's account: the backend runs the call
+    // against the client, bound to this application (see acting.ts).
+    const actFor = actingHeaderFor(path);
+    sentActing = !!actFor;
+    if (actFor) {
+      headers[ACTING_HEADER] = actFor;
+      headers["X-Application"] = activeApplication;
     }
     // Dual-control operate session: attach on ALL mutations when a token exists so
     // the SecureGraph Agent, Pentest Agent, and platform mutations share ONE operate
@@ -955,6 +966,13 @@ async function request<T>(
       detail = (await res.json()).detail;
     } catch { /* non-JSON */ }
     const detailObj = detail && typeof detail === "object" ? detail as Record<string, unknown> : null;
+    // The delegated client session ended (expired, revoked, assignment removed):
+    // leave the client's account, but never treat it as the analyst's own
+    // sign-in failing — that would sign them out of their MSSP account too.
+    if (sentActing && isActingFailure(res.status, detail)) {
+      clearActingSession(res.status === 401 ? "expired" : "revoked");
+      throw new ApiError(res.status, detail, correlationId, path);
+    }
     const relogin = detailObj?.relogin === true || detailObj?.error === "session_invalid";
     // Only treat a 401 as a dropped session when it is genuinely about an
     // invalid/expired token — NOT an authorization gap such as "dual-control
@@ -1121,6 +1139,11 @@ function buildAuthHeaders(method: string): Record<string, string> {
     headers["X-Application"] = activeApplication;
     const page = currentAppRoute();
     if (page) headers[APP_ROUTE_HEADER] = page;
+  }
+  const actFor = actingHeaderFor("");
+  if (actFor) {
+    headers[ACTING_HEADER] = actFor;
+    headers["X-Application"] = activeApplication;
   }
   if (method !== "GET" && tokens.dualControl) {
     headers["X-Dual-Control-Session"] = tokens.dualControl;
