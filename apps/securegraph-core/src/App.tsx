@@ -31,6 +31,7 @@ const AssuranceReports = React.lazy(() => import("./pages/assurance/ReportsAndMo
 const AssuranceMonitoring = React.lazy(() => import("./pages/assurance/ReportsAndMonitoring").then((m) => ({ default: m.AssuranceMonitoring })));
 const Privacy = React.lazy(() => import("./pages/Privacy"));
 const SandboxApplyPublic = React.lazy(() => import("./pages/SandboxApplyPublic"));
+const SharedReport = React.lazy(() => import("./pages/SharedReport"));
 const PasswordResetRequest = React.lazy(() => import("@sg/pages/auth/PasswordResetRequest"));
 const PasswordResetComplete = React.lazy(() => import("@sg/pages/auth/PasswordResetComplete"));
 const Docs = React.lazy(() => import("@sg/pages/Docs"));
@@ -99,6 +100,8 @@ export default function App() {
           <Route path="/cookies" element={<Cookies />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/sandbox-apply" element={<SandboxApplyPublic />} />
+          {/* Opened from the security overview email; the signed link is the credential. */}
+          <Route path="/shared-report/:token" element={<SharedReport />} />
           {/* Documentation is public: its own chrome, not the operator sidebar. */}
           <Route element={<PublicChrome />}>
             <Route path="/docs" element={<Docs application="core" />} />
