@@ -1,0 +1,130 @@
+# Coolify resource: the eight frontend apps in one container, served by nginx.
+#
+# Deploy as **Coolify → Project Phantix → Production → + Add Resource →
+# Docker Compose**, server `phantix-frontend`, compose file this one, and the git
+# key `coolify-github-frontend`.
+#
+# Why `image:` and not `build:`: `staff-portal/`, `platform-app/` and `landing/`
+# are gitignored in this repository, so a fresh clone cannot build the image
+# (the Dockerfile COPYs them). The image is built once on the frontend server
+# (`docker build -t phantix-frontend:prod /opt/frontend`) and Coolify runs it,
+# with `pull_policy: never` so compose does not try a registry pull.
+# Once those three apps are tracked (or moved to their own Coolify images), swap
+# this for `build: .` and drop `pull_policy`.
+#
+# Runtime env (set in the Coolify resource):
+#   API_PROXY_TARGET   backend the browser's /api and /api/v1 are proxied to
+#   FE_HOST_*          one hostname per app (LANDING takes apex + www)
+# Per-app VITE_* values are baked into the image at build time — rebuild the
+# image on the server to change them.
+name: phantix-frontend
+
+services:
+  web:
+    image: phantix-frontend:prod
+    pull_policy: never
+    container_name: phantix-frontend
+    restart: unless-stopped
+    environment:
+      # Required, no default: a missing value must never silently fall back to
+      # another environment's API.
+      API_PROXY_TARGET: ${API_PROXY_TARGET:?set API_PROXY_TARGET to the API origin}
+      FE_HOST_APP: ${FE_HOST_APP:-app.phantixlabs.com}
+      FE_HOST_ATTACK: ${FE_HOST_ATTACK:-attack.phantixlabs.com}
+      FE_HOST_DEFEND: ${FE_HOST_DEFEND:-defend.phantixlabs.com}
+      FE_HOST_CODE: ${FE_HOST_CODE:-code.phantixlabs.com}
+      FE_HOST_BLOG: ${FE_HOST_BLOG:-blog.phantixlabs.com}
+      FE_HOST_STAFF: ${FE_HOST_STAFF:-staff.phantixlabs.com}
+      FE_HOST_PLATFORM: ${FE_HOST_PLATFORM:-platform.phantixlabs.com}
+      FE_HOST_LANDING: ${FE_HOST_LANDING:-phantixlabs.com www.phantixlabs.com}
+    networks:
+      - coolify
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: coolify
+      traefik.http.services.phantixfe.loadbalancer.server.port: "80"
+      traefik.http.middlewares.phantixfe-redirect.redirectscheme.scheme: https
+      traefik.http.middlewares.phantixfe-redirect.redirectscheme.permanent: "false"
+      # One router per hostname: one SAN cert per domain, so a missing DNS record
+      # for a single app cannot fail the certificate for the other eight.
+      traefik.http.routers.feh1.rule: Host(`app.phantixlabs.com`)
+      traefik.http.routers.feh1.entrypoints: https
+      traefik.http.routers.feh1.tls.certresolver: letsencrypt
+      traefik.http.routers.feh1.service: phantixfe
+      traefik.http.routers.feh1-http.rule: Host(`app.phantixlabs.com`)
+      traefik.http.routers.feh1-http.entrypoints: http
+      traefik.http.routers.feh1-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh1-http.service: phantixfe
+      traefik.http.routers.feh2.rule: Host(`attack.phantixlabs.com`)
+      traefik.http.routers.feh2.entrypoints: https
+      traefik.http.routers.feh2.tls.certresolver: letsencrypt
+      traefik.http.routers.feh2.service: phantixfe
+      traefik.http.routers.feh2-http.rule: Host(`attack.phantixlabs.com`)
+      traefik.http.routers.feh2-http.entrypoints: http
+      traefik.http.routers.feh2-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh2-http.service: phantixfe
+      traefik.http.routers.feh3.rule: Host(`defend.phantixlabs.com`)
+      traefik.http.routers.feh3.entrypoints: https
+      traefik.http.routers.feh3.tls.certresolver: letsencrypt
+      traefik.http.routers.feh3.service: phantixfe
+      traefik.http.routers.feh3-http.rule: Host(`defend.phantixlabs.com`)
+      traefik.http.routers.feh3-http.entrypoints: http
+      traefik.http.routers.feh3-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh3-http.service: phantixfe
+      traefik.http.routers.feh4.rule: Host(`code.phantixlabs.com`)
+      traefik.http.routers.feh4.entrypoints: https
+      traefik.http.routers.feh4.tls.certresolver: letsencrypt
+      traefik.http.routers.feh4.service: phantixfe
+      traefik.http.routers.feh4-http.rule: Host(`code.phantixlabs.com`)
+      traefik.http.routers.feh4-http.entrypoints: http
+      traefik.http.routers.feh4-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh4-http.service: phantixfe
+      traefik.http.routers.feh5.rule: Host(`blog.phantixlabs.com`)
+      traefik.http.routers.feh5.entrypoints: https
+      traefik.http.routers.feh5.tls.certresolver: letsencrypt
+      traefik.http.routers.feh5.service: phantixfe
+      traefik.http.routers.feh5-http.rule: Host(`blog.phantixlabs.com`)
+      traefik.http.routers.feh5-http.entrypoints: http
+      traefik.http.routers.feh5-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh5-http.service: phantixfe
+      traefik.http.routers.feh6.rule: Host(`staff.phantixlabs.com`)
+      traefik.http.routers.feh6.entrypoints: https
+      traefik.http.routers.feh6.tls.certresolver: letsencrypt
+      traefik.http.routers.feh6.service: phantixfe
+      traefik.http.routers.feh6-http.rule: Host(`staff.phantixlabs.com`)
+      traefik.http.routers.feh6-http.entrypoints: http
+      traefik.http.routers.feh6-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh6-http.service: phantixfe
+      traefik.http.routers.feh7.rule: Host(`platform.phantixlabs.com`)
+      traefik.http.routers.feh7.entrypoints: https
+      traefik.http.routers.feh7.tls.certresolver: letsencrypt
+      traefik.http.routers.feh7.service: phantixfe
+      traefik.http.routers.feh7-http.rule: Host(`platform.phantixlabs.com`)
+      traefik.http.routers.feh7-http.entrypoints: http
+      traefik.http.routers.feh7-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh7-http.service: phantixfe
+      traefik.http.routers.feh8.rule: Host(`phantixlabs.com`)
+      traefik.http.routers.feh8.entrypoints: https
+      traefik.http.routers.feh8.tls.certresolver: letsencrypt
+      traefik.http.routers.feh8.service: phantixfe
+      traefik.http.routers.feh8-http.rule: Host(`phantixlabs.com`)
+      traefik.http.routers.feh8-http.entrypoints: http
+      traefik.http.routers.feh8-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh8-http.service: phantixfe
+      traefik.http.routers.feh9.rule: Host(`www.phantixlabs.com`)
+      traefik.http.routers.feh9.entrypoints: https
+      traefik.http.routers.feh9.tls.certresolver: letsencrypt
+      traefik.http.routers.feh9.service: phantixfe
+      traefik.http.routers.feh9-http.rule: Host(`www.phantixlabs.com`)
+      traefik.http.routers.feh9-http.entrypoints: http
+      traefik.http.routers.feh9-http.middlewares: phantixfe-redirect
+      traefik.http.routers.feh9-http.service: phantixfe
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+networks:
+  coolify:
+    external: true
