@@ -1,0 +1,344 @@
+# ---------------------------------------------------------------------------
+# Phantix frontend — generated from this template at container start.
+# ---------------------------------------------------------------------------
+# The official nginx image envsubst's /etc/nginx/templates/*.template into
+# /etc/nginx/conf.d/ using only variables that exist in the environment.
+#   ${...}  → environment (API_PROXY_TARGET, FE_HOST_*)
+#   $name   → nginx runtime variable (unchanged by envsubst)
+#
+# Shape: the browser only ever talks to the app's own hostname. `/api/v1/*` is
+# reverse-proxied to the backend, so the session cookie the API sets is
+# FIRST-PARTY on this host — that is why the frontends can live on
+# phantixlabs.com while the API lives elsewhere and still support
+# `__Host-sg_session` + SameSite=Strict.
+#
+# Each app block is wrapped in `#@APP:<name>@# … #@END:<name>@#` markers so the
+# Dockerfile can drop apps that were not built in this image.
+
+# Real client protocol: Traefik (Coolify) terminates TLS and forwards HTTP, so
+# $scheme here is http. Prefer the header it set, fall back to $scheme.
+# WebSocket upgrades (staff portal superadmin terminal connects same-origin).
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+map $http_x_forwarded_proto $phantix_proto {
+    default $http_x_forwarded_proto;
+    ""      $scheme;
+}
+
+# Hashed build assets are immutable; everything else revalidates. One
+# `add_header Cache-Control` at server level (via this map) keeps nginx's
+# add_header inheritance intact, so the security headers survive.
+map $uri $phantix_cache_control {
+    default                                  "public, max-age=0, must-revalidate";
+    ~^/static/                               "public, max-age=31536000, immutable";
+    ~^/assets/                               "public, max-age=31536000, immutable";
+    ~^/fonts/                                "public, max-age=31536000, immutable";
+}
+
+# ---------------------------------------------------------------------------
+# Catch-all: an unknown Host must not be served another tenant's app.
+# ---------------------------------------------------------------------------
+server {
+    listen 80 default_server;
+    server_name _;
+    server_tokens off;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location / {
+        return 404;
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Core — app.phantixlabs.com  (prerendered public pages + SPA shell)
+#@APP:core@#
+server {
+    listen 80;
+    server_name ${FE_HOST_APP};
+    server_tokens off;
+
+    root /usr/share/nginx/html/core/dist;
+    index app-shell.html;
+
+    include /etc/nginx/snippets/gzip.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://apis.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://www.google.com; frame-src 'self' blob: https://graph-679b0.firebaseapp.com; connect-src 'self' https://cloudflareinsights.com https://cdn.jsdelivr.net https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+    add_header Cache-Control $phantix_cache_control always;
+
+    # APK/IPA uploads go through this proxy.
+    client_max_body_size 200m;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location /api/v1/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location / {
+        # Files that exist win (prerendered HTML), everything else is the SPA.
+        try_files $uri $uri/index.html $uri/ /app-shell.html;
+    }
+}
+#@END:core@#
+
+# ---------------------------------------------------------------------------
+# Attack — attack.phantixlabs.com
+#@APP:attack@#
+server {
+    listen 80;
+    server_name ${FE_HOST_ATTACK};
+    server_tokens off;
+
+    root /usr/share/nginx/html/attack/dist;
+    index index.html;
+
+    include /etc/nginx/snippets/gzip.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://www.google.com; connect-src 'self' https://cloudflareinsights.com https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+    add_header Cache-Control $phantix_cache_control always;
+
+    client_max_body_size 200m;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location /api/v1/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location / {
+        try_files $uri $uri/index.html $uri/ /index.html;
+    }
+}
+#@END:attack@#
+
+# ---------------------------------------------------------------------------
+# Defend — defend.phantixlabs.com
+#@APP:defend@#
+server {
+    listen 80;
+    server_name ${FE_HOST_DEFEND};
+    server_tokens off;
+
+    root /usr/share/nginx/html/defend/dist;
+    index index.html;
+
+    include /etc/nginx/snippets/gzip.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://www.google.com; connect-src 'self' https://cloudflareinsights.com https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+    add_header Cache-Control $phantix_cache_control always;
+
+    client_max_body_size 200m;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location /api/v1/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location / {
+        try_files $uri $uri/index.html $uri/ /index.html;
+    }
+}
+#@END:defend@#
+
+# ---------------------------------------------------------------------------
+# Code — code.phantixlabs.com
+#@APP:code@#
+server {
+    listen 80;
+    server_name ${FE_HOST_CODE};
+    server_tokens off;
+
+    root /usr/share/nginx/html/code/dist;
+    index index.html;
+
+    include /etc/nginx/snippets/gzip.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://www.google.com; connect-src 'self' https://cloudflareinsights.com https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+    add_header Cache-Control $phantix_cache_control always;
+
+    client_max_body_size 200m;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location /api/v1/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location / {
+        try_files $uri $uri/index.html $uri/ /index.html;
+    }
+}
+#@END:code@#
+
+# ---------------------------------------------------------------------------
+# Blog — blog.phantixlabs.com  (prerendered issues/essays + SPA shell)
+#@APP:blog@#
+server {
+    listen 80;
+    server_name ${FE_HOST_BLOG};
+    server_tokens off;
+
+    root /usr/share/nginx/html/blog/dist;
+    index app-shell.html;
+
+    include /etc/nginx/snippets/gzip.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://*.pagesense.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+    add_header Cache-Control $phantix_cache_control always;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location /api/v1/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location / {
+        try_files $uri $uri/index.html $uri/ /app-shell.html;
+    }
+}
+#@END:blog@#
+
+# ---------------------------------------------------------------------------
+# Staff portal — staff.phantixlabs.com  (internal console)
+# No CSP yet: this app loads xterm/redoc/lottie and a backend terminal. Add one
+# after inventorying its third-party origins (Vercel never set one here either).
+#@APP:staff@#
+server {
+    listen 80;
+    server_name ${FE_HOST_STAFF};
+    server_tokens off;
+
+    root /usr/share/nginx/html/staff/dist;
+    index index.html;
+
+    include /etc/nginx/snippets/gzip.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Cache-Control $phantix_cache_control always;
+
+    # Staff uploads/imports can be large; the backend caps what it accepts.
+    client_max_body_size 200m;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    # The portal proxies /api (not /api/v1) plus the public sandbox-apply form.
+    location /api/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    # `/sandbox-apply` without the trailing slash would 301 to `/sandbox-apply/`
+    # (nginx normalises a slash-terminated location), so match it exactly first.
+    location = /sandbox-apply {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location /sandbox-apply/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location / {
+        try_files $uri $uri/index.html $uri/ /index.html;
+    }
+}
+#@END:staff@#
+
+# ---------------------------------------------------------------------------
+# Platform — platform.phantixlabs.com  (organization console)
+# No CSP yet: Firebase + lottie + markdown renderer. Follow-up, as for staff.
+#@APP:platform@#
+server {
+    listen 80;
+    server_name ${FE_HOST_PLATFORM};
+    server_tokens off;
+
+    root /usr/share/nginx/html/platform/dist;
+    index index.html;
+
+    include /etc/nginx/snippets/gzip.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Cache-Control $phantix_cache_control always;
+
+    client_max_body_size 200m;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location /api/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location / {
+        try_files $uri $uri/index.html $uri/ /index.html;
+    }
+}
+#@END:platform@#
+
+# ---------------------------------------------------------------------------
+# Landing — phantixlabs.com and www.phantixlabs.com
+# FE_HOST_LANDING carries both names: `server_name a.com www.a.com`.
+# No CSP yet: insights/analytics scripts shift; add with the others.
+#@APP:landing@#
+server {
+    listen 80;
+    server_name ${FE_HOST_LANDING};
+    server_tokens off;
+
+    root /usr/share/nginx/html/landing/dist;
+    index index.html;
+
+    include /etc/nginx/snippets/gzip.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+    add_header Cache-Control $phantix_cache_control always;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    # Landing only reads pricing/legal content from the backend.
+    location /api/ {
+        include /etc/nginx/snippets/api-proxy.conf;
+        proxy_pass ${API_PROXY_TARGET};
+    }
+
+    location / {
+        try_files $uri $uri/index.html $uri/ /index.html;
+    }
+}
+#@END:landing@#

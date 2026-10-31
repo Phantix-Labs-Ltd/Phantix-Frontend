@@ -8,7 +8,7 @@ import { docPageIds, siteFiles } from "../../packages/sg-shared/vite/siteFiles";
 export default defineConfig(({ mode, isSsrBuild }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const apiTarget =
-    env.API_PROXY_TARGET || process.env.API_PROXY_TARGET || "https://staging.phantix.site";
+    env.API_PROXY_TARGET || process.env.API_PROXY_TARGET || "http://127.0.0.1:8000";
   const port = Number(env.DEV_PORT || process.env.DEV_PORT || 5177);
   return {
     plugins: [

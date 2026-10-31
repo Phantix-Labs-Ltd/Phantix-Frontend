@@ -1,0 +1,49 @@
+# Local / non-Coolify way to run the frontend stack.
+#
+#   API_PROXY_TARGET=https://api.phantixlabs.com docker compose up --build
+#   open http://localhost:8080  (send a Host header to pick an app:)
+#   curl -H 'Host: app.phantixlabs.com' http://localhost:8080/healthz
+#
+# On Coolify you do NOT apply this file: create the application from the repo and
+# set the environment variables there (see DEPLOYMENT.md). Coolify's own Traefik
+# owns 80/443 and routes the domains to this container's port 80.
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        # space separated: core attack defend code blog
+        BUILD_APPS: ${BUILD_APPS:-core attack defend code blog}
+        BUILD_STANDALONE: ${BUILD_STANDALONE:-staff platform landing}
+        VITE_BLOG_API_URL: ${VITE_BLOG_API_URL:-}
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-}
+    image: ${FRONTEND_IMAGE:-phantix-frontend:local}
+    restart: unless-stopped
+    environment:
+      # Backend the browser's /api/v1 calls are proxied to.
+      API_PROXY_TARGET: ${API_PROXY_TARGET:?set API_PROXY_TARGET (e.g. https://api.phantixlabs.com)}
+      # One hostname per app; comma-separate to serve the same app on several.
+      FE_HOST_APP: ${FE_HOST_APP:-app.phantixlabs.com}
+      FE_HOST_ATTACK: ${FE_HOST_ATTACK:-attack.phantixlabs.com}
+      FE_HOST_DEFEND: ${FE_HOST_DEFEND:-defend.phantixlabs.com}
+      FE_HOST_CODE: ${FE_HOST_CODE:-code.phantixlabs.com}
+      FE_HOST_BLOG: ${FE_HOST_BLOG:-blog.phantixlabs.com}
+      FE_HOST_STAFF: ${FE_HOST_STAFF:-staff.phantixlabs.com}
+      FE_HOST_PLATFORM: ${FE_HOST_PLATFORM:-platform.phantixlabs.com}
+      FE_HOST_LANDING: ${FE_HOST_LANDING:-phantixlabs.com www.phantixlabs.com}
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3

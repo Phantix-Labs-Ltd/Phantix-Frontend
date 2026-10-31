@@ -90,7 +90,7 @@ ${list || `- See ${BLOG_ORIGIN}/sitemap.xml for every published post.`}
 // The blog is a React app, prerendered at build time (prerender.mjs). It talks
 // to the admin backend through `VITE_BLOG_API_URL` (absolute, or "/api/v1" when a same-origin rewrite is
 // used). For local dev you can point a proxy at the backend instead:
-//   BLOG_API_PROXY_TARGET=https://staging.phantix.site npm run dev
+//   BLOG_API_PROXY_TARGET=https://<api-host> npm run dev
 export default defineConfig(async ({ mode, isSsrBuild }): Promise<UserConfig> => {
   const proxyTarget = process.env.BLOG_API_PROXY_TARGET;
   const env = loadEnv(mode, process.cwd(), "");

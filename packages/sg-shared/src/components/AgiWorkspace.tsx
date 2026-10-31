@@ -6,6 +6,8 @@ import {
   AlertTriangle, Pencil,
 } from "lucide-react";
 import { Modal, SkeletonBlock } from "../ui";
+import AgiFindingDrawer from "./AgiFindingDrawer";
+import { autofixFromChunk, type AgiAutofixFix } from "./AgiAutofix";
 import DocLink from "./DocLink";
 import MarkdownView from "./MarkdownView";
 import AgiConsole from "./AgiConsole";
@@ -289,6 +291,8 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [transcript, setTranscript] = useState<AgiTranscriptChunk[]>([]);
+  // Finding opened in the detail drawer (evidence + autofix).
+  const [openFinding, setOpenFinding] = useState<Record<string, unknown> | null>(null);
   const afterSeqRef = useRef(0);
   const pendingOpsRef = useRef<string[]>([]);
   // Guards against duplicate transcript rows: overlapping polls are serialized,
@@ -889,6 +893,20 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
     }
   };
   const drawerRows = useMemo(() => groupStreamRows(transcript), [transcript]);
+  // Every autofix the subagent streamed this session, matched to a finding by title.
+  const sessionFixes = useMemo<AgiAutofixFix[]>(() => transcript.flatMap(autofixFromChunk), [transcript]);
+  // Progress watchdog: bumps whenever real activity lands, so the activity line
+  // can tell "working" from "stalled" and stop the runtime clock when nothing
+  // is happening (no more counting time with no work to show for it).
+  const lastActivityAt = useMemo(() => Date.now(), [transcript]);
+  // The operator input the loop is blocked on (an open info request), surfaced
+  // so the UI shows a clear reason instead of a silent, endless "waiting".
+  const blockedReason = useMemo(() => {
+    const reqs = openInfoRequests(session?.job);
+    if (!reqs.length) return null;
+    const r = reqs[0];
+    return r.description || r.key.replace(/_/g, " ") || "The agent needs input to continue.";
+  }, [session?.job]);
 
   const decide = async (action: AgiAction, approve: boolean, overrideCmd?: string) => {
     if (!(await requireDualControl("Approving a state-changing step requires a dual-control operate session."))) return;
@@ -1094,6 +1112,15 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
         }
         if (event === "loop_paused") { setPaused(true); pushLive(`paused-${Date.now()}`, "Operator paused the agent.", { kind: "loop_paused", event }); return; }
         if (event === "loop_resumed") { setPaused(false); pushLive(`resumed-${Date.now()}`, "Operator resumed the agent.", { kind: "loop_resumed", event }); return; }
+        if (event === "needs_attention") {
+          const p = JSON.parse(data) as { cause?: string; severity?: string; message?: string; action?: string };
+          pushLive(
+            `attn-${p.cause ?? ""}-${Date.now()}`,
+            `Needs attention (${p.cause || "issue"}): ${p.message || ""}${p.action ? ` → ${p.action}` : ""}`,
+            { kind: "needs_attention", event, ...p },
+          );
+          return;
+        }
         if (event === "autofix_subagent") {
           // The runner streams `fix` frames (finding title per index) and then a
           // `completed` frame with the full fixes: steps, stack and the
@@ -1668,7 +1695,17 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                         return (
                           <div
                             key={`${String(fid)}-${i}`}
-                            className="flex items-center gap-2 rounded-xl border border-phantix-700/40 bg-phantix-900/50 px-3 py-2"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setOpenFinding(f)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setOpenFinding(f);
+                              }
+                            }}
+                            title="Open finding — evidence and autofix"
+                            className="flex cursor-pointer items-center gap-2 rounded-xl border border-phantix-700/40 bg-phantix-900/50 px-3 py-2 transition-colors hover:border-gold-400/40 hover:bg-phantix-900/80"
                           >
                             <p className="wb-xs min-w-0 flex-1 truncate text-slate-300">
                               {String(f.title ?? "Finding")}
@@ -1682,7 +1719,10 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                               <span className="chip shrink-0 border-emerald-400/30 text-emerald-400">in risk register</span>
                             ) : confirmed ? (
                               <button
-                                onClick={() => void promoteFinding(f)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void promoteFinding(f);
+                                }}
                                 disabled={promoting === String(fid)}
                                 className="btn-ghost shrink-0 !px-2 !py-0.5 wb-xs disabled:opacity-50"
                                 title="Promote this confirmed finding into the org risk register"
@@ -1700,6 +1740,7 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                       })}
                     </div>
                   )}
+                  <AgiFindingDrawer finding={openFinding} fixes={sessionFixes} onClose={() => setOpenFinding(null)} />
                   {transcript.length === 0 && !connError && (
                     <div className="flex h-full flex-col items-center justify-center gap-2 py-10 text-center">
                       <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-phantix-700/40 bg-phantix-900/60 text-gold-400">
@@ -1800,6 +1841,8 @@ export default function AgiWorkspace({ variant = "drawer" }: { variant?: Workspa
                       connError,
                       sessionStatus: session.status,
                       startedAt: session.started_at,
+                      lastActivityAt,
+                      blockedReason,
                     }}
                   />
                 </div>

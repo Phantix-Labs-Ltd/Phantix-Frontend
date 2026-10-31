@@ -38,3 +38,5 @@ qatar-*/
 product-docs/
 Phantix Docs/
 Inception Badges/
+# Windows metadata files (Zone.Identifier) leaked by Explorer/Downloads.
+*:Zone.Identifier
