@@ -23,10 +23,73 @@ import { cx } from "../utils";
 
 const MONO = "'Geist Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
 
+// The dashboard look: raised grey cards, a blue area for a level over time and
+// light-blue columns for a count per day, three y-ticks and sparse date labels.
+const DASH = {
+  dark: {
+    card: "#2A2B2E",
+    line: "#2F7FF0",
+    fillOpacity: 0.55,
+    bar: "#9FD6F7",
+    grid: "rgba(255,255,255,0.10)",
+    axis: "#9B9CA1",
+  },
+  light: {
+    card: "#F4F4F5",
+    line: "#1D6FE0",
+    fillOpacity: 0.22,
+    bar: "#7CC3EE",
+    grid: "#E4E4E7",
+    axis: "#71717A",
+  },
+} as const;
+
 function useChartTheme() {
   const { theme } = useTheme();
   const mode = theme === "light" ? "light" : "dark";
-  return { mode, c: chartColors(mode), tip: tooltipStyles(mode) } as const;
+  return { mode, c: chartColors(mode), tip: tooltipStyles(mode), d: DASH[mode] } as const;
+}
+
+/** Background for a dashboard card, matching the chart panels. */
+export function useDashCard() {
+  return useChartTheme().d.card;
+}
+
+/** The dashboard chart palette plus tooltip styles, for charts outside this file. */
+export function useDashTheme() {
+  const { d, tip } = useChartTheme();
+  return { d, tip };
+}
+
+/** A rounded top for the y-axis plus the midpoint: 0, half, top. */
+export function niceTicks(max: number, allowDecimals = false): number[] {
+  if (!Number.isFinite(max) || max <= 0) return [0, 1, 2];
+  const half = max / 2;
+  const mag = 10 ** Math.floor(Math.log10(half));
+  const step = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 9, 10].find((n) => n * mag >= half)! * mag;
+  const s = allowDecimals ? step : Math.max(1, Math.ceil(step));
+  return [0, s, s * 2];
+}
+
+/** Up to `count` evenly spaced labels, always the first and the last. */
+export function sparseTicks(labels: string[], count = 5): string[] {
+  if (labels.length <= count) return labels;
+  const out = new Set<string>();
+  for (let i = 0; i < count; i++) out.add(labels[Math.round((i * (labels.length - 1)) / (count - 1))]);
+  return Array.from(out);
+}
+
+/** "2026-10-01" or "10-01" reads as "10/1". */
+export function shortDate(label: string): string {
+  const m = /(?:\d{4}-)?(\d{1,2})-(\d{1,2})$/.exec(String(label));
+  return m ? `${Number(m[1])}/${Number(m[2])}` : String(label);
+}
+
+export function compactNumber(n: number): string {
+  if (Math.abs(n) >= 1_000_000) {
+    return `${new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(n / 1_000_000)}M`;
+  }
+  return n.toLocaleString();
 }
 
 // ── Delta chip ────────────────────────────────────────────────────────────────
@@ -52,8 +115,8 @@ export function Delta({
       )}
     >
       <Icon size={13} aria-hidden />
-      {Math.abs(value)}
-      {unit}
+      {/* "0 pts" read as a score of zero; a flat line says so in words. */}
+      {flat ? "no change" : `${Math.abs(value)}${unit}`}
     </span>
   );
 }
@@ -82,6 +145,7 @@ export function KpiTile({
   delay?: number;
   size?: "md" | "lg";
 }) {
+  const card = useDashCard();
   const body = (
     <div className="flex items-center gap-3">
       {/* A small marker, not a feature graphic: the number is the content. */}
@@ -119,11 +183,17 @@ export function KpiTile({
       className={className}
     >
       {to ? (
-        <Link to={to} className="card block h-full px-4 py-3 transition-colors hover:border-phantix-600">
+        <Link
+          to={to}
+          className="block h-full rounded-2xl px-5 py-4 transition-shadow hover:ring-1 hover:ring-white/10"
+          style={{ backgroundColor: card }}
+        >
           {body}
         </Link>
       ) : (
-        <div className="card h-full px-4 py-3">{body}</div>
+        <div className="h-full rounded-2xl px-5 py-4" style={{ backgroundColor: card }}>
+          {body}
+        </div>
       )}
     </motion.div>
   );
@@ -132,6 +202,7 @@ export function KpiTile({
 // ── Panel ─────────────────────────────────────────────────────────────────────
 export function Panel({
   title,
+  figure,
   subtitle,
   action,
   children,
@@ -140,6 +211,8 @@ export function Panel({
   delay = 0,
 }: {
   title: string;
+  /** The headline number, set beside the title in a lighter weight ("API requests 15,479"). */
+  figure?: React.ReactNode;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
@@ -147,16 +220,23 @@ export function Panel({
   bodyClassName?: string;
   delay?: number;
 }) {
+  const card = useDashCard();
   return (
     <motion.section
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={cx("card flex min-w-0 flex-col p-4", className)}
+      className={cx("flex min-w-0 flex-col rounded-2xl p-5", className)}
+      style={{ backgroundColor: card }}
     >
-      <header className="mb-3 flex items-start justify-between gap-3">
+      <header className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-display text-[15px] font-semibold leading-snug text-slate-100">{title}</h3>
+          <h3 className="flex flex-wrap items-baseline gap-x-1.5 text-[14px] font-semibold leading-snug text-slate-100">
+            <span>{title}</span>
+            {figure != null ? (
+              <span className="inline-flex items-baseline gap-1.5 font-normal tabular-nums text-slate-400">{figure}</span>
+            ) : null}
+          </h3>
           {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -245,107 +325,100 @@ export function MiniTable<T>({
 // ── Charts ────────────────────────────────────────────────────────────────────
 export interface SeriesPoint {
   label: string;
-  value: number;
+  /** null for a day with nothing to plot; the line bridges it rather than dropping to 0. */
+  value: number | null;
 }
 
-/** Single-series area over time — the posture score. */
-export function AreaTrend({ points, height = 170, name }: { points: SeriesPoint[]; height?: number; name: string }) {
-  const { c, tip } = useChartTheme();
-  const id = React.useId().replace(/:/g, "");
+function maxOf(points: SeriesPoint[]): number {
+  return points.reduce((m, p) => (p.value != null && p.value > m ? p.value : m), 0);
+}
+
+function TrendAxes({ points, ticks, d }: { points: SeriesPoint[]; ticks: number[]; d: (typeof DASH)["dark" | "light"] }) {
+  const tick = { fill: d.axis, fontSize: 12 };
+  return (
+    <>
+      <CartesianGrid stroke={d.grid} vertical={false} />
+      <XAxis
+        dataKey="label"
+        ticks={sparseTicks(points.map((p) => p.label))}
+        interval={0}
+        tickFormatter={shortDate}
+        tick={tick}
+        tickLine={false}
+        axisLine={false}
+        tickMargin={8}
+      />
+      <YAxis
+        domain={[0, ticks[ticks.length - 1]]}
+        ticks={ticks}
+        tickFormatter={compactNumber}
+        tick={tick}
+        tickLine={false}
+        axisLine={false}
+        width={44}
+      />
+    </>
+  );
+}
+
+/**
+ * A level over time (the posture score) as a smooth filled area.
+ * `scale="score"` fixes the axis at 0–100; otherwise it rounds up from the data.
+ */
+export function AreaTrend({
+  points,
+  height = 200,
+  name,
+  scale = "score",
+}: {
+  points: SeriesPoint[];
+  height?: number;
+  name: string;
+  scale?: "score" | "auto";
+}) {
+  const { d, tip } = useChartTheme();
+  const ticks = scale === "score" ? [0, 50, 100] : niceTicks(maxOf(points));
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={points} margin={{ top: 8, right: 6, bottom: 0, left: -6 }}>
-        <defs>
-          <linearGradient id={`fill-${id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={c.gold} stopOpacity={0.35} />
-            <stop offset="100%" stopColor={c.gold} stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid stroke={c.grid} vertical={false} />
-        <XAxis
-          dataKey="label"
-          tick={{ fill: c.muted, fontSize: 12, fontFamily: MONO }}
-          tickLine={false}
-          axisLine={false}
-          interval="preserveStartEnd"
-          minTickGap={18}
+      <AreaChart data={points} margin={{ top: 6, right: 8, bottom: 0, left: -8 }}>
+        <TrendAxes points={points} ticks={ticks} d={d} />
+        <Tooltip
+          {...tip}
+          cursor={{ stroke: d.axis, strokeDasharray: "3 3" }}
+          labelFormatter={(l: string) => shortDate(l)}
+          formatter={(v: number) => [v, name]}
         />
-        <YAxis
-          domain={[0, 100]}
-          ticks={[0, 25, 50, 75, 100]}
-          tick={{ fill: c.muted, fontSize: 12, fontFamily: MONO }}
-          tickLine={false}
-          axisLine={false}
-          width={32}
-        />
-        <Tooltip {...tip} cursor={{ stroke: c.muted, strokeDasharray: "3 3" }} formatter={(v: number) => [v, name]} />
         <Area
           type="monotone"
           dataKey="value"
           name={name}
-          stroke={c.gold}
+          stroke={d.line}
           strokeWidth={2}
-          fill={`url(#fill-${id})`}
-          dot={{ r: 3, fill: c.gold, stroke: c.surface, strokeWidth: 2 }}
-          activeDot={{ r: 5, fill: c.gold, stroke: c.surface, strokeWidth: 2 }}
+          fill={d.line}
+          fillOpacity={d.fillOpacity}
+          connectNulls
+          dot={false}
+          activeDot={{ r: 4, fill: d.line, stroke: d.card, strokeWidth: 2 }}
         />
       </AreaChart>
     </ResponsiveContainer>
   );
 }
 
-/** Single-series column chart; only the latest and the peak columns are labeled. */
-export function ColumnTrend({ points, height = 170, name }: { points: SeriesPoint[]; height?: number; name: string }) {
-  const { c, tip } = useChartTheme();
-  const peak = points.reduce((m, p, i) => (p.value > (points[m]?.value ?? -1) ? i : m), 0);
-  const last = points.length - 1;
+/** A count per day as light-blue columns. */
+export function ColumnTrend({ points, height = 200, name }: { points: SeriesPoint[]; height?: number; name: string }) {
+  const { d, tip } = useChartTheme();
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={points} margin={{ top: 18, right: 4, bottom: 0, left: -6 }} barCategoryGap="22%">
-        <CartesianGrid stroke={c.grid} vertical={false} />
-        <XAxis
-          dataKey="label"
-          tick={{ fill: c.muted, fontSize: 12, fontFamily: MONO }}
-          tickLine={false}
-          axisLine={false}
-          interval="preserveStartEnd"
-          minTickGap={18}
+      <BarChart data={points} margin={{ top: 6, right: 8, bottom: 0, left: -8 }} barCategoryGap="28%">
+        <TrendAxes points={points} ticks={niceTicks(maxOf(points))} d={d} />
+        <Tooltip
+          {...tip}
+          cursor={{ fill: d.grid }}
+          labelFormatter={(l: string) => shortDate(l)}
+          formatter={(v: number) => [v, name]}
         />
-        <YAxis
-          allowDecimals={false}
-          tick={{ fill: c.muted, fontSize: 12, fontFamily: MONO }}
-          tickLine={false}
-          axisLine={false}
-          width={32}
-        />
-        <Tooltip {...tip} cursor={{ fill: c.grid, opacity: 0.5 }} formatter={(v: number) => [v, name]} />
-        <Bar
-          dataKey="value"
-          name={name}
-          fill={c.gold}
-          radius={[4, 4, 0, 0]}
-          maxBarSize={22}
-          label={({ x, y, width, value, index }: any) =>
-            index === peak || index === last ? (
-              <text
-                x={x + width / 2}
-                y={y - 5}
-                textAnchor="middle"
-                fontSize={12}
-                fontFamily={MONO}
-                fill={c.tooltipColor}
-              >
-                {value}
-              </text>
-            ) : (
-              <g />
-            )
-          }
-        >
-          {points.map((p, i) => (
-            <Cell key={p.label + i} fillOpacity={i === last ? 1 : 0.7} />
-          ))}
-        </Bar>
+        <Bar dataKey="value" name={name} fill={d.bar} radius={[3, 3, 0, 0]} maxBarSize={16} />
       </BarChart>
     </ResponsiveContainer>
   );

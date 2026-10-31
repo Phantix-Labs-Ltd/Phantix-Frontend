@@ -108,7 +108,8 @@ export default function AssetIntelligenceDashboard() {
     }, [setData]),
   });
 
-  const score = intelData.postureScore ?? intelData.posture_score ?? 68;
+  // Asset exposure, not the posture score. No data reads "Not set", never a default.
+  const score: number | null = intelData.postureScore ?? intelData.posture_score ?? null;
 
   // ── Live activity helpers ─────────────────────────────────────────────────
   const lastHeartbeatAt = useMemo(() => {
@@ -229,11 +230,11 @@ export default function AssetIntelligenceDashboard() {
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <Card className="lg:col-span-1 flex flex-col items-center justify-center py-6">
-          <ProgressRing value={score} size={100} stroke={7}>
-            <span className="font-display text-2xl font-bold text-white">{score}</span>
-            <span className="text-[12px] font-medium uppercase tracking-wider text-slate-500">score</span>
+          <ProgressRing value={score ?? 0} size={100} stroke={7}>
+            <span className="font-display text-2xl font-bold text-white">{score ?? "Not set"}</span>
+            <span className="text-[12px] font-medium uppercase tracking-wider text-slate-500">index</span>
           </ProgressRing>
-          <p className="text-xs text-slate-400 mt-3">Posture Score</p>
+          <p className="text-xs text-slate-400 mt-3">Asset risk index</p>
           <p className="text-[12px] text-slate-500 mt-0.5">higher = healthier</p>
         </Card>
         <StatCard label="Active Assets" value={<AnimatedNumber value={intelData.totals?.activeAssets ?? intelData.total_assets ?? 0} />} icon={<Globe size={18} />} />

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Activity, BarChart3, RefreshCw, TrendingUp } from "lucide-react";
-import { PageHeader, Card, EmptyState, PageSkeleton, StatCard } from "@sg/ui";
+import { PageHeader, Card, EmptyState, PageSkeleton, SeverityBadge, StatCard } from "@sg/ui";
 import DocLink from "@sg/components/DocLink";
 import TrendChart from "@sg/components/TrendChart";
 import ChartFrame from "@sg/charts/ChartFrame";
@@ -232,7 +232,15 @@ export default function Analytics() {
           {/* Headline numbers — a KPI row, not a chart. Four values do not earn
               an axis between them. */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard label="Overall posture" value={posture?.overall_score ?? "Not set"} hint="0–100 across all surfaces" />
+            <StatCard
+              label="Overall posture"
+              value={posture?.overall_score ?? "Not set"}
+              hint={
+                posture?.overall_score == null
+                  ? "No surface assessed yet"
+                  : `Average of ${posture.surfaces_covered ?? 0} assessed ${posture.surfaces_covered === 1 ? "surface" : "surfaces"}`
+              }
+            />
             <StatCard label="Open findings" value={totals.open} hint="Verified, not fixed or accepted" />
             <StatCard
               label="Fix rate"
@@ -252,6 +260,7 @@ export default function Analytics() {
               Posture
             </h2>
             <SurfaceScoreRow surfaces={surfaceRows} onSelect={(s) => setSurface(s === surface ? null : s)} selected={surface} />
+            <PostureBreakdown posture={posture} surfaces={surfaceRows} rows={rows} />
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <PostureDonut surfaces={surfaceRows} overallScore={posture?.overall_score ?? null} />
               <ChartFrame
@@ -456,5 +465,110 @@ export default function Analytics() {
         </div>
       )}
     </div>
+  );
+}
+
+const DEFAULT_WEIGHTS: Record<string, number> = { critical: 40, high: 20, medium: 6, low: 2, info: 0 };
+
+/**
+ * How the posture number is reached, and what is pulling it down. A score with
+ * no visible working reads as arbitrary, and a 64 on one page beside a "Not set"
+ * on another is impossible to reconcile without it.
+ */
+function PostureBreakdown({
+  posture,
+  surfaces,
+  rows,
+}: {
+  posture: PostureSnapshot | null;
+  surfaces: Array<{ surface: string; score: number | null; total: number; critical: number; high: number }>;
+  rows: TrackerFinding[];
+}) {
+  const method = (posture?.method ?? {}) as { k?: number; active_assets?: number; weights?: Record<string, number> };
+  const weights = { ...DEFAULT_WEIGHTS, ...(method.weights ?? {}) };
+  const assessed = surfaces.filter((s) => s.score != null);
+
+  // The same population the score uses: verified findings not fixed or accepted.
+  const contributing = rows
+    .filter((r) => {
+      const status = String(r.status ?? "").toLowerCase();
+      const v = String(r.verification_status ?? "");
+      return status !== "fixed" && status !== "accepted" && (!v || (v.endsWith("verified") && v !== "unverified"));
+    })
+    .map((r) => ({ row: r, weight: Number(weights[String(r.severity ?? "").toLowerCase()] ?? 0) }))
+    .filter((c) => c.weight > 0)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 8);
+
+  return (
+    <Card>
+      <h3 className="text-[14px] font-semibold text-slate-100">How the score is calculated</h3>
+      <p className="mt-1.5 max-w-3xl text-[13px] leading-5 text-slate-400">
+        Each surface scores <span className="font-mono text-slate-300">100 × e^(−weighted open ÷ k)</span>, so a surface
+        with nothing open scores 100. Every open verified finding adds weight by severity: critical {weights.critical},
+        high {weights.high}, medium {weights.medium}, low {weights.low}.
+        {method.k != null ? ` k is ${method.k}, scaled to ${method.active_assets ?? 0} active assets.` : ""} The overall
+        score is the average of the assessed surfaces. A surface with no scan or finding yet shows "Not set" and is left
+        out of the average.
+      </p>
+
+      <div className="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="min-w-0 overflow-x-auto">
+          <table className="w-full text-left text-[13px]">
+            <thead>
+              <tr className="border-b border-phantix-700/60 text-[12px] text-slate-500">
+                <th scope="col" className="py-2 pr-3 font-medium">Surface</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Score</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Open</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Critical</th>
+                <th scope="col" className="py-2 pl-3 text-right font-medium">High</th>
+              </tr>
+            </thead>
+            <tbody>
+              {surfaces.map((s) => (
+                <tr key={s.surface} className="border-b border-phantix-800/70 last:border-0">
+                  <td className="py-2 pr-3 text-slate-300">{SURFACE_LABELS[s.surface] ?? s.surface}</td>
+                  <td className="px-3 py-2 text-right font-mono text-slate-200">{s.score ?? <span className="text-slate-600">Not set</span>}</td>
+                  <td className="px-3 py-2 text-right font-mono text-slate-300">{s.total}</td>
+                  <td className="px-3 py-2 text-right font-mono text-slate-300">{s.critical}</td>
+                  <td className="py-2 pl-3 text-right font-mono text-slate-300">{s.high}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-phantix-700/60">
+                <td className="py-2 pr-3 font-medium text-slate-200">Overall</td>
+                <td className="px-3 py-2 text-right font-mono font-semibold text-white">{posture?.overall_score ?? "Not set"}</td>
+                <td colSpan={3} className="py-2 pl-3 text-right text-[12px] text-slate-500">
+                  {assessed.length
+                    ? `(${assessed.map((s) => s.score).join(" + ")}) ÷ ${assessed.length}`
+                    : "No surface assessed yet"}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div className="min-w-0">
+          <p className="mb-2 text-[12px] font-medium text-slate-500">Findings lowering the score most</p>
+          {contributing.length === 0 ? (
+            <p className="text-[13px] text-slate-500">
+              No open verified findings. Every assessed surface scores 100.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {contributing.map(({ row, weight }) => (
+                <li key={row.finding_key} className="flex min-w-0 items-center gap-2.5 text-[13px]">
+                  <SeverityBadge severity={row.severity} />
+                  <span className="min-w-0 flex-1 truncate text-slate-300" title={row.title}>{row.title}</span>
+                  <span className="shrink-0 text-[12px] text-slate-500">{SURFACE_LABELS[String(row.surface ?? "")] ?? ""}</span>
+                  <span className="w-14 shrink-0 text-right font-mono text-[12px] text-slate-400">weight {weight}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }

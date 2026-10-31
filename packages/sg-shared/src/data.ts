@@ -1396,7 +1396,9 @@ export async function loadPostureTrend(days = 14): Promise<PosturePoint[]> {
   const canonical = (posture?.trend ?? [])
     .filter((p) => p.day && p.score != null)
     .map((p) => ({ day: String(p.day), score: Number(p.score), findings: 0 }));
-  if (canonical.length) return canonical;
+  // An API that serves the canonical trend is the answer even when no day is
+  // scored yet. Falling through drew the asset index under the posture title.
+  if (canonical.length || Array.isArray(posture?.trend)) return canonical;
   const dash = await softOne<IntelligenceDashboard>("/assets/intelligence/dashboard");
   const raw = (dash?.posture_trend ?? dash?.postureTrend ?? []) as Array<{ day?: string; date?: string; label?: string; score?: number }>;
   if (raw.length) {

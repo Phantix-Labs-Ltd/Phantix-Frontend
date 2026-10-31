@@ -20,6 +20,7 @@ import {
   loadIntelligenceDashboard,
   type TrendSeriesPoint,
 } from "@sg/data";
+import { loadPostureSnapshot, type PostureSnapshot } from "@sg/vaptOps";
 import { useStore } from "@sg/store";
 import { timeAgo, cx, titleCase, clickableRowProps } from "@sg/utils";
 import { useSseStream, type SseEvent } from "@sg/useSse";
@@ -76,6 +77,8 @@ export default function SocDashboard() {
   const status = useResource<SocStatus | null>(() => loadSocStatus().then((d) => d ?? null), null, "soc-status");
   const socData = useResource<SocDashboardScaffold>(() => loadSocDashboard().then((d) => d ?? emptySoc), emptySoc, "soc-dashboard");
   const intelData = useResource<IntelligenceDashboard>(() => loadIntelligenceDashboard().then((d) => d ?? emptyIntel), emptyIntel);
+  // The one posture score (GET /posture), the number every other page shows.
+  const postureRes = useResource<PostureSnapshot | null>(() => loadPostureSnapshot().catch(() => null), null, "posture-snapshot");
 
   const queue = useResource<SocDetection[]>(
     async () => {
@@ -114,7 +117,11 @@ export default function SocDashboard() {
     [queue.data, statusFilter, severityFilter, query],
   );
 
-  const score = intelData.data?.postureScore ?? intelData.data?.posture_score ?? 68;
+  // Asset exposure from asset intelligence: not the posture score, and never a
+  // made-up default (it used to fall back to 68).
+  const assetIndex =
+    intelData.data === emptyIntel ? null : intelData.data?.postureScore ?? intelData.data?.posture_score ?? null;
+  const postureScore = postureRes.data?.overall_score ?? null;
   const queueAgg = status.data?.queue;
   const openCount = queueAgg?.openTotal ?? queueAgg?.open_total ?? (queue.data ?? []).length;
 
@@ -392,7 +399,10 @@ export default function SocDashboard() {
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard label="Open queue" value={<span className="text-white tabular-nums">{openCount}</span>} />
         <StatCard label="Critical open" value={<span className="text-severity-critical tabular-nums">{(queueAgg?.bySeverityOpen ?? queueAgg?.by_severity_open ?? {})["critical"] ?? 0}</span>} />
-        <StatCard label="Posture" value={<span className="text-gold-400 tabular-nums">{score}</span>} />
+        <StatCard
+          label="Posture"
+          value={postureScore == null ? <span className="text-slate-500">Not set</span> : <span className="text-gold-400 tabular-nums">{postureScore}</span>}
+        />
       </div>
 
       <Tabs
@@ -428,7 +438,7 @@ export default function SocDashboard() {
                   })()
                 }
               />
-              <TrendChart points={detTrend.data} color="#7C8CF8" secondaryColor="#F43F5E" height={190} />
+              <TrendChart points={detTrend.data} secondaryColor="#F43F5E" height={200} />
             </Card>
           </motion.div>
 
@@ -453,8 +463,8 @@ export default function SocDashboard() {
                     {panel.source.includes("asset_intelligence") && (
                       <div className="flex items-center justify-between rounded-xl bg-phantix-950/40 border border-phantix-700/30 p-3.5">
                         <div>
-                          <p className="font-display text-3xl font-bold tabular-nums text-white">{score}</p>
-                          <p className="text-xs text-slate-500">Posture score</p>
+                          <p className="font-display text-3xl font-bold tabular-nums text-white">{assetIndex ?? "Not set"}</p>
+                          <p className="text-xs text-slate-500">Asset risk index</p>
                         </div>
                         <div className="space-y-1.5 text-right text-xs">
                           <div className="flex justify-end gap-3"><span className="text-slate-500">Assets</span><span className="font-mono tabular-nums text-slate-200">{intelData.data?.totals?.activeAssets ?? intelData.data?.total_assets ?? 0}</span></div>
