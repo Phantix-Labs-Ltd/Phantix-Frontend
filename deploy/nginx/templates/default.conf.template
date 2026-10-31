@@ -17,6 +17,12 @@
 
 # Real client protocol: Traefik (Coolify) terminates TLS and forwards HTTP, so
 # $scheme here is http. Prefer the header it set, fall back to $scheme.
+# WebSocket upgrades (staff portal superadmin terminal connects same-origin).
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
 map $http_x_forwarded_proto $phantix_proto {
     default $http_x_forwarded_proto;
     ""      $scheme;
